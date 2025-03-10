@@ -1,0 +1,225 @@
+[
+    {
+        "id_concursos": 1,
+        "concursos": [
+            {
+                "id_concurso": 101,
+                "tipo": "Regular/Interino",    
+                "cerrado_abierto": "Abierto",           
+                "departamento": {
+                    "id_departamento": 10,
+                    "nombre_departamento": "Finanzas",
+                    "responsable_departamento": "Ana Pérez",
+                    "correo_departamento": "ana.perez@empresa.com"
+                },
+                "area": "Contabilidad",
+                "orientacion": "Presupuestos",
+                "categoria": "PAD",
+                "dedicacion": "Simple",
+                "abierta_determinada": "Determinada",
+                "localizacion": "Oficina Central",
+                "creado": "2023-01-01T00:00:00Z",
+                "cierre_inscripcion": "2025-05-02",
+                "vencimiento": "2025-12-31",
+                "RESOLUCIONES_CONCURSOS": [
+                    {
+                    "tipo": "RESOLUCION_LLAMADO_INTERINO",
+                    "url": "url_archivo",
+                    "estado": "CREADA",
+                    "creado": "2023-01-01T00:00:00Z"
+                },
+                {
+                    "tipo": "RESOLUCION_LLAMADO_REGULAR",
+                    "url": "url_archivo",
+                    "estado": "CREADA",
+                    "creado": "2023-01-01T00:00:00Z"
+                },
+                {
+                    "tipo": "RESOLUCION_TRIBUNAL_REGULAR",
+                    "url": "url_archivo",
+                    "estado": "CREADA",
+                    "creado": "2023-01-01T00:00:00Z"
+                }
+            ],
+                "tribunal": [
+                    {
+                        "rol": "Presidente",
+                        "nombre": "Juan",
+                        "apellido": "Gómez",
+                        "dni": "12345678",
+                        "correo": "juan.gomez@empresa.com"
+                    },
+                    {
+                        "rol": "Vocal",
+                        "nombre": "María",
+                        "apellido": "López",
+                        "dni": "87654321",
+                        "correo": "maria.lopez@empresa.com"
+                    }
+                ],
+                "postulantes": [
+                    {
+                        "dni": "",
+                        "nombre": "",
+                        "apellido": "",
+                        "correo": "",
+                        "telefono": "",
+                        "documentacion": [
+                            {
+                                "tipo": "SOLICITUD_INSCRIPCION",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "DECLARACION_JURADA",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "CV",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "DOCUMENTACION_RESPALDATORIA",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "PROGRAMA_ACTIVIDADES",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "PLAN_FORMACION_RRHH",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "PLAN_ACTIVIDADES_PRACTICAS",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "PROPUESTA_EJERCICIO",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "PLAN_INVESTIGACION",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            },
+                            {
+                                "tipo": "AMPLIACION_DOCUMENTACION",
+                                "url": "url_archivo",
+                                "creado": "2023-01-01T00:00:00Z"
+                            }
+                        ]
+                    }
+                ],
+                "documentacion_concurso": [
+                    {
+                        "tipo": "ACTA_CIERRE_INSCRIPCION",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "ACTA_ANTECEDENTES",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "ACTA_SORTEO_TEMA_EXPOSICION",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "ACTA_ORDEN_EXPOSICION",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "ACTA_DICTAMEN",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "OTRO_DOCUMENTO",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    },
+                    {
+                        "tipo": "RESOLUCION_DESIGNACION",
+                        "url": "url_archivo",
+                        "estado": "CREADA",
+                        "creado": "2023-01-01T00:00:00Z"
+                    }
+                ],
+                "estado": {
+                    "estado_actual": "CREADO",
+                    "historial": [
+                        {
+                            "estado": "CREADO",
+                            "fecha": "2023-01-01T00:00:00Z",
+                            "usuario": "admin@empresa.com",
+                            "observaciones": "Creación inicial del concurso"
+                        }
+                    ],
+                    "sustanciacion": {
+                        "constitucion_jurado": {
+                            "fecha_hora": null,
+                            "lugar": "",
+                            "observaciones": ""
+                        },
+                        "sorteo_tema_exposicion": {
+                            "fecha_hora": null,
+                            "lugar": "",
+                            "observaciones": ""
+                        },
+                        "exposicion": {
+                            "fecha_hora": null,
+                            "lugar": "",
+                            "observaciones": ""
+                        },
+                        "dictamen": {
+                            "fecha_hora": null,
+                            "lugar": "",
+                            "observaciones": ""
+                        },
+                        "resolucion": {
+                            "fecha_hora": null,
+                            "observaciones": ""
+                        }
+                    },
+                    "impugnaciones": [
+                        {
+                            "fecha_presentacion": null,
+                            "postulante_dni": "",
+                            "motivo": "",
+                            "estado": "",
+                            "resolucion": "",
+                            "fecha_resolucion": null
+                        }
+                    ],
+                    "recusación": [
+                        {
+                            "fecha_presentacion": null,
+                            "jurado_dni": "",
+                            "motivo": "",
+                            "estado": "",
+                            "resolucion": "",
+                            "fecha_resolucion": null
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+]

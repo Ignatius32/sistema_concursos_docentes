@@ -1,0 +1,106 @@
+[
+  {
+    "nombre": "Profesor",
+    "categorias": [
+      {
+        "codigo": "PTIT",
+        "nombre": "Profesor Titular",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "PLAN_TRABAJO",
+            "DNI",
+            "TITULO_GRADO"
+          ],
+          "porDedicacion": {
+            "Simple": ["FORMULARIO_A"],
+            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
+            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+          }
+        }
+      },
+      {
+        "codigo": "PASO",
+        "nombre": "Profesor Asociado",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "PLAN_TRABAJO",
+            "DNI",
+            "TITULO_GRADO"
+          ],
+          "porDedicacion": {
+            "Simple": ["FORMULARIO_A"],
+            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
+            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+          }
+        }
+      },
+      {
+        "codigo": "PADJ",
+        "nombre": "Profesor Adjunto",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "PLAN_TRABAJO",
+            "DNI",
+            "TITULO_GRADO"
+          ],
+          "porDedicacion": {
+            "Simple": ["FORMULARIO_A"],
+            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
+            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Auxiliar",
+    "categorias": [
+      {
+        "codigo": "JTP",
+        "nombre": "Jefe de Trabajos Prácticos",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "DNI",
+            "TITULO_GRADO"
+          ],
+          "porDedicacion": {
+            "Simple": ["FORMULARIO_D"],
+            "Parcial": ["FORMULARIO_E"],
+            "Exclusiva": ["FORMULARIO_F", "PROYECTO_INVESTIGACION"]
+          }
+        }
+      },
+      {
+        "codigo": "AYP",
+        "nombre": "Ayudante de Primera",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "DNI",
+            "TITULO_GRADO"
+          ],
+          "porDedicacion": {
+            "Simple": ["FORMULARIO_D"],
+            "Parcial": ["FORMULARIO_E"],
+            "Exclusiva": ["FORMULARIO_F", "PROYECTO_INVESTIGACION"]
+          }
+        }
+      },
+      {
+        "codigo": "AYS",
+        "nombre": "Ayudante de Segunda",
+        "documentacionRequerida": {
+          "base": [
+            "CV",
+            "DNI",
+            "CERTIFICADO_ALUMNO_REGULAR"
+          ]
+        }
+      }
+    ]
+  }
+]
