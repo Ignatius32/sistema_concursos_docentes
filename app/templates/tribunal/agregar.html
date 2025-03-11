@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar Miembro al Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="mb-0">Agregar Miembro al Tribunal - Concurso #{{ concurso.id }}</h2>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="rol" class="form-label">Rol en el Tribunal</label>
+                    <select class="form-select" id="rol" name="rol" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Presidente">Presidente</option>
+                        <option value="Vocal">Vocal</option>
+                        <option value="Suplente">Suplente</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="apellido" name="apellido" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="dni" name="dni" required 
+                           pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="correo" name="correo" required>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Agregar Miembro</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

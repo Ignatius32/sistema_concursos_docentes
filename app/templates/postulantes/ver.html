@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ postulante.nombre }} {{ postulante.apellido }} - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">{{ postulante.nombre }} {{ postulante.apellido }}</h2>
+        <div>
+            <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver a Postulantes</a>
+            <a href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}" class="btn btn-warning">Editar Postulante</a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Información Personal</h4>
+                <table class="table">
+                    <tr>
+                        <th>DNI:</th>
+                        <td>{{ postulante.dni }}</td>
+                    </tr>
+                    <tr>
+                        <th>Correo:</th>
+                        <td>{{ postulante.correo }}</td>
+                    </tr>
+                    <tr>
+                        <th>Teléfono:</th>
+                        <td>{{ postulante.telefono or 'No especificado' }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="col-md-6">
+                <h4>Información del Concurso</h4>
+                <table class="table">
+                    <tr>
+                        <th>Departamento:</th>
+                        <td>{{ concurso.departamento_rel.nombre }}</td>
+                    </tr>
+                    <tr>
+                        <th>Categoría:</th>
+                        <td>{{ concurso.categoria }}</td>
+                    </tr>
+                    <tr>
+                        <th>Dedicación:</th>
+                        <td>{{ concurso.dedicacion }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Documentación</h4>
+                    <a href="{{ url_for('postulantes.agregar_documento', postulante_id=postulante.id) }}" class="btn btn-primary">
+                        Agregar Documento
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Fecha de Subida</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc_tipo in required_docs %}
+                            <tr>
+                                <td>{{ doc_tipo }}</td>
+                                <td>
+                                    {% if doc_tipo in uploaded_docs %}
+                                    <span class="badge bg-success">Subido</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc_tipo in uploaded_docs %}
+                                    {{ uploaded_docs[doc_tipo].creado.strftime('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc_tipo in uploaded_docs %}
+                                    <div class="btn-group">
+                                        {% if uploaded_docs[doc_tipo].url %}
+                                        <a href="{{ uploaded_docs[doc_tipo].url }}" target="_blank" class="btn btn-sm btn-info">Ver</a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" 
+                                                data-bs-target="#eliminarDocModal{{ uploaded_docs[doc_tipo].id }}">
+                                            Eliminar
+                                        </button>
+                                    </div>
+
+                                    <!-- Modal de confirmación de eliminación -->
+                                    <div class="modal fade" id="eliminarDocModal{{ uploaded_docs[doc_tipo].id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    ¿Está seguro que desea eliminar el documento "{{ doc_tipo }}"?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <form action="{{ url_for('postulantes.eliminar_documento', documento_id=uploaded_docs[doc_tipo].id) }}" 
+                                                          method="POST" style="display: inline;">
+                                                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-primary" 
+                                            data-action="upload-document" 
+                                            data-doc-type="{{ doc_tipo }}">
+                                        Subir
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Impugnaciones</h4>
+                {% if postulante.impugnaciones.count() > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Motivo</th>
+                                <th>Estado</th>
+                                <th>Resolución</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for impugnacion in postulante.impugnaciones %}
+                            <tr>
+                                <td>{{ impugnacion.fecha_presentacion.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ impugnacion.motivo }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if impugnacion.estado == 'PRESENTADA' else 'info' }}">
+                                        {{ impugnacion.estado }}
+                                    </span>
+                                </td>
+                                <td>{{ impugnacion.resolucion or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No hay impugnaciones registradas.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Hidden form for file uploads -->
+<form id="document-upload-form" method="POST" action="{{ url_for('postulantes.agregar_documento', postulante_id=postulante.id) }}" 
+      enctype="multipart/form-data" style="display: none;">
+    <input type="hidden" name="tipo" id="tipo">
+    <input type="file" name="documento" id="documento" accept=".pdf,.jpg,.jpeg,.png">
+</form>
+{% endblock %}

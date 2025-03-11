@@ -1,48 +1,155 @@
-/* Custom styles */
+/* Main layout */
 body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background-color: #f8f9fa;
 }
 
-main {
-    flex: 1;
-}
-
-.footer {
-    margin-top: auto;
-}
-
+/* Card styles */
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
 }
 
 .card-header {
-    font-weight: 500;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Table styles */
+.table-responsive {
+    margin-bottom: 1rem;
 }
 
 .table th {
     background-color: #f8f9fa;
+    font-weight: 600;
 }
 
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
-}
-
-.badge {
+/* Form styles */
+.form-label {
     font-weight: 500;
 }
 
-.list-group-item {
-    border-left: none;
-    border-right: none;
+.form-text {
+    color: #6c757d;
 }
 
-.list-group-item:first-child {
-    border-top: none;
+/* Button styles */
+.btn-group {
+    gap: 0.25rem;
 }
 
-.list-group-item:last-child {
+/* Badge styles */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+/* Custom status colors */
+.status-created {
+    color: #198754;
+}
+
+.status-pending {
+    color: #ffc107;
+}
+
+.status-completed {
+    color: #0dcaf0;
+}
+
+/* Document list styles */
+.document-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.document-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.document-list li:last-child {
     border-bottom: none;
+}
+
+/* Alert styles */
+.alert {
+    border: none;
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation styles */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+/* Modal styles */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Custom utilities */
+.text-small {
+    font-size: 0.875rem;
+}
+
+.mt-lg {
+    margin-top: 2rem;
+}
+
+.mb-lg {
+    margin-bottom: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

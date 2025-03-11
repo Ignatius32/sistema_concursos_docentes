@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar Postulante - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="mb-0">Agregar Postulante para Concurso #{{ concurso.id }}</h2>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="apellido" name="apellido" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="dni" name="dni" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="correo" name="correo" required>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Agregar Postulante</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h4 class="mb-0">Detalles del Concurso</h4>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Departamento</dt>
+            <dd class="col-sm-9">{{ concurso.departamento_rel.nombre }}</dd>
+
+            <dt class="col-sm-3">Área</dt>
+            <dd class="col-sm-9">{{ concurso.area }}</dd>
+
+            <dt class="col-sm-3">Orientación</dt>
+            <dd class="col-sm-9">{{ concurso.orientacion }}</dd>
+
+            <dt class="col-sm-3">Categoría</dt>
+            <dd class="col-sm-9">{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</dd>
+
+            <dt class="col-sm-3">Dedicación</dt>
+            <dd class="col-sm-9">{{ concurso.dedicacion }}</dd>
+
+            <dt class="col-sm-3">Estado</dt>
+            <dd class="col-sm-9"><span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">{{ concurso.estado_actual }}</span></dd>
+        </dl>
+    </div>
+</div>
+{% endblock %}

@@ -20,7 +20,7 @@
         }
       },
       {
-        "codigo": "PASO",
+        "codigo": "PAS",
         "nombre": "Profesor Asociado",
         "documentacionRequerida": {
           "base": [
@@ -37,7 +37,7 @@
         }
       },
       {
-        "codigo": "PADJ",
+        "codigo": "PAD",
         "nombre": "Profesor Adjunto",
         "documentacionRequerida": {
           "base": [

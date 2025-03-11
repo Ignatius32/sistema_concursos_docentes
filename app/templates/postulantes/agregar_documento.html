@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar Documento - {{ postulante.nombre }} {{ postulante.apellido }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Agregar Documento - {{ postulante.nombre }} {{ postulante.apellido }}</h2>
+        <a href="{{ url_for('postulantes.ver', postulante_id=postulante.id) }}" class="btn btn-secondary">Volver</a>
+    </div>
+    <div class="card-body">
+        {% if available_docs %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tipo de Documento</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc_tipo in available_docs %}
+                    <tr>
+                        <td>{{ doc_tipo }}</td>
+                        <td>
+                            <button type="button" class="btn btn-primary"
+                                    data-action="upload-document"
+                                    data-doc-type="{{ doc_tipo }}">
+                                Subir archivo
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No hay documentos pendientes de subir para este postulante.
+            <br>
+            <a href="{{ url_for('postulantes.ver', postulante_id=postulante.id) }}" class="btn btn-primary mt-2">
+                Volver a Detalles del Postulante
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Hidden form for file uploads -->
+<form id="document-upload-form" method="POST" enctype="multipart/form-data" style="display: none;">
+    <input type="hidden" name="tipo" id="tipo">
+    <input type="file" name="documento" id="documento" accept=".pdf,.jpg,.jpeg,.png">
+</form>
+{% endblock %}

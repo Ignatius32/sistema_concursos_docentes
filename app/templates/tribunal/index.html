@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Tribunal - Concurso #{{ concurso.id }}</h2>
+        <div>
+            <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver al Concurso</a>
+            <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary">Agregar Miembro</a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        {% if miembros %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Nombre</th>
+                        <th>Apellido</th>
+                        <th>DNI</th>
+                        <th>Correo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for miembro in miembros %}
+                    <tr>
+                        <td>{{ miembro.rol }}</td>
+                        <td>{{ miembro.nombre }}</td>
+                        <td>{{ miembro.apellido }}</td>
+                        <td>{{ miembro.dni }}</td>
+                        <td>{{ miembro.correo }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ miembro.id }}">
+                                    Eliminar
+                                </button>
+                                <a href="{{ url_for('tribunal.recusar', miembro_id=miembro.id) }}" class="btn btn-sm btn-info">Recusar</a>
+                            </div>
+
+                            <!-- Modal de confirmación de eliminación -->
+                            <div class="modal fade" id="eliminarModal{{ miembro.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirmar Eliminación</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            ¿Está seguro que desea eliminar a {{ miembro.nombre }} {{ miembro.apellido }} del tribunal?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <form action="{{ url_for('tribunal.eliminar', miembro_id=miembro.id) }}" method="POST" style="display: inline;">
+                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No hay miembros en el tribunal. <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}">Agregar un miembro</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

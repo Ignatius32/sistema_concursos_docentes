@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
+        <div class="btn-group">
+            <a href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}" class="btn btn-warning">Editar</a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal">
+                Eliminar
+            </button>
+            <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Tribunal</a>
+            <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">Postulantes</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Información General</h4>
+                <table class="table">
+                    <tr>
+                        <th>Tipo:</th>
+                        <td>{{ concurso.tipo }}</td>
+                    </tr>
+                    <tr>
+                        <th>Cerrado/Abierto:</th>
+                        <td>{{ concurso.cerrado_abierto }}</td>
+                    </tr>
+                    <tr>
+                        <th>Cantidad de Cargos:</th>
+                        <td>{{ concurso.cant_cargos }}</td>
+                    </tr>
+                    <tr>
+                        <th>Departamento:</th>
+                        <td>{{ concurso.departamento_rel.nombre }}</td>
+                    </tr>
+                    <tr>
+                        <th>Área:</th>
+                        <td>{{ concurso.area }}</td>
+                    </tr>
+                    <tr>
+                        <th>Orientación:</th>
+                        <td>{{ concurso.orientacion }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h4>Detalles del Cargo</h4>
+                <table class="table">
+                    <tr>
+                        <th>Categoría:</th>
+                        <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                    </tr>
+                    <tr>
+                        <th>Dedicación:</th>
+                        <td>{{ concurso.dedicacion }}</td>
+                    </tr>
+                    <tr>
+                        <th>Localización:</th>
+                        <td>{{ concurso.localizacion }}</td>
+                    </tr>
+                    <tr>
+                        <th>Cierre Inscripción:</th>
+                        <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
+                    </tr>
+                    {% if concurso.vencimiento %}
+                    <tr>
+                        <th>Vencimiento:</th>
+                        <td>{{ concurso.vencimiento.strftime('%d/%m/%Y') }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if concurso.drive_folder_id %}
+                    <tr>
+                        <th>Carpeta Google Drive:</th>
+                        <td>
+                            <a href="https://drive.google.com/drive/folders/{{ concurso.drive_folder_id }}" 
+                               target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-folder"></i> Abrir carpeta
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Estado y Tribunal</h4>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }} fs-6">
+                        Estado: {{ concurso.estado_actual }}
+                    </span>
+                    <div>
+                        <span class="me-2">Miembros del Tribunal: {{ concurso.tribunal.count() }}</span>
+                        <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-outline-primary">
+                            Ver Tribunal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Postulantes</h4>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Total Postulantes: {{ concurso.postulantes.count() }}</span>
+                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-outline-primary">
+                        Ver Postulantes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Historial de Estados</h4>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for estado in concurso.historial_estados %}
+                            <tr>
+                                <td>{{ estado.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ estado.estado }}</td>
+                                <td>{{ estado.observaciones }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="eliminarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar el concurso #{{ concurso.id }}?</p>
+                <p class="text-danger"><strong>¡Atención!</strong> Esta acción eliminará también:</p>
+                <ul class="text-danger">
+                    <li>Todos los miembros del tribunal</li>
+                    <li>Todos los postulantes y sus documentos</li>
+                    <li>Todos los documentos del concurso</li>
+                    <li>Todo el historial y sustanciación</li>
+                </ul>
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('concursos.eliminar', concurso_id=concurso.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

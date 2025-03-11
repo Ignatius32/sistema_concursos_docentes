@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Postulantes - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Postulantes - Concurso #{{ concurso.id }}</h2>
+        <div>
+            <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver al Concurso</a>
+            <a href="{{ url_for('postulantes.agregar', concurso_id=concurso.id) }}" class="btn btn-primary">Agregar Postulante</a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        {% if postulantes %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Apellido</th>
+                        <th>Correo</th>
+                        <th>Documentos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for postulante in postulantes %}
+                    <tr>
+                        <td>{{ postulante.dni }}</td>
+                        <td>{{ postulante.nombre }}</td>
+                        <td>{{ postulante.apellido }}</td>
+                        <td>{{ postulante.correo }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ postulante.documentos.count() }} documentos</span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('postulantes.ver', postulante_id=postulante.id) }}" class="btn btn-sm btn-info">Ver</a>
+                                <a href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ postulante.id }}">
+                                    Eliminar
+                                </button>
+                                <a href="{{ url_for('postulantes.impugnar', postulante_id=postulante.id) }}" class="btn btn-sm btn-secondary">Impugnar</a>
+                            </div>
+
+                            <!-- Modal de confirmación de eliminación -->
+                            <div class="modal fade" id="eliminarModal{{ postulante.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirmar Eliminación</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            ¿Está seguro que desea eliminar al postulante {{ postulante.nombre }} {{ postulante.apellido }}?
+                                            <br>
+                                            <strong class="text-danger">Esta acción eliminará también todos los documentos asociados.</strong>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <form action="{{ url_for('postulantes.eliminar', postulante_id=postulante.id) }}" method="POST" style="display: inline;">
+                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No hay postulantes registrados. <a href="{{ url_for('postulantes.agregar', concurso_id=concurso.id) }}">Agregar un postulante</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

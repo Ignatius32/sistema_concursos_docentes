@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="mb-0">Editar Concurso #{{ concurso.id }}</h2>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="tipo" class="form-label">Tipo de Concurso</label>
+                    <select class="form-select" id="tipo" name="tipo" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Regular" {% if concurso.tipo == 'Regular' %}selected{% endif %}>Regular</option>
+                        <option value="Interino" {% if concurso.tipo == 'Interino' %}selected{% endif %}>Interino</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
+                    <select class="form-select" id="cerrado_abierto" name="cerrado_abierto" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Abierto" {% if concurso.cerrado_abierto == 'Abierto' %}selected{% endif %}>Abierto</option>
+                        <option value="Cerrado" {% if concurso.cerrado_abierto == 'Cerrado' %}selected{% endif %}>Cerrado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="departamento_id" class="form-label">Departamento</label>
+                    <select class="form-select" id="departamento_id" name="departamento_id" required>
+                        <option value="">Seleccione...</option>
+                        {% for depto in departamentos %}
+                        <option value="{{ depto.id }}" {% if concurso.departamento_id == depto.id %}selected{% endif %}>{{ depto.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="area" class="form-label">Área</label>
+                    <select class="form-select" id="area" name="area" required>
+                        <option value="">Seleccione un departamento primero...</option>
+                        <option value="{{ concurso.area }}" selected>{{ concurso.area }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="orientacion" class="form-label">Orientación</label>
+                    <select class="form-select" id="orientacion" name="orientacion" required>
+                        <option value="">Seleccione un área primero...</option>
+                        <option value="{{ concurso.orientacion }}" selected>{{ concurso.orientacion }}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="categoria" class="form-label">Categoría</label>
+                    <select class="form-select" id="categoria" name="categoria" required onchange="updateCategoriaNombre(this)">
+                        <option value="">Seleccione...</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.codigo }}" data-nombre="{{ cat.nombre }}" {% if concurso.categoria == cat.codigo %}selected{% endif %}>{{ cat.nombre }} ({{ cat.codigo }})</option>
+                        {% endfor %}
+                        <option value="Abierta" data-nombre="Abierta" {% if concurso.categoria == 'Abierta' %}selected{% endif %}>Abierta</option>
+                    </select>
+                    <input type="hidden" name="categoria_nombre" id="categoria_nombre" value="{{ concurso.categoria_nombre }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="dedicacion" class="form-label">Dedicación</label>
+                    <select class="form-select" id="dedicacion" name="dedicacion" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Simple" {% if concurso.dedicacion == 'Simple' %}selected{% endif %}>Simple</option>
+                        <option value="Parcial" {% if concurso.dedicacion == 'Parcial' %}selected{% endif %}>Parcial</option>
+                        <option value="Exclusiva" {% if concurso.dedicacion == 'Exclusiva' %}selected{% endif %}>Exclusiva</option>
+                        <option value="Abierta" {% if concurso.dedicacion == 'Abierta' %}selected{% endif %}>Abierta</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
+                    <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="{{ concurso.cant_cargos }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="localizacion" class="form-label">Localización</label>
+                    <input type="text" class="form-control" id="localizacion" name="localizacion" required value="{{ concurso.localizacion }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
+                    <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion" 
+                           value="{{ concurso.cierre_inscripcion.strftime('%Y-%m-%d') if concurso.cierre_inscripcion }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="vencimiento" class="form-label">Fecha de Vencimiento</label>
+                    <input type="date" class="form-control" id="vencimiento" name="vencimiento"
+                           value="{{ concurso.vencimiento.strftime('%Y-%m-%d') if concurso.vencimiento }}">
+                </div>
+            </div>
+
+            <div class="text-end">
+                <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deptoSelect = document.getElementById('departamento_id');
+    const areaSelect = document.getElementById('area');
+    const orientacionSelect = document.getElementById('orientacion');
+
+    // Handle departamento -> area -> orientacion chain
+    deptoSelect.addEventListener('change', function() {
+        if (this.value) {
+            fetch(`/concursos/api/areas/${this.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    areaSelect.innerHTML = '<option value="">Seleccione...</option>';
+                    data.forEach(area => {
+                        areaSelect.innerHTML += `<option value="${area.nombre}">${area.nombre}</option>`;
+                    });
+                    areaSelect.disabled = false;
+                    orientacionSelect.disabled = true;
+                    orientacionSelect.innerHTML = '<option value="">Seleccione un área primero...</option>';
+                });
+        } else {
+            areaSelect.disabled = true;
+            areaSelect.innerHTML = '<option value="">Seleccione un departamento primero...</option>';
+            orientacionSelect.disabled = true;
+            orientacionSelect.innerHTML = '<option value="">Seleccione un área primero...</option>';
+        }
+    });
+
+    areaSelect.addEventListener('change', function() {
+        const deptoId = deptoSelect.value;
+        if (deptoId && this.value) {
+            fetch(`/concursos/api/orientaciones/${deptoId}?area=${encodeURIComponent(this.value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    orientacionSelect.innerHTML = '<option value="">Seleccione...</option>';
+                    data.forEach(orientacion => {
+                        orientacionSelect.innerHTML += `<option value="${orientacion.nombre}">${orientacion.nombre}</option>`;
+                    });
+                    orientacionSelect.disabled = false;
+                });
+        } else {
+            orientacionSelect.disabled = true;
+            orientacionSelect.innerHTML = '<option value="">Seleccione un área primero...</option>';
+        }
+    });
+
+    // Add categoria nombre handling
+    function updateCategoriaNombre(selectElement) {
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        document.getElementById('categoria_nombre').value = selectedOption.getAttribute('data-nombre') || selectedOption.text;
+    }
+});
+</script>
+{% endblock %}
