@@ -100,6 +100,34 @@
             </div>
 
             <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="asignaturas" class="form-label">Asignaturas</label>
+                    <input type="text" class="form-control" id="asignaturas" name="asignaturas" placeholder="Opcional">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="expediente" class="form-label">Expediente</label>
+                    <input type="text" class="form-control" id="expediente" name="expediente" placeholder="Opcional">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="origen_vacante" class="form-label">Origen de Vacante</label>
+                    <select class="form-select" id="origen_vacante" name="origen_vacante">
+                        <option value="">Seleccione...</option>
+                        <option value="LICENCIA SIN GOCE DE HABERES">LICENCIA SIN GOCE DE HABERES</option>
+                        <option value="RENUNCIA">RENUNCIA</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
+                    <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" placeholder="Opcional">
+                </div>
+            </div>
+
+            <div class="row">
                 <div class="col-md-12 mb-3">
                     <label for="vencimiento" class="form-label">Fecha de Vencimiento</label>
                     <input type="date" class="form-control" id="vencimiento" name="vencimiento">

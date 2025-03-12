@@ -92,15 +92,46 @@
                     <label for="localizacion" class="form-label">Localización</label>
                     <input type="text" class="form-control" id="localizacion" name="localizacion" required value="{{ concurso.localizacion }}">
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion" 
                            value="{{ concurso.cierre_inscripcion.strftime('%Y-%m-%d') if concurso.cierre_inscripcion }}">
                 </div>
+            </div>
 
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="asignaturas" class="form-label">Asignaturas</label>
+                    <input type="text" class="form-control" id="asignaturas" name="asignaturas" 
+                           value="{{ concurso.asignaturas }}" placeholder="Opcional">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="expediente" class="form-label">Expediente</label>
+                    <input type="text" class="form-control" id="expediente" name="expediente" 
+                           value="{{ concurso.expediente }}" placeholder="Opcional">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="origen_vacante" class="form-label">Origen de Vacante</label>
+                    <select class="form-select" id="origen_vacante" name="origen_vacante">
+                        <option value="">Seleccione...</option>
+                        <option value="LICENCIA SIN GOCE DE HABERES" {% if concurso.origen_vacante == 'LICENCIA SIN GOCE DE HABERES' %}selected{% endif %}>LICENCIA SIN GOCE DE HABERES</option>
+                        <option value="RENUNCIA" {% if concurso.origen_vacante == 'RENUNCIA' %}selected{% endif %}>RENUNCIA</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
+                    <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" 
+                           value="{{ concurso.docente_vacante }}" placeholder="Opcional">
+                </div>
+            </div>
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="vencimiento" class="form-label">Fecha de Vencimiento</label>
                     <input type="date" class="form-control" id="vencimiento" name="vencimiento"

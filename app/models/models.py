@@ -59,6 +59,10 @@ class Concurso(db.Model):
     categoria_nombre = db.Column(db.String(100), nullable=True)  # Full name of the categoria
     dedicacion = db.Column(db.String(20), nullable=False)  # Simple, Parcial, Exclusiva
     localizacion = db.Column(db.String(100))
+    asignaturas = db.Column(db.String(255), nullable=True)  # Optional field for subjects
+    expediente = db.Column(db.String(100), nullable=True)  # Optional field for file number
+    origen_vacante = db.Column(db.String(50), nullable=True)  # LICENCIA SIN GOCE DE HABERES, RENUNCIA
+    docente_vacante = db.Column(db.String(100), nullable=True)  # Name of the teacher who generated the vacancy
     creado = db.Column(db.DateTime, default=datetime.utcnow)
     cierre_inscripcion = db.Column(db.Date, nullable=True)  # Changed to nullable=True
     vencimiento = db.Column(db.Date, nullable=True)  # Already nullable

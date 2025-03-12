@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso
 from app.integrations.google_drive import GoogleDriveAPI
+import json
+import os
 
 concursos = Blueprint('concursos', __name__, url_prefix='/concursos')
 drive_api = GoogleDriveAPI()
@@ -29,6 +31,138 @@ def _format_cargos_text(cant_cargos, tipo):
     
     return f"{numero} ({cant_cargos}) {cargo_text} {tipo_text}"
 
+# Helper function to generate documents from templates
+def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepare_data_func):
+    """
+    Generic function to generate a document from a template.
+    
+    Args:
+        concurso_id (int): ID of the concurso
+        template_name (str): Name of the template in Google Drive
+        doc_tipo (str): Type of document for database record
+        prepare_data_func (function): Function that prepares the data for the template
+        
+    Returns:
+        tuple: (success, message, url) - Indicates success/failure, message, and URL if successful
+    """
+    try:
+        concurso = Concurso.query.get_or_404(concurso_id)
+        
+        if not concurso.borradores_folder_id:
+            return False, 'El concurso no tiene una carpeta de borradores asociada.', None
+        
+        # Get data for template from the specific function
+        data, validation_message = prepare_data_func(concurso)
+        
+        # Check if data preparation succeeded
+        if not data:
+            return False, validation_message, None
+            
+        # Generate file name with timestamp
+        file_name = f"{doc_tipo.replace('_', ' ').title()}_Concurso_{concurso.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        
+        # Use API to create document from template in borradores folder
+        file_id, web_link = drive_api.create_document_from_template(
+            template_name,
+            data,
+            concurso.borradores_folder_id,
+            file_name
+        )
+        
+        # Create document record
+        documento = DocumentoConcurso(
+            concurso=concurso,
+            tipo=doc_tipo,
+            url=web_link,
+            estado='BORRADOR'
+        )
+        db.session.add(documento)
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_GENERADO",
+            observaciones=f"{doc_tipo.replace('_', ' ').title()} generado por {current_user.username}"
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        return True, f'Documento generado exitosamente.', web_link
+        
+    except Exception as e:
+        db.session.rollback()
+        return False, f'Error al generar el documento: {str(e)}', None
+
+# Data preparation functions for different templates
+def prepare_data_resolucion_llamado_tribunal(concurso):
+    """Prepare data for the resolucion llamado tribunal template."""
+    # Check if tribunal members are assigned
+    tribunal_members = concurso.tribunal.all()
+    if not tribunal_members:
+        return None, 'No hay miembros del tribunal asignados para este concurso.'
+    
+    # Get related data
+    departamento = Departamento.query.get(concurso.departamento_id)
+    
+    # Format dates for display
+    current_year = datetime.now().year
+    
+    # Format tribunal members
+    titulares = []
+    suplentes = []
+    
+    for miembro in tribunal_members:
+        member_info = f"{miembro.apellido}, {miembro.nombre} (DNI: {miembro.dni})"
+        
+        if miembro.rol == "Presidente":
+            # Presidente always goes first in the titulares list
+            titulares.insert(0, f"{member_info} - Presidente")
+        elif miembro.rol == "Suplente":
+            suplentes.append(member_info)
+        else:  # Vocal
+            titulares.append(member_info)
+    
+    # Join lists with line breaks for the document
+    tribunal_titular_text = "\n".join(titulares)
+    tribunal_suplentes_text = "\n".join(suplentes)
+    
+    # Get expediente number (this is an example, you might need to add this field to your model)
+    #expediente = f"{expediente}"  # Replace with actual expediente field
+    
+    # Ensure we have the categoria_nombre
+    categoria_nombre = concurso.categoria_nombre
+    if not categoria_nombre:
+        # Load roles_categorias.json data if needed
+        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'roles_categorias.json')
+        with open(json_path, 'r', encoding='utf-8') as f:
+            roles_data = json.load(f)
+        
+        # Find categoria name by codigo
+        for rol in roles_data:
+            for categoria in rol['categorias']:
+                if categoria['codigo'] == concurso.categoria:
+                    categoria_nombre = categoria['nombre']
+                    break
+            if categoria_nombre:
+                break
+    
+    # Prepare data for template replacements
+    data = {
+        'cantCargos': _format_cargos_text(concurso.cant_cargos, concurso.tipo),
+        'departamento': departamento.nombre,
+        'area': concurso.area,
+        'orientacion': concurso.orientacion,
+        'tipo': concurso.tipo,
+        'nombre': categoria_nombre or concurso.categoria,  # Use found name or fallback to codigo
+        'codigo': concurso.categoria,
+        'tribunal_titular': tribunal_titular_text,
+        'tribunal_suplentes': tribunal_suplentes_text,
+        'yyyy': str(current_year),
+        'expediente': concurso.expediente
+    }
+    
+    return data, None
+
 @concursos.route('/')
 @login_required
 def index():
@@ -52,6 +186,8 @@ def nuevo():
             categoria = request.form.get('categoria')
             dedicacion = request.form.get('dedicacion')
             localizacion = request.form.get('localizacion')
+            asignaturas = request.form.get('asignaturas')
+            expediente = request.form.get('expediente')
             
             # Get categoria name from roles_categorias.json
             import json
@@ -96,6 +232,10 @@ def nuevo():
                 categoria_nombre=categoria_nombre,  # Set the nombre from roles_categorias.json
                 dedicacion=dedicacion,
                 localizacion=localizacion,
+                asignaturas=asignaturas,
+                expediente=expediente,
+                origen_vacante=request.form.get('origen_vacante'),
+                docente_vacante=request.form.get('docente_vacante'),
                 cierre_inscripcion=cierre_inscripcion,
                 vencimiento=vencimiento,
                 estado_actual="CREADO"
@@ -155,116 +295,19 @@ def ver(concurso_id):
 @login_required
 def generar_resolucion_llamado_tribunal(concurso_id):
     """Generate a resolution document with tribunal information for a concurso."""
-    concurso = Concurso.query.get_or_404(concurso_id)
+    success, message, url = generar_documento_desde_template(
+        concurso_id,
+        'resLlamadoTribunalInterino',  # template name
+        'RESOLUCION_LLAMADO_TRIBUNAL',  # document type
+        prepare_data_resolucion_llamado_tribunal  # function to prepare data
+    )
     
-    if not concurso.borradores_folder_id:
-        flash('El concurso no tiene una carpeta de borradores asociada.', 'danger')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
-    # Check if tribunal members are assigned
-    tribunal_members = concurso.tribunal.all()
-    if not tribunal_members:
-        flash('No hay miembros del tribunal asignados para este concurso.', 'danger')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
-    try:
-        # Get related data
-        departamento = Departamento.query.get(concurso.departamento_id)
+    if success:
+        flash(f'{message} <a href="{url}" target="_blank" class="alert-link">Abrir documento</a>', 'success')
+    else:
+        flash(message, 'danger')
         
-        # Format dates for display
-        current_year = datetime.now().year
-        
-        # Format tribunal members
-        titulares = []
-        suplentes = []
-        
-        for miembro in tribunal_members:
-            member_info = f"{miembro.apellido}, {miembro.nombre} (DNI: {miembro.dni})"
-            
-            if miembro.rol == "Presidente":
-                # Presidente always goes first in the titulares list
-                titulares.insert(0, f"{member_info} - Presidente")
-            elif miembro.rol == "Suplente":
-                suplentes.append(member_info)
-            else:  # Vocal
-                titulares.append(member_info)
-        
-        # Join lists with line breaks for the document
-        tribunal_titular_text = "\n".join(titulares)
-        tribunal_suplentes_text = "\n".join(suplentes)
-        
-        # Get expediente number (this is an example, you might need to add this field to your model)
-        expediente = f"00000-YYYY"  # Replace with actual expediente field
-        
-        # Get categoria name from roles_categorias.json
-        import json
-        import os
-        
-        # Load roles_categorias.json data
-        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'roles_categorias.json')
-        with open(json_path, 'r', encoding='utf-8') as f:
-            roles_data = json.load(f)
-        
-        # Find categoria name by codigo
-        categoria_nombre = None
-        for rol in roles_data:
-            for categoria in rol['categorias']:
-                if categoria['codigo'] == concurso.categoria:
-                    categoria_nombre = categoria['nombre']
-                    break
-            if categoria_nombre:
-                break
-        
-        # Prepare data for template replacements
-        data = {
-            'cantCargos': _format_cargos_text(concurso.cant_cargos, concurso.tipo),
-            'departamento': departamento.nombre,
-            'area': concurso.area,
-            'orientacion': concurso.orientacion,
-            'tipo': concurso.tipo,
-            'nombre': categoria_nombre or concurso.categoria,  # Use found name or fallback to codigo
-            'codigo': concurso.categoria,
-            'tribunal_titular': tribunal_titular_text,
-            'tribunal_suplentes': tribunal_suplentes_text,
-            'yyyy': str(current_year),
-            'expediente': expediente
-        }
-        
-        # Generate file name
-        file_name = f"Resolucion_Llamado_y_Tribunal_Concurso_{concurso.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
-        
-        # Use the API to create document from template in borradores folder
-        file_id, web_link = drive_api.create_document_from_template(
-            'resLlamadoTribunalInterino',
-            data,
-            concurso.borradores_folder_id,
-            file_name
-        )
-        
-        # Create document record
-        documento = DocumentoConcurso(
-            concurso=concurso,
-            tipo='RESOLUCION_LLAMADO_TRIBUNAL',
-            url=web_link,
-            estado='BORRADOR'
-        )
-        db.session.add(documento)
-        
-        # Add entry to history
-        historial = HistorialEstado(
-            concurso=concurso,
-            estado="DOCUMENTO_GENERADO",
-            observaciones=f"Resolución de Llamado y Tribunal generada por {current_user.username}"
-        )
-        db.session.add(historial)
-        db.session.commit()
-        
-        flash(f'Documento de resolución generado exitosamente. <a href="{web_link}" target="_blank" class="alert-link">Abrir documento</a>', 'success')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-        
-    except Exception as e:
-        flash(f'Error al generar el documento: {str(e)}', 'danger')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
 @login_required
@@ -291,6 +334,10 @@ def editar(concurso_id):
             concurso.categoria = request.form.get('categoria')
             concurso.dedicacion = request.form.get('dedicacion')
             concurso.localizacion = request.form.get('localizacion')
+            concurso.asignaturas = request.form.get('asignaturas')
+            concurso.expediente = request.form.get('expediente')
+            concurso.origen_vacante = request.form.get('origen_vacante')
+            concurso.docente_vacante = request.form.get('docente_vacante')
             
             # Get categoria name from roles_categorias.json
             import json

@@ -69,6 +69,30 @@
                         <th>Localización:</th>
                         <td>{{ concurso.localizacion }}</td>
                     </tr>
+                    {% if concurso.asignaturas %}
+                    <tr>
+                        <th>Asignaturas:</th>
+                        <td>{{ concurso.asignaturas }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if concurso.expediente %}
+                    <tr>
+                        <th>Expediente:</th>
+                        <td>{{ concurso.expediente }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if concurso.origen_vacante %}
+                    <tr>
+                        <th>Origen de Vacante:</th>
+                        <td>{{ concurso.origen_vacante }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if concurso.docente_vacante %}
+                    <tr>
+                        <th>Docente que genera vacante:</th>
+                        <td>{{ concurso.docente_vacante }}</td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <th>Cierre Inscripción:</th>
                         <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
