@@ -64,6 +64,7 @@ class Concurso(db.Model):
     vencimiento = db.Column(db.Date, nullable=True)  # Already nullable
     estado_actual = db.Column(db.String(50), default="CREADO")
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
+    borradores_folder_id = db.Column(db.String(100), nullable=True)  # Borradores subfolder ID
     
     # Relationships
     tribunal = db.relationship('TribunalMiembro', backref='concurso', lazy='dynamic')

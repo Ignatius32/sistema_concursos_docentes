@@ -5,11 +5,9 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
+from pathlib import Path
 
 from app.models.models import db, User, init_db_from_json, init_categories_from_json
-
-# Load environment variables
-load_dotenv()
 
 login_manager = LoginManager()
 migrate = Migrate()
@@ -17,14 +15,13 @@ migrate = Migrate()
 def init_app_data(app):
     """Initialize application data like admin user and reference data."""
     with app.app_context():
+        # Create the instance directory if it doesn't exist
+        os.makedirs(app.instance_path, exist_ok=True)
+        
         db.create_all()
         
         # Check if admin user exists
-        print(f"ADMIN_USERNAME: {os.environ.get('ADMIN_USERNAME')}")
-        print(f"ADMIN_PASSWORD: {os.environ.get('ADMIN_PASSWORD')}")
         admin = User.query.filter_by(username=os.environ.get('ADMIN_USERNAME', 'admin')).first()
-        if admin:
-            print(f"Admin user exists: {admin.username}, {admin.password_hash}")
         if not admin:
             print("Creating admin user...")
             admin = User(
@@ -33,7 +30,6 @@ def init_app_data(app):
             admin.set_password(os.environ.get('ADMIN_PASSWORD', 'admin123'))
             db.session.add(admin)
             db.session.commit()
-            print(f"Admin user created: {admin.username}, {admin.password_hash}")
         
         # Initialize the database with departamentos, areas, orientaciones from JSON
         try:
@@ -58,11 +54,35 @@ def init_app_data(app):
             print(f"Error loading categorias: {e}")
 
 def create_app():
-    app = Flask(__name__)
+    # Load environment variables from the root directory
+    env_path = Path(__file__).resolve().parent.parent / '.env'
+    print(f"Loading .env from: {env_path}")
+    load_dotenv(env_path)
+    
+    app = Flask(__name__, instance_relative_config=True)
+    
+    # Ensure the instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
     
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///concursos.db')
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    
+    # Set up database URI with absolute path in instance folder
+    if os.environ.get('DATABASE_URI'):
+        db_uri = os.environ.get('DATABASE_URI')
+        if db_uri.startswith('sqlite:///'):
+            # Convert relative SQLite path to absolute path in instance folder
+            db_path = os.path.join(app.instance_path, db_uri.replace('sqlite:///', ''))
+            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        else:
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+    else:
+        db_path = os.path.join(app.instance_path, 'concursos.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions

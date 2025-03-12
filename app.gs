@@ -1,5 +1,15 @@
 // IMPORTANT: Make sure to add SECURE_TOKEN in Script Properties with the value from your .env file
 
+// Template IDs for document generation
+// Add your actual template document IDs here
+const TEMPLATES = {
+  'concursoResolucion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
+  'actaSustanciacion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',  // Replace with actual template ID
+  'certificadoPostulante': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
+  'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', // Real template ID
+  // Add more templates as needed
+};
+
 // Function to sanitize folder name
 function sanitizeFolderName(name) {
   // Replace spaces with underscores
@@ -8,6 +18,51 @@ function sanitizeFolderName(name) {
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '') // Remove accents
             .replace(/[^a-zA-Z0-9_-]/g, '_'); // Replace other special chars with underscore
+}
+
+// Function to create a document from template
+function createDocFromTemplate(templateName, data, targetFolderId, fileName) {
+  // Basic validation
+  if (!templateName || !data || !targetFolderId || !fileName) {
+    throw new Error("Template name, data, target folder ID, and file name are required.");
+  }
+  
+  // Get template ID from the mapping
+  var templateId = TEMPLATES[templateName];
+  if (!templateId) {
+    throw new Error(`Unknown template: ${templateName}`);
+  }
+  
+  try {
+    // Get the template file
+    var templateFile = DriveApp.getFileById(templateId);
+    
+    // Get the target folder
+    var targetFolder = DriveApp.getFolderById(targetFolderId);
+    
+    // Create a copy of the template in the target folder
+    var newDoc = templateFile.makeCopy(fileName, targetFolder);
+    
+    // Open the document for editing
+    var doc = DocumentApp.openById(newDoc.getId());
+    var body = doc.getBody();
+    
+    // Replace all placeholders with actual data
+    Object.keys(data).forEach(function(key) {
+      var placeholder = '<<' + key + '>>';
+      body.replaceText(placeholder, data[key] || '');
+    });
+    
+    // Save and close the document
+    doc.saveAndClose();
+    
+    return {
+      fileId: newDoc.getId(),
+      webViewLink: newDoc.getUrl()
+    };
+  } catch (err) {
+    throw new Error("Error creating document from template: " + err.message);
+  }
 }
 
 // Function to create a contest folder under a specific root folder.
@@ -31,7 +86,18 @@ function crearConcurso(folderName) {
   
   // Create the new folder with sanitized name
   var newFolder = root.createFolder(sanitizedName);
-  return newFolder.getId();
+  
+  // Extract concurso ID from the folder name (it's the first part before _)
+  var concursoId = sanitizedName.split('_')[0];
+  
+  // Create borradores subfolder
+  var borradoresName = 'borradores_' + concursoId;
+  newFolder.createFolder(borradoresName);
+  
+  return {
+    folderId: newFolder.getId(),
+    borradoresFolderId: newFolder.getFoldersByName(borradoresName).next().getId()
+  };
 }
 
 // Function to create a postulante folder inside a concurso folder
@@ -215,6 +281,16 @@ function doPost(e) {
         break;
       case 'renameFolder':
         response.success = renameFolder(params.folderId, params.newName);
+        break;
+      case 'createDocFromTemplate':
+        var docResult = createDocFromTemplate(
+          params.templateName, 
+          params.data, 
+          params.folderId, 
+          params.fileName
+        );
+        response.fileId = docResult.fileId;
+        response.webViewLink = docResult.webViewLink;
         break;
       default:
         throw new Error("Unknown action: " + params.action);

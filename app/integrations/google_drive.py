@@ -48,6 +48,37 @@ class GoogleDriveAPI:
 
         return folder_data.get('folderId')
 
+    def create_document_from_template(self, template_name, data, folder_id, file_name):
+        """
+        Create a document from a template in Google Drive.
+        
+        Args:
+            template_name (str): Name of the template to use (must be defined in TEMPLATES in the Apps Script)
+            data (dict): Dictionary of placeholder values to replace in the template
+            folder_id (str): The ID of the Google Drive folder where the document should be created
+            file_name (str): The name for the new document
+            
+        Returns:
+            tuple: (file_id, web_view_link) - ID and URL of the created document
+        """
+        response = requests.post(self.api_url, json={
+            'action': 'createDocFromTemplate',
+            'templateName': template_name,
+            'data': data,
+            'folderId': folder_id,
+            'fileName': file_name,
+            'token': self.secure_token
+        })
+        
+        if response.status_code != 200:
+            raise Exception(f"Error creating document from template: {response.text}")
+            
+        doc_data = response.json()
+        if doc_data.get('status') != 'success':
+            raise Exception(f"Error from Google Drive API: {doc_data.get('message')}")
+            
+        return doc_data.get('fileId'), doc_data.get('webViewLink')
+
     def upload_document(self, folder_id, file_name, file_data):
         """
         Upload a document to Google Drive in the specified folder.

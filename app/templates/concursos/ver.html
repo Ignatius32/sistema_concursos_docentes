@@ -8,6 +8,14 @@
         <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
         <div class="btn-group">
             <a href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}" class="btn btn-warning">Editar</a>
+            <div class="btn-group">
+                <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Generar Documentos
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ url_for('concursos.generar_resolucion_llamado_tribunal', concurso_id=concurso.id) }}">Resolución Llamado y Tribunal</a></li>
+                </ul>
+            </div>
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal">
                 Eliminar
             </button>
@@ -83,6 +91,79 @@
                     </tr>
                     {% endif %}
                 </table>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Documentos Generados</h4>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Fecha Generación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for documento in concurso.documentos|sort(attribute='creado', reverse=true) %}
+                            <tr>
+                                <td>
+                                    {% if documento.tipo == 'RESOLUCION_LLAMADO_TRIBUNAL' %}
+                                    Resolución de Llamado y Tribunal
+                                    {% else %}
+                                    {{ documento.tipo }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if documento.estado == 'CREADA' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ documento.estado }}
+                                    </span>
+                                </td>
+                                <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-file-earmark-text"></i> Abrir
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarDocumentoModal{{ documento.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Modal de confirmación de eliminación de documento -->
+                                    <div class="modal fade" id="eliminarDocumentoModal{{ documento.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmar Eliminación de Documento</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>¿Está seguro que desea eliminar este documento?</p>
+                                                    <p>Esta acción eliminará el documento tanto de la base de datos como de Google Drive.</p>
+                                                    <p class="text-danger">Esta acción no se puede deshacer.</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <form action="{{ url_for('concursos.eliminar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" style="display: inline;">
+                                                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No hay documentos generados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
