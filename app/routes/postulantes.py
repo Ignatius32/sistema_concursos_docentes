@@ -82,10 +82,10 @@ def agregar(concurso_id):
             db.session.flush()  # To get the postulante ID
             
             # Create Google Drive folder for the postulante
-            if concurso.drive_folder_id:
+            if concurso.postulantes_folder_id:
                 try:
                     folder_id = drive_api.create_postulante_folder(
-                        concurso.drive_folder_id,
+                        concurso.postulantes_folder_id,
                         postulante.dni,
                         postulante.apellido,
                         postulante.nombre,

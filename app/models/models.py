@@ -69,6 +69,15 @@ class Concurso(db.Model):
     estado_actual = db.Column(db.String(50), default="CREADO")
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
     borradores_folder_id = db.Column(db.String(100), nullable=True)  # Borradores subfolder ID
+    postulantes_folder_id = db.Column(db.String(100), nullable=True)  # Postulantes subfolder ID
+    documentos_firmados_folder_id = db.Column(db.String(100), nullable=True)  # Documentos firmados subfolder ID
+    
+    # New fields for committee and council information
+    fecha_comision_academica = db.Column(db.Date, nullable=True)
+    despacho_comision_academica = db.Column(db.String(255), nullable=True)
+    sesion_consejo_directivo = db.Column(db.String(100), nullable=True)
+    fecha_consejo_directivo = db.Column(db.Date, nullable=True)
+    despacho_consejo_directivo = db.Column(db.String(255), nullable=True)
     
     # Relationships
     tribunal = db.relationship('TribunalMiembro', backref='concurso', lazy='dynamic')

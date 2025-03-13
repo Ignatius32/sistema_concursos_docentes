@@ -25,8 +25,30 @@ class GoogleDriveAPI:
         folder_data = response.json()
         if folder_data.get('status') != 'success':
             raise Exception(f"Error from Google Drive API: {folder_data.get('message')}")
-
-        return folder_data.get('folderId')
+        
+        # Create a postulantes folder inside the main folder
+        postulantes_folder_name = f"postulantes_{departamento}_{categoria}_{dedicacion}_{concurso_id}"
+        postulantes_response = requests.post(self.api_url, json={
+            'action': 'createNestedFolder',
+            'parentFolderId': folder_data.get('folderId'),
+            'folderName': postulantes_folder_name,
+            'token': self.secure_token
+        })
+        
+        if postulantes_response.status_code != 200:
+            raise Exception(f"Error creating postulantes folder: {postulantes_response.text}")
+            
+        postulantes_data = postulantes_response.json()
+        if postulantes_data.get('status') != 'success':
+            raise Exception(f"Error from Google Drive API when creating postulantes folder: {postulantes_data.get('message')}")
+            
+        # Return all folder IDs
+        return {
+            'folderId': folder_data.get('folderId'),
+            'borradoresFolderId': folder_data.get('borradoresFolderId'),
+            'postulantesFolderId': postulantes_data.get('folderId'),
+            'documentosFirmadosFolderId': folder_data.get('documentosFirmadosFolderId')
+        }
 
     def create_postulante_folder(self, concurso_folder_id, dni, apellido, nombre, categoria, dedicacion):
         """Create a folder in Google Drive for a postulante inside a concurso folder."""

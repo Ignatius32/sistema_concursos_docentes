@@ -92,11 +92,37 @@ function crearConcurso(folderName) {
   
   // Create borradores subfolder
   var borradoresName = 'borradores_' + concursoId;
-  newFolder.createFolder(borradoresName);
+  var borradoresFolder = newFolder.createFolder(borradoresName);
+  
+  // Create documentos_firmados_seleccion subfolder
+  var documentosFirmadosName = 'documentos_firmados_seleccion_' + concursoId;
+  var documentosFirmadosFolder = newFolder.createFolder(documentosFirmadosName);
   
   return {
     folderId: newFolder.getId(),
-    borradoresFolderId: newFolder.getFoldersByName(borradoresName).next().getId()
+    borradoresFolderId: borradoresFolder.getId(),
+    documentosFirmadosFolderId: documentosFirmadosFolder.getId()
+  };
+}
+
+// Function to create a nested folder inside a parent folder
+function createNestedFolder(parentFolderId, folderName) {
+  // Basic validation
+  if (!parentFolderId || !folderName) {
+    throw new Error("Parent folder ID and folder name are required.");
+  }
+
+  // Sanitize the folder name
+  var sanitizedName = sanitizeFolderName(folderName);
+  
+  // Get the parent folder
+  var parentFolder = DriveApp.getFolderById(parentFolderId);
+  
+  // Create the new folder with sanitized name
+  var newFolder = parentFolder.createFolder(sanitizedName);
+  
+  return {
+    folderId: newFolder.getId()
   };
 }
 
@@ -261,7 +287,14 @@ function doPost(e) {
         response.folderId = crearPostulante(params.concursoFolderId, params.folderName);
         break;
       case 'createFolder':
-        response.folderId = crearConcurso(params.folderName);
+        var folderResult = crearConcurso(params.folderName);
+        response.folderId = folderResult.folderId;
+        response.borradoresFolderId = folderResult.borradoresFolderId;
+        response.documentosFirmadosFolderId = folderResult.documentosFirmadosFolderId;
+        break;
+      case 'createNestedFolder':
+        var nestedFolderResult = createNestedFolder(params.parentFolderId, params.folderName);
+        response.folderId = nestedFolderResult.folderId;
         break;
       case 'uploadFile':
         var uploadResult = uploadFile(params.folderId, params.fileName, params.fileData);

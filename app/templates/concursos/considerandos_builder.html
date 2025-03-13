@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Generar Documento - Considerandos - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Seleccionar Considerandos</h2>
+        <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver</a>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="document_type" value="{{ document_type }}">
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Seleccione las opciones para cada uno de los considerandos que desea incluir en el documento.
+            </div>
+
+            {% if error_message %}
+            <div class="alert alert-danger">
+                {{ error_message }}
+            </div>
+            {% endif %}
+            
+            <!-- Comisión Académica y Consejo Directivo Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0">Información de Comisión y Consejo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Comisión Académica</h5>
+                            <div class="mb-3">
+                                <label for="fecha_comision_academica" class="form-label">Fecha de Comisión Académica</label>
+                                <input type="date" class="form-control" id="fecha_comision_academica" name="fecha_comision_academica" 
+                                       value="{{ concurso.fecha_comision_academica.strftime('%Y-%m-%d') if concurso.fecha_comision_academica else '' }}">
+                                <small class="text-muted">Se usará como <<fecha_comision_academica>> en la plantilla</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="despacho_comision_academica" class="form-label">Despacho de Comisión Académica</label>
+                                <input type="text" class="form-control" id="despacho_comision_academica" name="despacho_comision_academica" 
+                                       value="{{ concurso.despacho_comision_academica or '' }}" 
+                                       placeholder="Ej: avala la selección y tribunal propuesto">
+                                <small class="text-muted">Se usará como <<despacho_comision_academica>> en la plantilla</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Consejo Directivo</h5>
+                            <div class="mb-3">
+                                <label for="sesion_consejo_directivo" class="form-label">Sesión de Consejo Directivo</label>
+                                <input type="text" class="form-control" id="sesion_consejo_directivo" name="sesion_consejo_directivo" 
+                                       value="{{ concurso.sesion_consejo_directivo or '' }}" 
+                                       placeholder="Ej: 2° Sesión Ordinaria">
+                                <small class="text-muted">Se usará como <<sesion_consejo_directivo>> en la plantilla</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fecha_consejo_directivo" class="form-label">Fecha de Consejo Directivo</label>
+                                <input type="date" class="form-control" id="fecha_consejo_directivo" name="fecha_consejo_directivo" 
+                                       value="{{ concurso.fecha_consejo_directivo.strftime('%Y-%m-%d') if concurso.fecha_consejo_directivo else '' }}">
+                                <small class="text-muted">Se usará como <<fecha_consejo_directivo>> en la plantilla</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="despacho_consejo_directivo" class="form-label">Despacho de Consejo Directivo</label>
+                                <input type="text" class="form-control" id="despacho_consejo_directivo" name="despacho_consejo_directivo" 
+                                       value="{{ concurso.despacho_consejo_directivo or '' }}" 
+                                       placeholder="Ej: aprueba por unanimidad/mayoría la selección y tribunal propuesto">
+                                <small class="text-muted">Se usará como <<despacho_consejo_directivo>> en la plantilla</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if considerandos_data %}
+                {% for considerando_key, opciones in considerandos_data.items() %}
+                <div class="mb-4">
+                    <h4>{{ considerando_key|replace('_', ' ')|capitalize }}</h4>
+                    
+                    {% if opciones|length > 0 %}
+                    <div class="form-group">
+                        <label for="{{ considerando_key }}">Seleccione una opción:</label>
+                        <select class="form-select" id="{{ considerando_key }}" name="{{ considerando_key }}">
+                            <option value="">No incluir</option>
+                            {% for opcion_key, opcion_value in opciones.items() %}
+                            <option value="{{ opcion_value }}" title="{{ opcion_value }}">
+                                {{ opcion_key }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-2 p-2 border rounded considerando-preview" id="{{ considerando_key }}_preview" style="display: none; background-color: #f8f9fa;">
+                            <small class="text-muted">Vista previa:</small>
+                            <div class="preview-content"></div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        No hay opciones disponibles para este considerando.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                <!-- Custom Considerando Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0">Considerando Personalizado</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="custom_considerando" class="form-label">Texto adicional (opcional):</label>
+                            <textarea class="form-control" id="custom_considerando" name="custom_considerando" rows="4" 
+                                    placeholder="Escriba aquí cualquier considerando adicional que desee incluir"></textarea>
+                            <small class="text-muted">Este texto se añadirá después de los considerandos seleccionados arriba.</small>
+                            <div class="mt-2 p-2 border rounded considerando-preview" id="custom_considerando_preview" style="display: none; background-color: #f8f9fa;">
+                                <small class="text-muted">Vista previa:</small>
+                                <div class="preview-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Generar Documento</button>
+                    <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    No se encontraron considerandos para este tipo de documento.
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all considerando select elements
+    const considerandoSelects = document.querySelectorAll('select[id]');
+    
+    // Add event listeners to each select
+    considerandoSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const previewDiv = document.getElementById(`${this.id}_preview`);
+            const previewContent = previewDiv.querySelector('.preview-content');
+            
+            if (this.value) {
+                // Update preview content and show it
+                previewContent.textContent = this.value;
+                previewDiv.style.display = 'block';
+            } else {
+                // Hide preview if nothing selected
+                previewDiv.style.display = 'none';
+            }
+        });
+    });
+    
+    // Add event listener for custom considerando textarea
+    const customConsiderando = document.getElementById('custom_considerando');
+    if (customConsiderando) {
+        customConsiderando.addEventListener('input', function() {
+            const previewDiv = document.getElementById('custom_considerando_preview');
+            const previewContent = previewDiv.querySelector('.preview-content');
+            
+            if (this.value) {
+                // Update preview content and show it
+                previewContent.textContent = this.value;
+                previewDiv.style.display = 'block';
+            } else {
+                // Hide preview if nothing typed
+                previewDiv.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
