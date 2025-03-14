@@ -9,12 +9,10 @@
         <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver</a>
     </div>
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" id="considerandosForm" onsubmit="return validateForm()">
             <input type="hidden" name="document_type" value="{{ document_type }}">
             
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Seleccione las opciones para cada uno de los considerandos que desea incluir en el documento.
-            </div>
+
 
             {% if error_message %}
             <div class="alert alert-danger">
@@ -33,15 +31,17 @@
                             <h5>Comisión Académica</h5>
                             <div class="mb-3">
                                 <label for="fecha_comision_academica" class="form-label">Fecha de Comisión Académica</label>
-                                <input type="date" class="form-control" id="fecha_comision_academica" name="fecha_comision_academica" 
-                                       value="{{ concurso.fecha_comision_academica.strftime('%Y-%m-%d') if concurso.fecha_comision_academica else '' }}">
+                                <input type="date" class="form-control placeholder-input prevent-enter-submit" id="fecha_comision_academica" name="fecha_comision_academica" 
+                                       value="{{ concurso.fecha_comision_academica.strftime('%Y-%m-%d') if concurso.fecha_comision_academica else '' }}"
+                                       data-placeholder-key="<<fecha_comision_academica>>">
                                 <small class="text-muted">Se usará como <<fecha_comision_academica>> en la plantilla</small>
                             </div>
                             <div class="mb-3">
                                 <label for="despacho_comision_academica" class="form-label">Despacho de Comisión Académica</label>
-                                <input type="text" class="form-control" id="despacho_comision_academica" name="despacho_comision_academica" 
+                                <input type="text" class="form-control placeholder-input prevent-enter-submit" id="despacho_comision_academica" name="despacho_comision_academica" 
                                        value="{{ concurso.despacho_comision_academica or '' }}" 
-                                       placeholder="Ej: avala la selección y tribunal propuesto">
+                                       placeholder="Ej: avala la selección y tribunal propuesto"
+                                       data-placeholder-key="<<despacho_comision_academica>>">
                                 <small class="text-muted">Se usará como <<despacho_comision_academica>> en la plantilla</small>
                             </div>
                         </div>
@@ -49,22 +49,25 @@
                             <h5>Consejo Directivo</h5>
                             <div class="mb-3">
                                 <label for="sesion_consejo_directivo" class="form-label">Sesión de Consejo Directivo</label>
-                                <input type="text" class="form-control" id="sesion_consejo_directivo" name="sesion_consejo_directivo" 
+                                <input type="text" class="form-control placeholder-input prevent-enter-submit" id="sesion_consejo_directivo" name="sesion_consejo_directivo" 
                                        value="{{ concurso.sesion_consejo_directivo or '' }}" 
-                                       placeholder="Ej: 2° Sesión Ordinaria">
+                                       placeholder="Ej: 2° Sesión Ordinaria"
+                                       data-placeholder-key="<<sesion_consejo_directivo>>">
                                 <small class="text-muted">Se usará como <<sesion_consejo_directivo>> en la plantilla</small>
                             </div>
                             <div class="mb-3">
                                 <label for="fecha_consejo_directivo" class="form-label">Fecha de Consejo Directivo</label>
-                                <input type="date" class="form-control" id="fecha_consejo_directivo" name="fecha_consejo_directivo" 
-                                       value="{{ concurso.fecha_consejo_directivo.strftime('%Y-%m-%d') if concurso.fecha_consejo_directivo else '' }}">
+                                <input type="date" class="form-control placeholder-input prevent-enter-submit" id="fecha_consejo_directivo" name="fecha_consejo_directivo" 
+                                       value="{{ concurso.fecha_consejo_directivo.strftime('%Y-%m-%d') if concurso.fecha_consejo_directivo else '' }}"
+                                       data-placeholder-key="<<fecha_consejo_directivo>>">
                                 <small class="text-muted">Se usará como <<fecha_consejo_directivo>> en la plantilla</small>
                             </div>
                             <div class="mb-3">
                                 <label for="despacho_consejo_directivo" class="form-label">Despacho de Consejo Directivo</label>
-                                <input type="text" class="form-control" id="despacho_consejo_directivo" name="despacho_consejo_directivo" 
+                                <input type="text" class="form-control placeholder-input prevent-enter-submit" id="despacho_consejo_directivo" name="despacho_consejo_directivo" 
                                        value="{{ concurso.despacho_consejo_directivo or '' }}" 
-                                       placeholder="Ej: aprueba por unanimidad/mayoría la selección y tribunal propuesto">
+                                       placeholder="Ej: aprueba por unanimidad/mayoría la selección y tribunal propuesto"
+                                       data-placeholder-key="<<despacho_consejo_directivo>>">
                                 <small class="text-muted">Se usará como <<despacho_consejo_directivo>> en la plantilla</small>
                             </div>
                         </div>
@@ -72,56 +75,128 @@
                 </div>
             </div>
             
+            <!-- Considerandos selector section -->
             {% if considerandos_data %}
-                {% for considerando_key, opciones in considerandos_data.items() %}
-                <div class="mb-4">
-                    <h4>{{ considerando_key|replace('_', ' ')|capitalize }}</h4>
-                    
-                    {% if opciones|length > 0 %}
-                    <div class="form-group">
-                        <label for="{{ considerando_key }}">Seleccione una opción:</label>
-                        <select class="form-select" id="{{ considerando_key }}" name="{{ considerando_key }}">
-                            <option value="">No incluir</option>
-                            {% for opcion_key, opcion_value in opciones.items() %}
-                            <option value="{{ opcion_value }}" title="{{ opcion_value }}">
-                                {{ opcion_key }}
-                            </option>
+                <div class="row">
+                    <!-- Left column for available considerandos -->
+                    <div class="col-md-6">
+                        <h3>Considerandos Disponibles</h3>
+                        
+                        <!-- Tab navigation for considerando categories -->
+                        <ul class="nav nav-tabs" id="considerandosTabs" role="tablist">
+                            {% for considerando_key, opciones in considerandos_data.items() %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                        id="tab-{{ considerando_key }}" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#content-{{ considerando_key }}" 
+                                        type="button" 
+                                        role="tab" 
+                                        aria-controls="content-{{ considerando_key }}" 
+                                        aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                                    {{ considerando_key|replace('_', ' ')|capitalize }}
+                                </button>
+                            </li>
                             {% endfor %}
-                        </select>
-                        <div class="mt-2 p-2 border rounded considerando-preview" id="{{ considerando_key }}_preview" style="display: none; background-color: #f8f9fa;">
-                            <small class="text-muted">Vista previa:</small>
-                            <div class="preview-content"></div>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning">
-                        No hay opciones disponibles para este considerando.
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-                
-                <!-- Custom Considerando Section -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0">Considerando Personalizado</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label for="custom_considerando" class="form-label">Texto adicional (opcional):</label>
-                            <textarea class="form-control" id="custom_considerando" name="custom_considerando" rows="4" 
-                                    placeholder="Escriba aquí cualquier considerando adicional que desee incluir"></textarea>
-                            <small class="text-muted">Este texto se añadirá después de los considerandos seleccionados arriba.</small>
-                            <div class="mt-2 p-2 border rounded considerando-preview" id="custom_considerando_preview" style="display: none; background-color: #f8f9fa;">
-                                <small class="text-muted">Vista previa:</small>
-                                <div class="preview-content"></div>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" 
+                                        id="tab-custom" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#content-custom" 
+                                        type="button" 
+                                        role="tab" 
+                                        aria-controls="content-custom" 
+                                        aria-selected="false">
+                                    Personalizado
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <!-- Tab content -->
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom mb-4" id="considerandosTabsContent">
+                            {% for considerando_key, opciones in considerandos_data.items() %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                                 id="content-{{ considerando_key }}" 
+                                 role="tabpanel" 
+                                 aria-labelledby="tab-{{ considerando_key }}">
+                                
+                                {% if opciones|length > 0 %}
+                                <div class="mt-3">
+                                    <h5>Seleccione un considerando:</h5>
+                                    <div class="considerando-options-list" data-group="{{ considerando_key }}">
+                                        {% for opcion_key, opcion_value in opciones.items() %}
+                                        <div class="considerando-option card mb-2" 
+                                             data-group="{{ considerando_key }}"
+                                             data-key="{{ considerando_key }}"
+                                             data-option-key="{{ opcion_key }}"
+                                             data-value="{{ opcion_value }}"
+                                             data-original-value="{{ opcion_value }}"
+                                             id="option-{{ considerando_key }}-{{ loop.index }}">
+                                            <div class="card-body p-2">
+                                                <strong>{{ opcion_key }}</strong>
+                                                <p class="mb-0 small text-muted considerando-preview-text">{{ opcion_value|truncate(100) }}</p>
+                                                <input type="hidden" name="{{ considerando_key }}" value="{{ opcion_value }}" disabled>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning mt-3">
+                                    No hay opciones disponibles para este considerando.
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            
+                            <!-- Custom considerando tab -->
+                            <div class="tab-pane fade" id="content-custom" role="tabpanel" aria-labelledby="tab-custom">
+                                <div class="form-group mt-3">
+                                    <label for="custom-considerando-text" class="form-label">Escriba un considerando personalizado:</label>
+                                    <div class="input-group">
+                                        <textarea id="custom-considerando-text" class="form-control prevent-enter-submit" rows="3" 
+                                                placeholder="Escriba aquí un considerando personalizado"></textarea>
+                                        <button type="button" class="btn btn-success" id="add-custom-btn">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2 p-2 border rounded considerando-preview" 
+                                     id="custom_preview" 
+                                     style="display: none; background-color: #f8f9fa;">
+                                    <small class="text-muted">Vista previa:</small>
+                                    <div class="preview-content"></div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Right column for selected considerandos -->
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3>Considerandos Seleccionados</h3>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <span>Puede arrastrar los considerandos para reordenarlos</span>
+                        </div>
+                        
+                        <!-- Container for selected considerandos -->
+                        <div id="selectedConsiderandosList" class="mb-4">
+                            <!-- Selected considerandos will be displayed here -->
+                            <div class="text-center text-muted p-3" id="noConsiderandosMessage">
+                                <i class="bi bi-exclamation-circle"></i> No hay considerandos seleccionados
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden input to store the final order -->
+                        <input type="hidden" name="considerandos_order" id="considerandosOrder">
                     </div>
                 </div>
                 
                 <div class="mt-4">
-                    <button type="submit" class="btn btn-primary">Generar Documento</button>
+                    <button type="submit" class="btn btn-primary" id="submitButton">Generar Documento</button>
                     <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
                 </div>
             {% else %}
@@ -136,45 +211,390 @@
 
 {% block scripts %}
 {{ super() }}
+<!-- Add Sortable.js for drag and drop functionality -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Get all considerando select elements
-    const considerandoSelects = document.querySelectorAll('select[id]');
-    
-    // Add event listeners to each select
-    considerandoSelects.forEach(select => {
-        select.addEventListener('change', function() {
-            const previewDiv = document.getElementById(`${this.id}_preview`);
-            const previewContent = previewDiv.querySelector('.preview-content');
-            
-            if (this.value) {
-                // Update preview content and show it
-                previewContent.textContent = this.value;
-                previewDiv.style.display = 'block';
-            } else {
-                // Hide preview if nothing selected
-                previewDiv.style.display = 'none';
+    // Prevent Enter key from submitting the form
+    document.querySelectorAll('.prevent-enter-submit').forEach(elem => {
+        elem.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                return false;
             }
         });
     });
     
-    // Add event listener for custom considerando textarea
-    const customConsiderando = document.getElementById('custom_considerando');
-    if (customConsiderando) {
-        customConsiderando.addEventListener('input', function() {
-            const previewDiv = document.getElementById('custom_considerando_preview');
-            const previewContent = previewDiv.querySelector('.preview-content');
-            
-            if (this.value) {
-                // Update preview content and show it
-                previewContent.textContent = this.value;
-                previewDiv.style.display = 'block';
-            } else {
-                // Hide preview if nothing typed
-                previewDiv.style.display = 'none';
+    // Function to validate form before submission
+    window.validateForm = function() {
+        // Update the order data one last time
+        updateConsiderandosOrder();
+        
+        // Here you can add any additional validation logic if needed
+        
+        // Return true to allow form submission
+        return true;
+    };
+    
+    // Initialize sortable for the selected considerandos list
+    const selectedConsiderandosList = document.getElementById('selectedConsiderandosList');
+    let sortable = null;
+    
+    function initSortable() {
+        if (sortable) {
+            sortable.destroy();
+        }
+        
+        sortable = new Sortable(selectedConsiderandosList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function() {
+                updateConsiderandosOrder();
             }
         });
     }
+    
+    // Initialize sortable
+    initSortable();
+    
+    // Map to store placeholder values
+    const placeholderValues = {
+        "<<Docente_que_genera_vacante>>": "{{ concurso.docente_vacante or '' }}",
+        "<<licencia>>": "{{ concurso.origen_vacante or '' }}",
+        "<<Origen_vacante>>": "{{ concurso.origen_vacante or '' }}",
+        "<<Expediente>>": "{{ concurso.expediente or '' }}",
+        "<<Departamento>>": "{{ concurso.departamento.nombre if concurso.departamento else '' }}",
+        "<<Area>>": "{{ concurso.area or '' }}",
+        "<<Orientacion>>": "{{ concurso.orientacion or '' }}",
+        "<<Categoria>>": "{{ concurso.categoria_nombre or concurso.categoria or '' }}",
+        "<<Dedicacion>>": "{{ concurso.dedicacion or '' }}",
+        "<<CantCargos>>": "{{ concurso.cant_cargos or '1' }}"
+    };
+    
+    // Initialize input placeholder values
+    function initPlaceholders() {
+        document.querySelectorAll('.placeholder-input').forEach(input => {
+            const key = input.dataset.placeholderKey;
+            const formattedValue = formatDateIfNeeded(input, input.value);
+            placeholderValues[key] = formattedValue;
+            
+            // Update any visible considerando that uses this placeholder
+            updateConsiderandoTexts();
+        });
+    }
+    
+    // Format date values from YYYY-MM-DD to DD/MM/YYYY
+    function formatDateIfNeeded(input, value) {
+        if (input.type === 'date' && value) {
+            const date = new Date(value);
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        return value;
+    }
+    
+    // Replace placeholders in text
+    function replacePlaceholders(text) {
+        if (!text) return text;
+        
+        let result = text;
+        for (const [placeholder, value] of Object.entries(placeholderValues)) {
+            if (value) {
+                result = result.replace(new RegExp(placeholder, 'g'), value);
+            }
+        }
+        return result;
+    }
+    
+    // Update all considerando texts with current placeholder values
+    function updateConsiderandoTexts() {
+        // Update options in tabs
+        document.querySelectorAll('.considerando-option').forEach(option => {
+            const originalText = option.dataset.originalValue;
+            const previewText = option.querySelector('.considerando-preview-text');
+            const replacedText = replacePlaceholders(originalText);
+            previewText.textContent = replacedText.length > 100 ? replacedText.substring(0, 97) + '...' : replacedText;
+            
+            // Update the hidden input value and data-value attribute
+            option.dataset.value = replacedText;
+            const input = option.querySelector('input');
+            if (input) {
+                input.value = replacedText;
+            }
+        });
+        
+        // Update selected items
+        document.querySelectorAll('#selectedConsiderandosList .considerando-item').forEach(item => {
+            if (item.dataset.type === 'predefined') {
+                const originalOptionId = `option-${item.dataset.id}-1`; // Assuming first option
+                const originalOption = document.getElementById(originalOptionId);
+                if (originalOption) {
+                    const originalText = originalOption.dataset.originalValue;
+                    const replacedText = replacePlaceholders(originalText);
+                    item.querySelector('.considerando-text').textContent = replacedText;
+                    item.dataset.value = replacedText;
+                    const input = item.querySelector('input');
+                    if (input) {
+                        input.value = replacedText;
+                    }
+                }
+            }
+        });
+        
+        // Update custom preview if visible
+        const customPreviewDiv = document.getElementById('custom_preview');
+        if (customPreviewDiv.style.display !== 'none') {
+            const customTextarea = document.getElementById('custom-considerando-text');
+            const customPreviewContent = customPreviewDiv.querySelector('.preview-content');
+            const replacedText = replacePlaceholders(customTextarea.value);
+            customPreviewContent.textContent = replacedText;
+        }
+        
+        // Update the hidden order input
+        updateConsiderandosOrder();
+    }
+    
+    // Listen for changes to the placeholder inputs
+    document.querySelectorAll('.placeholder-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const key = this.dataset.placeholderKey;
+            const formattedValue = formatDateIfNeeded(this, this.value);
+            placeholderValues[key] = formattedValue;
+            updateConsiderandoTexts();
+        });
+    });
+    
+    // Function to update the hidden input with the current order of considerandos
+    function updateConsiderandosOrder() {
+        const items = selectedConsiderandosList.querySelectorAll('.considerando-item');
+        const orderData = Array.from(items).map(item => {
+            return {
+                id: item.dataset.id,
+                type: item.dataset.type,
+                value: item.dataset.value,
+                text: item.querySelector('.considerando-text').textContent
+            };
+        });
+        
+        document.getElementById('considerandosOrder').value = JSON.stringify(orderData);
+        
+        // Show/hide the "no considerandos" message
+        const noConsiderandosMessage = document.getElementById('noConsiderandosMessage');
+        if (items.length > 0) {
+            noConsiderandosMessage.style.display = 'none';
+        } else {
+            noConsiderandosMessage.style.display = 'block';
+        }
+    }
+    
+    // Create a considerando item element
+    function createConsiderandoItem(id, type, value, text, optionElement = null) {
+        const itemId = `${type}-${id}`;
+        const item = document.createElement('div');
+        item.className = 'considerando-item card mb-2';
+        item.dataset.id = id;
+        item.dataset.type = type;
+        item.dataset.value = text; // Store the processed text with placeholders replaced
+        
+        item.innerHTML = `
+            <div class="card-body p-2">
+                <div class="d-flex align-items-start">
+                    <div class="flex-grow-1 considerando-text-container">
+                        <div class="considerando-text">${text}</div>
+                    </div>
+                    <div class="ms-2">
+                        <button type="button" class="btn btn-sm btn-danger remove-considerando" title="Eliminar">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add input with the considerando value
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = type === 'predefined' ? id : 'custom_considerandos[]';
+        input.value = text; // Use processed text here too
+        item.appendChild(input);
+        
+        // Add event listener for remove button
+        item.querySelector('.remove-considerando').addEventListener('click', function() {
+            // If it's a predefined considerando, update the option element
+            if (type === 'predefined' && optionElement) {
+                // Remove selected class from the option
+                optionElement.classList.remove('selected');
+                optionElement.querySelector('input').disabled = true;
+            }
+            item.remove();
+            updateConsiderandosOrder();
+        });
+        
+        return item;
+    }
+    
+    // Handle clicking on considerando options
+    document.querySelectorAll('.considerando-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const considerandoKey = this.dataset.key;
+            const optionValue = this.dataset.value; // This will have placeholders replaced
+            const optionTitle = this.dataset.optionKey;
+            const groupName = this.dataset.group;
+            const itemId = `${considerandoKey}-item`;
+            const existingItem = document.getElementById(itemId);
+            
+            if (this.classList.contains('selected')) {
+                // Deselect option
+                this.classList.remove('selected');
+                this.querySelector('input').disabled = true;
+                
+                // Remove from selected list
+                if (existingItem) {
+                    existingItem.remove();
+                }
+            } else {
+                // First, deselect any other option in the same group
+                document.querySelectorAll(`.considerando-option[data-group="${groupName}"].selected`).forEach(selectedOption => {
+                    selectedOption.classList.remove('selected');
+                    selectedOption.querySelector('input').disabled = true;
+                    
+                    // Remove any existing item from this group
+                    const selectedItemId = `${selectedOption.dataset.key}-item`;
+                    const selectedItem = document.getElementById(selectedItemId);
+                    if (selectedItem) {
+                        selectedItem.remove();
+                    }
+                });
+                
+                // Now select this option
+                this.classList.add('selected');
+                this.querySelector('input').disabled = false;
+                
+                // Add to selected list - use the text with placeholders replaced
+                const newItem = createConsiderandoItem(considerandoKey, 'predefined', optionValue, optionValue, this);
+                newItem.id = itemId;
+                selectedConsiderandosList.appendChild(newItem);
+            }
+            
+            updateConsiderandosOrder();
+        });
+    });
+    
+    // Preview functionality for custom considerando
+    const customTextarea = document.getElementById('custom-considerando-text');
+    const customPreviewDiv = document.getElementById('custom_preview');
+    const customPreviewContent = customPreviewDiv.querySelector('.preview-content');
+    
+    customTextarea.addEventListener('input', function() {
+        if (this.value.trim()) {
+            // Update preview content with placeholders replaced and show it
+            const replacedText = replacePlaceholders(this.value);
+            customPreviewContent.textContent = replacedText;
+            customPreviewDiv.style.display = 'block';
+        } else {
+            // Hide preview if nothing typed
+            customPreviewDiv.style.display = 'none';
+        }
+    });
+    
+    // Handle adding custom considerandos
+    document.getElementById('add-custom-btn').addEventListener('click', function() {
+        const text = customTextarea.value.trim();
+        
+        if (text) {
+            // Create a unique ID for the custom considerando
+            const customId = 'custom-' + Date.now();
+            
+            // Replace placeholders in the custom text
+            const replacedText = replacePlaceholders(text);
+            
+            // Add the custom considerando to the list
+            const customItem = createConsiderandoItem(customId, 'custom', replacedText, replacedText);
+            selectedConsiderandosList.appendChild(customItem);
+            updateConsiderandosOrder();
+            
+            // Clear the textarea
+            customTextarea.value = '';
+            customPreviewDiv.style.display = 'none';
+        }
+    });
+    
+    // Handle form submission
+    document.getElementById('considerandosForm').addEventListener('submit', function(e) {
+        // Final update of the order before submitting
+        updateConsiderandosOrder();
+    });
+    
+    // Initialize placeholder values and update all considerando texts
+    initPlaceholders();
+    
+    // Initial update of the order
+    updateConsiderandosOrder();
 });
 </script>
+
+<style>
+.considerando-item {
+    transition: background-color 0.3s;
+    cursor: grab;
+}
+.considerando-item:hover {
+    background-color: #f8f9fa;
+}
+.considerando-item:active {
+    cursor: grabbing;
+}
+.sortable-ghost {
+    opacity: 0.5;
+    background-color: #e9ecef;
+}
+.sortable-chosen {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+.sortable-drag {
+    opacity: 0.8;
+}
+.considerando-text-container {
+    user-select: none;
+}
+.nav-tabs .nav-link {
+    color: #495057;
+}
+.nav-tabs .nav-link.active {
+    font-weight: 500;
+}
+.tab-content {
+    min-height: 200px;
+}
+
+/* Styles for clickable considerando options */
+.considerando-option {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+.considerando-option:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.considerando-option.selected {
+    background-color: #d4edda;
+    border-left-color: #28a745;
+}
+.considerando-option.selected:hover {
+    background-color: #c3e6cb;
+}
+
+.considerando-options-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+</style>
 {% endblock %}

@@ -81,6 +81,16 @@
                         <td>{{ concurso.expediente }}</td>
                     </tr>
                     {% endif %}
+                    <tr>
+                        <th>Cierre Inscripción:</th>
+                        <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
+                    </tr>
+                    {% if concurso.vencimiento %}
+                    <tr>
+                        <th>Vencimiento:</th>
+                        <td>{{ concurso.vencimiento.strftime('%d/%m/%Y') }}</td>
+                    </tr>
+                    {% endif %}
                     {% if concurso.origen_vacante %}
                     <tr>
                         <th>Origen de Vacante:</th>
@@ -93,14 +103,10 @@
                         <td>{{ concurso.docente_vacante }}</td>
                     </tr>
                     {% endif %}
+                    {% if concurso.id_designacion_mocovi %}
                     <tr>
-                        <th>Cierre Inscripción:</th>
-                        <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
-                    </tr>
-                    {% if concurso.vencimiento %}
-                    <tr>
-                        <th>Vencimiento:</th>
-                        <td>{{ concurso.vencimiento.strftime('%d/%m/%Y') }}</td>
+                        <th>ID Designación MOCOVI:</th>
+                        <td>{{ concurso.id_designacion_mocovi }}</td>
                     </tr>
                     {% endif %}
                     {% if concurso.drive_folder_id %}
@@ -117,6 +123,109 @@
                 </table>
             </div>
         </div>
+
+        {% if concurso.sustanciacion %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4>Sustanciación de Concurso</h4>
+                <div class="table-responsive">
+                    <table class="table">
+                        <!-- Constitución del Jurado section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Constitución del Jurado</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Constitución del Tribunal:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.constitucion_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.constitucion_observaciones %}
+                        <tr>
+                            <th>Observaciones:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                        <!-- Sorteo section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Sorteo de Tema</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Sorteo de Tema:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar del Sorteo:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual del Sorteo:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.sorteo_observaciones %}
+                        <tr>
+                            <th>Observaciones del Sorteo:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+
+                        <!-- Exposicion section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Exposición</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de la Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual de la Exposición:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.exposicion_observaciones %}
+                        <tr>
+                            <th>Observaciones de la Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="row mt-4">
             <div class="col-12">

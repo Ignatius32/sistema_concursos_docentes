@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
-from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso
+from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion
 from app.integrations.google_drive import GoogleDriveAPI
 import json
 import os
@@ -350,6 +350,45 @@ def nuevo():
             )
             db.session.add(historial)
             
+            # Create Sustanciacion record if any of the fields are filled
+            constitucion_fecha_str = request.form.get('constitucion_fecha')
+            constitucion_lugar = request.form.get('constitucion_lugar')
+            constitucion_virtual_link = request.form.get('constitucion_virtual_link')
+            constitucion_observaciones = request.form.get('constitucion_observaciones')
+            
+            # Check if any sustanciacion fields are filled
+            if (constitucion_fecha_str or constitucion_lugar or 
+                constitucion_virtual_link or constitucion_observaciones or
+                request.form.get('sorteo_fecha') or request.form.get('sorteo_lugar') or
+                request.form.get('sorteo_virtual_link') or request.form.get('sorteo_observaciones') or
+                request.form.get('exposicion_fecha') or request.form.get('exposicion_lugar') or
+                request.form.get('exposicion_virtual_link') or request.form.get('exposicion_observaciones')):
+                
+                # Parse datetime fields
+                constitucion_fecha = datetime.strptime(constitucion_fecha_str, '%Y-%m-%dT%H:%M') if constitucion_fecha_str else None
+                sorteo_fecha_str = request.form.get('sorteo_fecha')
+                sorteo_fecha = datetime.strptime(sorteo_fecha_str, '%Y-%m-%dT%H:%M') if sorteo_fecha_str else None
+                exposicion_fecha_str = request.form.get('exposicion_fecha')
+                exposicion_fecha = datetime.strptime(exposicion_fecha_str, '%Y-%m-%dT%H:%M') if exposicion_fecha_str else None
+                
+                # Create Sustanciacion record
+                sustanciacion = Sustanciacion(
+                    concurso=concurso,
+                    constitucion_fecha=constitucion_fecha,
+                    constitucion_lugar=constitucion_lugar,
+                    constitucion_virtual_link=constitucion_virtual_link,
+                    constitucion_observaciones=constitucion_observaciones,
+                    sorteo_fecha=sorteo_fecha,
+                    sorteo_lugar=request.form.get('sorteo_lugar'),
+                    sorteo_virtual_link=request.form.get('sorteo_virtual_link'),
+                    sorteo_observaciones=request.form.get('sorteo_observaciones'),
+                    exposicion_fecha=exposicion_fecha,
+                    exposicion_lugar=request.form.get('exposicion_lugar'),
+                    exposicion_virtual_link=request.form.get('exposicion_virtual_link'),
+                    exposicion_observaciones=request.form.get('exposicion_observaciones')
+                )
+                db.session.add(sustanciacion)
+
             db.session.commit()
             
             flash('Concurso creado exitosamente.', 'success')
@@ -445,18 +484,32 @@ def considerandos_builder(concurso_id):
             flash(f'Error al guardar información de comisión y consejo: {str(e)}', 'warning')
             db.session.rollback()
         
-        # Collect selected considerandos
+        # Collect selected considerandos in the specified order
         selected_considerandos = []
         
-        for considerando_key in considerandos_data.keys():
-            selected_value = request.form.get(considerando_key)
-            if selected_value:
-                selected_considerandos.append(selected_value)
-        
-        # Add custom considerando if provided
-        custom_considerando = request.form.get('custom_considerando')
-        if custom_considerando and custom_considerando.strip():
-            selected_considerandos.append(custom_considerando.strip())
+        # Process considerandos order from the hidden input
+        considerandos_order_json = request.form.get('considerandos_order', '[]')
+        try:
+            considerandos_order = json.loads(considerandos_order_json)
+            
+            # Extract considerando values in the specified order
+            for item in considerandos_order:
+                value = item.get('value', '')
+                if value and value.strip():
+                    selected_considerandos.append(value.strip())
+        except json.JSONDecodeError:
+            # Fallback to the old way if the JSON is invalid
+            # This ensures backward compatibility
+            for considerando_key in considerandos_data.keys():
+                selected_value = request.form.get(considerando_key)
+                if selected_value:
+                    selected_considerandos.append(selected_value)
+            
+            # Add custom considerandos if provided
+            custom_considerandos = request.form.getlist('custom_considerandos[]')
+            for custom_text in custom_considerandos:
+                if custom_text and custom_text.strip():
+                    selected_considerandos.append(custom_text.strip())
         
         # Compile considerandos text with single line breaks
         considerandos_text = "\n".join(selected_considerandos)
@@ -572,16 +625,42 @@ def editar(concurso_id):
                 except Exception as e:
                     flash(f'El concurso fue actualizado pero hubo un error al renombrar su carpeta en Drive: {str(e)}', 'warning')
             
-            # Add edit entry to history
-            historial = HistorialEstado(
-                concurso=concurso,
-                estado="EDITADO",
-                observaciones=f"Concurso editado por {current_user.username}"
-            )
-            db.session.add(historial)
+            # Update or create Sustanciacion record
+            constitucion_fecha_str = request.form.get('constitucion_fecha')
+            sorteo_fecha_str = request.form.get('sorteo_fecha')
+            exposicion_fecha_str = request.form.get('exposicion_fecha')
+
+            if not concurso.sustanciacion:
+                if (constitucion_fecha_str or request.form.get('constitucion_lugar') or 
+                    request.form.get('constitucion_virtual_link') or request.form.get('constitucion_observaciones') or
+                    sorteo_fecha_str or request.form.get('sorteo_lugar') or
+                    request.form.get('sorteo_virtual_link') or request.form.get('sorteo_observaciones') or
+                    exposicion_fecha_str or request.form.get('exposicion_lugar') or
+                    request.form.get('exposicion_virtual_link') or request.form.get('exposicion_observaciones')):
+                    
+                    concurso.sustanciacion = Sustanciacion(concurso=concurso)
+            
+            if concurso.sustanciacion:
+                # Update dates if provided
+                if constitucion_fecha_str:
+                    concurso.sustanciacion.constitucion_fecha = datetime.strptime(constitucion_fecha_str, '%Y-%m-%dT%H:%M')
+                if sorteo_fecha_str:
+                    concurso.sustanciacion.sorteo_fecha = datetime.strptime(sorteo_fecha_str, '%Y-%m-%dT%H:%M')
+                if exposicion_fecha_str:
+                    concurso.sustanciacion.exposicion_fecha = datetime.strptime(exposicion_fecha_str, '%Y-%m-%dT%H:%M')
+                
+                # Update other fields
+                concurso.sustanciacion.constitucion_lugar = request.form.get('constitucion_lugar')
+                concurso.sustanciacion.constitucion_virtual_link = request.form.get('constitucion_virtual_link')
+                concurso.sustanciacion.constitucion_observaciones = request.form.get('constitucion_observaciones')
+                concurso.sustanciacion.sorteo_lugar = request.form.get('sorteo_lugar')
+                concurso.sustanciacion.sorteo_virtual_link = request.form.get('sorteo_virtual_link')
+                concurso.sustanciacion.sorteo_observaciones = request.form.get('sorteo_observaciones')
+                concurso.sustanciacion.exposicion_lugar = request.form.get('exposicion_lugar')
+                concurso.sustanciacion.exposicion_virtual_link = request.form.get('exposicion_virtual_link')
+                concurso.sustanciacion.exposicion_observaciones = request.form.get('exposicion_observaciones')
             
             db.session.commit()
-            
             flash('Concurso actualizado exitosamente.', 'success')
             return redirect(url_for('concursos.ver', concurso_id=concurso.id))
             

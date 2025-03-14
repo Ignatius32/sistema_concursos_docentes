@@ -63,6 +63,9 @@ class Concurso(db.Model):
     expediente = db.Column(db.String(100), nullable=True)  # Optional field for file number
     origen_vacante = db.Column(db.String(50), nullable=True)  # LICENCIA SIN GOCE DE HABERES, RENUNCIA
     docente_vacante = db.Column(db.String(100), nullable=True)  # Name of the teacher who generated the vacancy
+    categoria_vacante = db.Column(db.String(10), nullable=True)  # PAD, JTP, etc of the vacancy position
+    dedicacion_vacante = db.Column(db.String(20), nullable=True)  # Simple, Parcial, Exclusiva of the vacancy position
+    id_designacion_mocovi = db.Column(db.String(50), nullable=True)  # ID from MOCOVI system
     creado = db.Column(db.DateTime, default=datetime.utcnow)
     cierre_inscripcion = db.Column(db.Date, nullable=True)  # Changed to nullable=True
     vencimiento = db.Column(db.Date, nullable=True)  # Already nullable
@@ -148,16 +151,19 @@ class Sustanciacion(db.Model):
     constitucion_fecha = db.Column(db.DateTime)
     constitucion_lugar = db.Column(db.String(100))
     constitucion_observaciones = db.Column(db.Text)
+    constitucion_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
     
     # Sorteo tema exposición
     sorteo_fecha = db.Column(db.DateTime)
     sorteo_lugar = db.Column(db.String(100))
     sorteo_observaciones = db.Column(db.Text)
+    sorteo_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
     
     # Exposición
     exposicion_fecha = db.Column(db.DateTime)
     exposicion_lugar = db.Column(db.String(100))
     exposicion_observaciones = db.Column(db.Text)
+    exposicion_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
     
     # Dictamen
     dictamen_fecha = db.Column(db.DateTime)
