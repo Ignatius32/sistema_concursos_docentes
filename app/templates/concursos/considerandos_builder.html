@@ -265,12 +265,22 @@ document.addEventListener('DOMContentLoaded', function() {
         "<<licencia>>": "{{ concurso.origen_vacante or '' }}",
         "<<Origen_vacante>>": "{{ concurso.origen_vacante or '' }}",
         "<<Expediente>>": "{{ concurso.expediente or '' }}",
-        "<<Departamento>>": "{{ concurso.departamento.nombre if concurso.departamento else '' }}",
+        "<<departamento>>": "{{ departamento.nombre if departamento else '' }}",
         "<<Area>>": "{{ concurso.area or '' }}",
         "<<Orientacion>>": "{{ concurso.orientacion or '' }}",
         "<<Categoria>>": "{{ concurso.categoria_nombre or concurso.categoria or '' }}",
         "<<Dedicacion>>": "{{ concurso.dedicacion or '' }}",
-        "<<CantCargos>>": "{{ concurso.cant_cargos or '1' }}"
+        "<<CantCargos>>": "{{ concurso.cant_cargos or '1' }}",
+        "<<tipo>>": "{{ concurso.tipo or '' }}",
+        "<<descripcion_cargo>>": "{{ descripcion_cargo }}"
+        {% if departamento_heads %}
+        {% for head in departamento_heads %}
+        {% if departamento and head.departamento == departamento.nombre %}
+        , "<<resp_departamento>>": "{{ head.responsable }}"
+        , "<<prefijo_resp_departamento>>": "{{ head.prefijo }}"
+        {% endif %}
+        {% endfor %}
+        {% endif %}
     };
     
     // Initialize input placeholder values

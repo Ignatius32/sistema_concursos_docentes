@@ -3,6 +3,10 @@ from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion
 from app.integrations.google_drive import GoogleDriveAPI
+from app.helpers.text_formatting import format_descripcion_cargo
+from app.helpers.api_services import get_considerandos_data, get_departamento_heads_data
+from app.document_generation.document_generator import generar_documento_desde_template
+from app.document_generation.resolucion_templates import prepare_data_resolucion_llamado_tribunal
 import json
 import os
 import requests
@@ -10,241 +14,7 @@ import requests
 concursos = Blueprint('concursos', __name__, url_prefix='/concursos')
 drive_api = GoogleDriveAPI()
 
-# URL to fetch considerandos options
-CONSIDERANDOS_API_URL = "https://script.google.com/macros/s/AKfycbz48ziHckZ-Ir6_gmXnUZF_S42AapQLnvpjktJXTnSbD1ps1lWimgkrxTzLXyiH_Eorlw/exec"
-
-def _format_cargos_text(cant_cargos, tipo):
-    """Format the cargo count text with number in words and proper pluralization."""
-    numeros_texto = {
-        1: "un",
-        2: "dos",
-        3: "tres",
-        4: "cuatro",
-        5: "cinco",
-        6: "seis",
-        7: "siete",
-        8: "ocho",
-        9: "nueve",
-        10: "diez"
-    }
-    
-    numero = numeros_texto.get(cant_cargos, str(cant_cargos))
-    cargo_text = "cargo" if cant_cargos == 1 else "cargos"
-    tipo_text = "interino" if tipo == "Interino" else "regular"
-    tipo_text = tipo_text if cant_cargos == 1 else tipo_text + ("es" if tipo == "Regular" else "s")
-    
-    return f"{numero} ({cant_cargos}) {cargo_text} {tipo_text}"
-
-# Helper function to get considerandos data from API
-def get_considerandos_data(document_type):
-    """
-    Fetch considerandos data from the API for a specific document type.
-    
-    Args:
-        document_type (str): Type of document to get considerandos for (e.g., 'RESOLUCION_LLAMADO_TRIBUNAL')
-    
-    Returns:
-        dict or None: Dictionary of considerandos options or None if error or not found
-    """
-    try:
-        response = requests.get(CONSIDERANDOS_API_URL)
-        if response.status_code != 200:
-            return None
-        
-        data = response.json()
-        for item in data:
-            if item.get('document_type') == document_type:
-                return item.get('considerandos', {})
-                
-        return None
-    except Exception as e:
-        print(f"Error fetching considerandos data: {str(e)}")
-        return None
-
-# Helper function to generate documents from templates
-def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepare_data_func, considerandos_text=None):
-    """
-    Generic function to generate a document from a template.
-    
-    Args:
-        concurso_id (int): ID of the concurso
-        template_name (str): Name of the template in Google Drive
-        doc_tipo (str): Type of document for database record
-        prepare_data_func (function): Function that prepares the data for the template
-        considerandos_text (str, optional): Compiled considerandos text to add to the document
-        
-    Returns:
-        tuple: (success, message, url) - Indicates success/failure, message, and URL if successful
-    """
-    try:
-        concurso = Concurso.query.get_or_404(concurso_id)
-        
-        if not concurso.borradores_folder_id:
-            return False, 'El concurso no tiene una carpeta de borradores asociada.', None
-        
-        # Get data for template from the specific function
-        data, validation_message = prepare_data_func(concurso)
-        
-        # Check if data preparation succeeded
-        if not data:
-            return False, validation_message, None
-
-        # Add committee and council information to data for template
-        # Format committee date
-        if concurso.fecha_comision_academica:
-            fecha_comision = concurso.fecha_comision_academica.strftime('%d/%m/%Y')
-            data['fecha_comision_academica'] = fecha_comision
-        else:
-            data['fecha_comision_academica'] = ""
-            
-        # Format council date
-        if concurso.fecha_consejo_directivo:
-            fecha_consejo = concurso.fecha_consejo_directivo.strftime('%d/%m/%Y')
-            data['fecha_consejo_directivo'] = fecha_consejo
-        else:
-            data['fecha_consejo_directivo'] = ""
-            
-        # Add text fields
-        data['despacho_comision_academica'] = concurso.despacho_comision_academica or ""
-        data['sesion_consejo_directivo'] = concurso.sesion_consejo_directivo or ""
-        data['despacho_consejo_directivo'] = concurso.despacho_consejo_directivo or ""
-
-        # Process considerandos text if provided - replace placeholders with actual values
-        if considerandos_text:
-            # Define placeholders and their corresponding values from the concurso
-            placeholders = {
-                '<<Docente_que_genera_vacante>>': concurso.docente_vacante or '',
-                '<<licencia>>': concurso.origen_vacante or '',
-                '<<Origen_vacante>>': concurso.origen_vacante or '',
-                '<<Expediente>>': concurso.expediente or '',
-                '<<Departamento>>': Departamento.query.get(concurso.departamento_id).nombre if concurso.departamento_id else '',
-                '<<Area>>': concurso.area or '',
-                '<<Orientacion>>': concurso.orientacion or '',
-                '<<Categoria>>': concurso.categoria_nombre or concurso.categoria or '',
-                '<<Dedicacion>>': concurso.dedicacion or '',
-                '<<CantCargos>>': str(concurso.cant_cargos) if concurso.cant_cargos else '1',
-                '<<fecha_comision_academica>>': data['fecha_comision_academica'],
-                '<<despacho_comision_academica>>': data['despacho_comision_academica'],
-                '<<sesion_consejo_directivo>>': data['sesion_consejo_directivo'],
-                '<<fecha_consejo_directivo>>': data['fecha_consejo_directivo'],
-                '<<despacho_consejo_directivo>>': data['despacho_consejo_directivo']
-            }
-            
-            # Replace placeholders in considerandos text
-            processed_text = considerandos_text
-            for placeholder, value in placeholders.items():
-                processed_text = processed_text.replace(placeholder, value)
-            
-            # Add processed considerandos to data
-            data['considerandos'] = processed_text
-            
-        # Generate file name with timestamp
-        file_name = f"{doc_tipo.replace('_', ' ').title()}_Concurso_{concurso.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
-        
-        # Use API to create document from template in borradores folder
-        file_id, web_link = drive_api.create_document_from_template(
-            template_name,
-            data,
-            concurso.borradores_folder_id,
-            file_name
-        )
-        
-        # Create document record
-        documento = DocumentoConcurso(
-            concurso=concurso,
-            tipo=doc_tipo,
-            url=web_link,
-            estado='BORRADOR'
-        )
-        db.session.add(documento)
-        
-        # Add entry to history
-        historial = HistorialEstado(
-            concurso=concurso,
-            estado="DOCUMENTO_GENERADO",
-            observaciones=f"{doc_tipo.replace('_', ' ').title()} generado por {current_user.username}"
-        )
-        db.session.add(historial)
-        db.session.commit()
-        
-        return True, f'Documento generado exitosamente.', web_link
-        
-    except Exception as e:
-        db.session.rollback()
-        return False, f'Error al generar el documento: {str(e)}', None
-
-# Data preparation functions for different templates
-def prepare_data_resolucion_llamado_tribunal(concurso):
-    """Prepare data for the resolucion llamado tribunal template."""
-    # Check if tribunal members are assigned
-    tribunal_members = concurso.tribunal.all()
-    if not tribunal_members:
-        return None, 'No hay miembros del tribunal asignados para este concurso.'
-    
-    # Get related data
-    departamento = Departamento.query.get(concurso.departamento_id)
-    
-    # Format dates for display
-    current_year = datetime.now().year
-    
-    # Format tribunal members
-    titulares = []
-    suplentes = []
-    
-    for miembro in tribunal_members:
-        member_info = f"{miembro.apellido}, {miembro.nombre} (DNI: {miembro.dni})"
-        
-        if miembro.rol == "Presidente":
-            # Presidente always goes first in the titulares list
-            titulares.insert(0, f"{member_info}")
-        elif miembro.rol == "Suplente":
-            suplentes.append(member_info)
-        else:  # Vocal
-            titulares.append(member_info)
-    
-    # Join lists with line breaks for the document
-    tribunal_titular_text = "\n".join(titulares)
-    tribunal_suplentes_text = "\n".join(suplentes)
-    
-    # Get expediente number (this is an example, you might need to add this field to your model)
-    #expediente = f"{expediente}"  # Replace with actual expediente field
-    
-    # Ensure we have the categoria_nombre
-    categoria_nombre = concurso.categoria_nombre
-    if not categoria_nombre:
-        # Load roles_categorias.json data if needed
-        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'roles_categorias.json')
-        with open(json_path, 'r', encoding='utf-8') as f:
-            roles_data = json.load(f)
-        
-        # Find categoria name by codigo
-        for rol in roles_data:
-            for categoria in rol['categorias']:
-                if categoria['codigo'] == concurso.categoria:
-                    categoria_nombre = categoria['nombre']
-                    break
-            if categoria_nombre:
-                break
-    
-    # Prepare data for template replacements
-    data = {
-        'cantCargos': _format_cargos_text(concurso.cant_cargos, concurso.tipo),
-        'departamento': departamento.nombre,
-        'area': concurso.area,
-        'orientacion': concurso.orientacion,
-        'tipo': concurso.tipo,
-        'nombre': categoria_nombre or concurso.categoria,  # Use found name or fallback to codigo
-        'codigo': concurso.categoria,
-        'tribunal_titular': tribunal_titular_text,
-        'tribunal_suplentes': tribunal_suplentes_text,
-        'yyyy': str(current_year),
-        'expediente': concurso.expediente
-    }
-    
-    return data, None
-
 @concursos.route('/')
-
 @login_required
 def index():
     """Display list of all concursos."""
@@ -435,9 +205,21 @@ def considerandos_builder(concurso_id):
     """
     concurso = Concurso.query.get_or_404(concurso_id)
     
+    # Get the departamento object
+    departamento = Departamento.query.get(concurso.departamento_id) if concurso.departamento_id else None
+    
     # Get document type and template name from query parameters
     document_type = request.args.get('document_type')
     template_name = request.args.get('template_name')
+    
+    # Generate cargo description - FIX: Correct order of parameters
+    descripcion_cargo = format_descripcion_cargo(
+        concurso.cant_cargos,
+        concurso.tipo,
+        concurso.categoria,
+        concurso.categoria_nombre or concurso.categoria,
+        concurso.dedicacion
+    )
     
     if not document_type or not template_name:
         flash('Tipo de documento o plantilla no especificados', 'danger')
@@ -446,13 +228,19 @@ def considerandos_builder(concurso_id):
     # Fetch considerandos options from the API
     considerandos_data = get_considerandos_data(document_type)
     
+    # Fetch departamento heads data
+    departamento_heads = get_departamento_heads_data()
+    
     if considerandos_data is None:
         error_message = 'No se pudieron cargar los considerandos. Por favor, inténtelo de nuevo más tarde.'
         return render_template(
             'concursos/considerandos_builder.html', 
             concurso=concurso,
+            departamento=departamento,
             document_type=document_type,
             considerandos_data={},
+            departamento_heads=departamento_heads,
+            descripcion_cargo=descripcion_cargo,
             error_message=error_message
         )
     
@@ -538,8 +326,11 @@ def considerandos_builder(concurso_id):
     return render_template(
         'concursos/considerandos_builder.html',
         concurso=concurso,
+        departamento=departamento,
         document_type=document_type,
-        considerandos_data=considerandos_data
+        considerandos_data=considerandos_data,
+        departamento_heads=departamento_heads,
+        descripcion_cargo=descripcion_cargo
     )
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
