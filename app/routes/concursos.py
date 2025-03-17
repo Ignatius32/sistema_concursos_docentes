@@ -10,6 +10,8 @@ from app.document_generation.resolucion_templates import prepare_data_resolucion
 import json
 import os
 import requests
+import io
+from werkzeug.utils import secure_filename
 
 concursos = Blueprint('concursos', __name__, url_prefix='/concursos')
 drive_api = GoogleDriveAPI()
@@ -111,6 +113,7 @@ def nuevo():
             concurso.borradores_folder_id = folder_result['borradoresFolderId']
             concurso.postulantes_folder_id = folder_result['postulantesFolderId']
             concurso.documentos_firmados_folder_id = folder_result['documentosFirmadosFolderId']
+            concurso.tribunal_folder_id = folder_result['tribunalFolderId']
             
             # Add initial state to history
             historial = HistorialEstado(
@@ -131,6 +134,7 @@ def nuevo():
                 constitucion_virtual_link or constitucion_observaciones or
                 request.form.get('sorteo_fecha') or request.form.get('sorteo_lugar') or
                 request.form.get('sorteo_virtual_link') or request.form.get('sorteo_observaciones') or
+                request.form.get('temas_exposicion') or
                 request.form.get('exposicion_fecha') or request.form.get('exposicion_lugar') or
                 request.form.get('exposicion_virtual_link') or request.form.get('exposicion_observaciones')):
                 
@@ -152,6 +156,7 @@ def nuevo():
                     sorteo_lugar=request.form.get('sorteo_lugar'),
                     sorteo_virtual_link=request.form.get('sorteo_virtual_link'),
                     sorteo_observaciones=request.form.get('sorteo_observaciones'),
+                    temas_exposicion=request.form.get('temas_exposicion'),
                     exposicion_fecha=exposicion_fecha,
                     exposicion_lugar=request.form.get('exposicion_lugar'),
                     exposicion_virtual_link=request.form.get('exposicion_virtual_link'),
@@ -181,7 +186,43 @@ def nuevo():
 def ver(concurso_id):
     """View details of a specific concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
-    return render_template('concursos/ver.html', concurso=concurso)
+    
+    # Get available document types based on concurso type
+    available_documents = []
+    
+    # Define all possible document types and their display names
+    all_document_types = [
+        {
+            'id': 'RESOLUCION_LLAMADO_TRIBUNAL',
+            'name': 'Resolución Llamado y Tribunal',
+            'url_generator': lambda c_id: url_for('concursos.generar_resolucion_llamado_tribunal', concurso_id=c_id)
+        },
+        {
+            'id': 'RESOLUCION_LLAMADO_REGULAR',
+            'name': 'Resolución Llamado Regular',
+            'url_generator': lambda c_id: url_for('concursos.generar_resolucion_llamado_regular', concurso_id=c_id)
+        },
+        {
+            'id': 'RESOLUCION_TRIBUNAL_REGULAR',
+            'name': 'Resolución Tribunal Regular',
+            'url_generator': lambda c_id: url_for('concursos.generar_resolucion_tribunal_regular', concurso_id=c_id)
+        }
+        # Add more document types here in the future
+    ]
+    
+    # Check each document type's visibility
+    for doc_type in all_document_types:
+        doc_data = get_considerandos_data(doc_type['id'], concurso.tipo)
+        if doc_data:
+            available_documents.append({
+                'id': doc_type['id'],
+                'name': doc_type['name'],
+                'url': doc_type['url_generator'](concurso_id)
+            })
+    
+    return render_template('concursos/ver.html', 
+                          concurso=concurso,
+                          available_documents=available_documents)
 
 @concursos.route('/<int:concurso_id>/generar-resolucion-llamado-tribunal', methods=['GET'])
 @login_required
@@ -193,6 +234,28 @@ def generar_resolucion_llamado_tribunal(concurso_id):
                            concurso_id=concurso_id, 
                            document_type='RESOLUCION_LLAMADO_TRIBUNAL', 
                            template_name='resLlamadoTribunalInterino'))
+
+@concursos.route('/<int:concurso_id>/generar-resolucion-llamado-regular', methods=['GET'])
+@login_required
+def generar_resolucion_llamado_regular(concurso_id):
+    """Handle the request to generate a regular resolution document."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    # Redirect to the considerandos builder
+    return redirect(url_for('concursos.considerandos_builder', 
+                           concurso_id=concurso_id, 
+                           document_type='RESOLUCION_LLAMADO_REGULAR', 
+                           template_name='resLlamadoRegular'))
+
+@concursos.route('/<int:concurso_id>/generar-resolucion-tribunal-regular', methods=['GET'])
+@login_required
+def generar_resolucion_tribunal_regular(concurso_id):
+    """Handle the request to generate a regular tribunal resolution document."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    # Redirect to the considerandos builder
+    return redirect(url_for('concursos.considerandos_builder', 
+                           concurso_id=concurso_id, 
+                           document_type='RESOLUCION_TRIBUNAL_REGULAR', 
+                           template_name='resTribunalRegular'))
 
 @concursos.route('/<int:concurso_id>/considerandos-builder', methods=['GET', 'POST'])
 @login_required
@@ -225,8 +288,8 @@ def considerandos_builder(concurso_id):
         flash('Tipo de documento o plantilla no especificados', 'danger')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
     
-    # Fetch considerandos options from the API
-    considerandos_data = get_considerandos_data(document_type)
+    # Fetch considerandos options from the API, passing the concurso type for visibility filtering
+    considerandos_data = get_considerandos_data(document_type, concurso.tipo)
     
     # Fetch departamento heads data
     departamento_heads = get_departamento_heads_data()
@@ -243,6 +306,21 @@ def considerandos_builder(concurso_id):
             descripcion_cargo=descripcion_cargo,
             error_message=error_message
         )
+    
+    # Check if document is unique and already exists for this concurso
+    is_unique = considerandos_data.get('unique', 0) == 1
+    if is_unique:
+        existing_document = DocumentoConcurso.query.filter_by(
+            concurso_id=concurso_id, 
+            tipo=document_type
+        ).first()
+        
+        if existing_document:
+            flash(f'Ya existe un documento de tipo {document_type} para este concurso. Por favor, elimine el existente antes de generar uno nuevo.', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    # Extract just the considerandos part to use in the template
+    considerandos_options = considerandos_data.get('considerandos', {})
     
     if request.method == 'POST':
         # Save committee and council information
@@ -288,7 +366,7 @@ def considerandos_builder(concurso_id):
         except json.JSONDecodeError:
             # Fallback to the old way if the JSON is invalid
             # This ensures backward compatibility
-            for considerando_key in considerandos_data.keys():
+            for considerando_key in considerandos_options.keys():
                 selected_value = request.form.get(considerando_key)
                 if selected_value:
                     selected_considerandos.append(selected_value)
@@ -311,6 +389,22 @@ def considerandos_builder(concurso_id):
                 prepare_data_resolucion_llamado_tribunal,
                 considerandos_text
             )
+        elif document_type == 'RESOLUCION_LLAMADO_REGULAR':
+            success, message, url = generar_documento_desde_template(
+                concurso_id,
+                template_name,
+                document_type,
+                prepare_data_resolucion_llamado_tribunal,  # We can reuse the same data prep function
+                considerandos_text
+            )
+        elif document_type == 'RESOLUCION_TRIBUNAL_REGULAR':
+            success, message, url = generar_documento_desde_template(
+                concurso_id,
+                template_name,
+                document_type,
+                prepare_data_resolucion_llamado_tribunal,  # We can reuse the same data prep function
+                considerandos_text
+            )
         else:
             flash('Tipo de documento no soportado', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
@@ -328,7 +422,7 @@ def considerandos_builder(concurso_id):
         concurso=concurso,
         departamento=departamento,
         document_type=document_type,
-        considerandos_data=considerandos_data,
+        considerandos_data=considerandos_options,
         departamento_heads=departamento_heads,
         descripcion_cargo=descripcion_cargo
     )
@@ -399,7 +493,7 @@ def editar(concurso_id):
             else:
                 concurso.vencimiento = None
             
-            # Update Google Drive folder name if relevant fields changed and folder exists
+            # Update Google Drive folder names if relevant fields changed
             if concurso.drive_folder_id and (
                 old_departamento_id != concurso.departamento_id or 
                 old_area != concurso.area or 
@@ -411,8 +505,36 @@ def editar(concurso_id):
                     # Get the department name for the folder
                     departamento = Departamento.query.get(concurso.departamento_id)
                     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+                    
+                    # Update main concurso folder
                     new_folder_name = f"{concurso.id}_{departamento.nombre}_{concurso.area}_{concurso.orientacion}_{concurso.categoria}_{concurso.dedicacion}_{timestamp}"
                     drive_api.update_folder_name(concurso.drive_folder_id, new_folder_name)
+                    
+                    # Update subfolder names
+                    if old_categoria != concurso.categoria or old_dedicacion != concurso.dedicacion:
+                        subfolders = {
+                            'borradores': (concurso.borradores_folder_id, f"borradores_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
+                            'postulantes': (concurso.postulantes_folder_id, f"postulantes_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
+                            'documentos_firmados': (concurso.documentos_firmados_folder_id, f"documentos_firmados_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
+                            'tribunal': (concurso.tribunal_folder_id, f"tribunal_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}")
+                        }
+
+                        for folder_type, (folder_id, new_name) in subfolders.items():
+                            if folder_id:
+                                try:
+                                    drive_api.update_folder_name(folder_id, new_name)
+                                except Exception as e:
+                                    flash(f'Error al renombrar la carpeta {folder_type}: {str(e)}', 'warning')
+                        
+                        # Update postulante folder names since they include categoria and dedicacion
+                        for postulante in concurso.postulantes:
+                            if postulante.drive_folder_id:
+                                try:
+                                    new_postulante_folder_name = f"{postulante.apellido}_{postulante.nombre}_{postulante.dni}_{concurso.categoria}_{concurso.dedicacion}"
+                                    drive_api.update_folder_name(postulante.drive_folder_id, new_postulante_folder_name)
+                                except Exception as e:
+                                    flash(f'Error al renombrar la carpeta del postulante {postulante.apellido} {postulante.nombre}: {str(e)}', 'warning')
+
                 except Exception as e:
                     flash(f'El concurso fue actualizado pero hubo un error al renombrar su carpeta en Drive: {str(e)}', 'warning')
             
@@ -420,16 +542,20 @@ def editar(concurso_id):
             constitucion_fecha_str = request.form.get('constitucion_fecha')
             sorteo_fecha_str = request.form.get('sorteo_fecha')
             exposicion_fecha_str = request.form.get('exposicion_fecha')
+            temas_exposicion = request.form.get('temas_exposicion')
 
+            # Check if a Sustanciacion record needs to be created
             if not concurso.sustanciacion:
                 if (constitucion_fecha_str or request.form.get('constitucion_lugar') or 
                     request.form.get('constitucion_virtual_link') or request.form.get('constitucion_observaciones') or
                     sorteo_fecha_str or request.form.get('sorteo_lugar') or
                     request.form.get('sorteo_virtual_link') or request.form.get('sorteo_observaciones') or
+                    temas_exposicion or  # Added this check
                     exposicion_fecha_str or request.form.get('exposicion_lugar') or
                     request.form.get('exposicion_virtual_link') or request.form.get('exposicion_observaciones')):
                     
                     concurso.sustanciacion = Sustanciacion(concurso=concurso)
+                    db.session.add(concurso.sustanciacion)
             
             if concurso.sustanciacion:
                 # Update dates if provided
@@ -440,6 +566,9 @@ def editar(concurso_id):
                 if exposicion_fecha_str:
                     concurso.sustanciacion.exposicion_fecha = datetime.strptime(exposicion_fecha_str, '%Y-%m-%dT%H:%M')
                 
+                # Add logging for debugging
+                print(f"Saving temas_exposicion: {temas_exposicion}")
+                
                 # Update other fields
                 concurso.sustanciacion.constitucion_lugar = request.form.get('constitucion_lugar')
                 concurso.sustanciacion.constitucion_virtual_link = request.form.get('constitucion_virtual_link')
@@ -447,6 +576,7 @@ def editar(concurso_id):
                 concurso.sustanciacion.sorteo_lugar = request.form.get('sorteo_lugar')
                 concurso.sustanciacion.sorteo_virtual_link = request.form.get('sorteo_virtual_link')
                 concurso.sustanciacion.sorteo_observaciones = request.form.get('sorteo_observaciones')
+                concurso.sustanciacion.temas_exposicion = temas_exposicion
                 concurso.sustanciacion.exposicion_lugar = request.form.get('exposicion_lugar')
                 concurso.sustanciacion.exposicion_virtual_link = request.form.get('exposicion_virtual_link')
                 concurso.sustanciacion.exposicion_observaciones = request.form.get('exposicion_observaciones')
@@ -571,5 +701,66 @@ def eliminar_documento(concurso_id, documento_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar el documento: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/subir-firmado', methods=['POST'])
+@login_required
+def subir_documento_firmado(concurso_id, documento_id):
+    """Upload a signed version of a document."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    documento = DocumentoConcurso.query.get_or_404(documento_id)
+    
+    # Verify the document belongs to the concurso
+    if documento.concurso_id != concurso_id:
+        flash('El documento no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    if not concurso.documentos_firmados_folder_id:
+        flash('El concurso no tiene una carpeta de documentos firmados asociada.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        file = request.files.get('documento_firmado')
+        
+        if not file:
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Get base filename from the original document
+        original_url = documento.url
+        original_file_id = original_url.split('/')[-2]  # Extract file ID from Google Drive URL
+        
+        # Create the new filename with _firmado suffix
+        original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso_id}"
+        new_filename = f"{original_filename}_firmado.pdf"
+        
+        # Convert to PDF if it's not already and get file data
+        file_data = file.read()
+        
+        # Upload to Google Drive in the documentos_firmados folder
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id,
+            new_filename,
+            file_data
+        )
+        
+        # Update document status to FIRMADO
+        documento.estado = 'FIRMADO'
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_FIRMADO",
+            observaciones=f"Documento firmado {documento.tipo} subido por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash(f'Documento firmado subido exitosamente. <a href="{web_view_link}" target="_blank" class="alert-link">Ver documento</a>', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al subir el documento firmado: {str(e)}', 'danger')
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))

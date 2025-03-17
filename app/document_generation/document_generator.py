@@ -4,7 +4,7 @@ Contains core functions for generating documents from templates.
 """
 from datetime import datetime
 from flask_login import current_user
-from app.models.models import db, HistorialEstado, DocumentoConcurso, Concurso, Departamento
+from app.models.models import db, HistorialEstado, DocumentoConcurso, Concurso, Departamento, TribunalMiembro
 from app.integrations.google_drive import GoogleDriveAPI
 from app.helpers.api_services import get_departamento_heads_data
 
@@ -30,8 +30,8 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
         if not concurso.borradores_folder_id:
             return False, 'El concurso no tiene una carpeta de borradores asociada.', None
         
-        # Get data for template from the specific function
-        data, validation_message = prepare_data_func(concurso)
+        # Get data for template from the specific function - pass document type
+        data, validation_message = prepare_data_func(concurso, doc_tipo)
         
         # Check if data preparation succeeded
         if not data:
@@ -98,6 +98,48 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
                     placeholders['<<resp_departamento>>'] = dept_head.get('responsable', '')
                     placeholders['<<prefijo_resp_departamento>>'] = dept_head.get('prefijo', '')
             
+            # Add sustanciacion placeholders
+            if concurso.sustanciacion:
+                sustanciacion = concurso.sustanciacion
+                # Format dates
+                constitucion_fecha = sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if sustanciacion.constitucion_fecha else ''
+                sorteo_fecha = sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if sustanciacion.sorteo_fecha else ''
+                exposicion_fecha = sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if sustanciacion.exposicion_fecha else ''
+                
+                placeholders.update({
+                    # Constitución
+                    '<<constitucion_fecha>>': constitucion_fecha,
+                    '<<constitucion_lugar>>': sustanciacion.constitucion_lugar or '',
+                    '<<constitucion_virtual_link>>': sustanciacion.constitucion_virtual_link or '',
+                    
+                    # Sorteo
+                    '<<sorteo_fecha>>': sorteo_fecha,
+                    '<<sorteo_lugar>>': sustanciacion.sorteo_lugar or '',
+                    '<<sorteo_virtual_link>>': sustanciacion.sorteo_virtual_link or '',
+                    '<<temas_exposicion>>': (sustanciacion.temas_exposicion or '').replace('|', '\n'),
+                    
+                    # Exposición
+                    '<<exposicion_fecha>>': exposicion_fecha,
+                    '<<exposicion_lugar>>': sustanciacion.exposicion_lugar or '',
+                    '<<exposicion_virtual_link>>': sustanciacion.exposicion_virtual_link or '',
+                })
+            
+            # Add tribunal placeholders
+            tribunal_members = TribunalMiembro.query.filter_by(concurso_id=concurso.id).all()
+            presidente = next((m for m in tribunal_members if m.rol == 'Presidente'), None)
+            vocales = [m for m in tribunal_members if m.rol == 'Vocal']
+            suplentes = [m for m in tribunal_members if m.rol == 'Suplente']
+
+            def format_member(m):
+                return f"{m.apellido}, {m.nombre} (DNI: {m.dni})"
+
+            placeholders.update({
+                '<<tribunal_presidente>>': format_member(presidente) if presidente else '',
+                '<<tribunal_vocales>>': '\n'.join(format_member(v) for v in vocales),
+                '<<tribunal_suplentes>>': '\n'.join(format_member(s) for s in suplentes),
+                '<<tribunal_miembros>>': '\n'.join(format_member(m) for m in tribunal_members)
+            })
+
             # Replace placeholders in considerandos text
             processed_text = considerandos_text
             for placeholder, value in placeholders.items():

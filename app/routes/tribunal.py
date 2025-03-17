@@ -1,9 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
-from app.models.models import db, Concurso, TribunalMiembro, Recusacion
+from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal
+from app.integrations.google_drive import GoogleDriveAPI
 from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
+drive_api = GoogleDriveAPI()
 
 @tribunal.route('/concurso/<int:concurso_id>')
 @login_required
@@ -28,6 +32,16 @@ def agregar(concurso_id):
             dni = request.form.get('dni')
             correo = request.form.get('correo')
             
+            # Create Google Drive folder for tribunal member
+            folder_name = f"{rol}_{apellido}_{nombre}_{dni}"
+            folder_id = drive_api.create_tribunal_folder(
+                parent_folder_id=concurso.tribunal_folder_id,
+                nombre=nombre,
+                apellido=apellido,
+                dni=dni,
+                rol=rol
+            )
+            
             # Create new tribunal member
             miembro = TribunalMiembro(
                 concurso_id=concurso_id,
@@ -35,7 +49,8 @@ def agregar(concurso_id):
                 nombre=nombre,
                 apellido=apellido,
                 dni=dni,
-                correo=correo
+                correo=correo,
+                drive_folder_id=folder_id
             )
             
             db.session.add(miembro)
@@ -66,8 +81,12 @@ def editar(miembro_id):
             miembro.dni = request.form.get('dni')
             miembro.correo = request.form.get('correo')
             
-            db.session.commit()
+            # Update Drive folder name if needed
+            if miembro.drive_folder_id:
+                new_folder_name = f"{miembro.rol}_{miembro.apellido}_{miembro.nombre}_{miembro.dni}"
+                drive_api.update_folder_name(miembro.drive_folder_id, new_folder_name)
             
+            db.session.commit()
             flash('Miembro del tribunal actualizado exitosamente.', 'success')
             return redirect(url_for('tribunal.index', concurso_id=miembro.concurso_id))
             
@@ -85,6 +104,10 @@ def eliminar(miembro_id):
     concurso_id = miembro.concurso_id
     
     try:
+        # Delete Drive folder if exists
+        if miembro.drive_folder_id:
+            drive_api.delete_folder(miembro.drive_folder_id)
+        
         db.session.delete(miembro)
         db.session.commit()
         flash('Miembro del tribunal eliminado exitosamente.', 'success')
@@ -122,3 +145,54 @@ def recusar(miembro_id):
             flash(f'Error al presentar recusación: {str(e)}', 'danger')
     
     return render_template('tribunal/recusar.html', miembro=miembro, concurso=concurso)
+
+@tribunal.route('/<int:miembro_id>/subir-documento', methods=['POST'])
+@login_required
+def subir_documento(miembro_id):
+    """Upload a document for a tribunal member."""
+    miembro = TribunalMiembro.query.get_or_404(miembro_id)
+    concurso = Concurso.query.get_or_404(miembro.concurso_id)
+    
+    try:
+        # Get form data
+        tipo = request.form.get('tipo')
+        file = request.files.get('documento')
+        
+        if not file:
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return redirect(url_for('tribunal.index', concurso_id=concurso.id))
+        
+        if not miembro.drive_folder_id:
+            flash('El miembro del tribunal no tiene una carpeta asociada.', 'danger')
+            return redirect(url_for('tribunal.index', concurso_id=concurso.id))
+        
+        # Create filename with proper suffix
+        filename = secure_filename(f"{tipo}_{miembro.apellido}_{miembro.nombre}_{concurso.id}.pdf")
+        
+        # Read file data
+        file_data = file.read()
+        
+        # Upload to Google Drive
+        file_id, web_view_link = drive_api.upload_document(
+            miembro.drive_folder_id,
+            filename,
+            file_data
+        )
+        
+        # Create document record
+        documento = DocumentoTribunal(
+            miembro_id=miembro.id,
+            tipo=tipo,
+            url=web_view_link
+        )
+        
+        db.session.add(documento)
+        db.session.commit()
+        
+        flash(f'Documento subido exitosamente. <a href="{web_view_link}" target="_blank" class="alert-link">Ver documento</a>', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al subir documento: {str(e)}', 'danger')
+    
+    return redirect(url_for('tribunal.index', concurso_id=concurso.id))

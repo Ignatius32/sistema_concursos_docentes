@@ -225,6 +225,21 @@
                     <label for="sorteo_observaciones" class="form-label">Observaciones del Sorteo</label>
                     <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="3">{{ concurso.sustanciacion.sorteo_observaciones if concurso.sustanciacion and concurso.sustanciacion.sorteo_observaciones }}</textarea>
                 </div>
+                
+                <div class="col-md-12 mb-3">
+                    <label for="temas_exposicion" class="form-label">Temas de Exposición</label>
+                    <div id="temas-container" class="mb-2">
+                        <!-- Temas will be displayed here as separate items -->
+                    </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="nuevo-tema" placeholder="Escriba un nuevo tema y presione '+ Agregar'">
+                        <button class="btn btn-outline-secondary" type="button" id="btn-add-tema">+ Agregar</button>
+                    </div>
+                    <!-- Hidden textarea to store concatenated temas for form submission -->
+                    <input type="hidden" id="temas_exposicion" name="temas_exposicion" 
+                           value="{{ concurso.sustanciacion.temas_exposicion if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion }}">
+                    <small class="form-text text-muted">Agregue los temas uno por uno. Puede eliminar cualquier tema haciendo clic en la X.</small>
+                </div>
 
                 <!-- Exposición section -->
                 <div class="col-12">
@@ -312,6 +327,103 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedOption = selectElement.options[selectElement.selectedIndex];
         document.getElementById('categoria_nombre').value = selectedOption.getAttribute('data-nombre') || selectedOption.text;
     }
+    
+    // Make updateCategoriaNombre available globally
+    window.updateCategoriaNombre = updateCategoriaNombre;
+    
+    // Enhanced tema handling
+    const btnAddTema = document.getElementById('btn-add-tema');
+    const nuevoTemaInput = document.getElementById('nuevo-tema');
+    const temasContainer = document.getElementById('temas-container');
+    const temasInput = document.getElementById('temas_exposicion');
+    
+    // Function to update the hidden input with all temas
+    function updateTemasInput() {
+        const temaElements = temasContainer.querySelectorAll('.tema-item');
+        const temas = Array.from(temaElements).map(el => el.dataset.texto);
+        temasInput.value = temas.join('|');
+        console.log('Updated temas_exposicion value:', temasInput.value);
+    }
+    
+    // Function to add a new tema
+    function addTema(texto) {
+        if (!texto || texto.trim() === '') return;
+        
+        // Create a new tema element
+        const temaElement = document.createElement('div');
+        temaElement.className = 'tema-item badge bg-light text-dark p-2 me-2 mb-2';
+        temaElement.dataset.texto = texto.trim();
+        
+        // Add tema text and delete button
+        temaElement.innerHTML = `
+            <span>${texto.trim()}</span>
+            <button type="button" class="btn-delete-tema btn-close ms-2" aria-label="Eliminar"></button>
+        `;
+        
+        // Add click handler for delete button
+        temaElement.querySelector('.btn-delete-tema').addEventListener('click', function() {
+            temaElement.remove();
+            updateTemasInput();
+        });
+        
+        // Add to container and update hidden input
+        temasContainer.appendChild(temaElement);
+        updateTemasInput();
+    }
+    
+    // Load existing temas
+    console.log('Initial temas_exposicion value:', temasInput.value);
+    if (temasInput.value) {
+        // Split by | but handle with or without spaces
+        const temasValue = temasInput.value;
+        let existingTemas = [];
+        
+        if (temasValue.includes('|')) {
+            existingTemas = temasValue.split('|');
+        } else if (temasValue.trim()) {
+            existingTemas = [temasValue]; // Single tema without separator
+        }
+        
+        console.log('Parsed temas:', existingTemas);
+        existingTemas
+            .map(t => t.trim())
+            .filter(t => t)
+            .forEach(addTema);
+    }
+    
+    // Add tema button click handler
+    if (btnAddTema && nuevoTemaInput) {
+        btnAddTema.addEventListener('click', function() {
+            const texto = nuevoTemaInput.value.trim();
+            if (texto) {
+                addTema(texto);
+                nuevoTemaInput.value = '';
+                nuevoTemaInput.focus();
+            }
+        });
+        
+        // Allow adding tema by pressing Enter
+        nuevoTemaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnAddTema.click();
+            }
+        });
+    }
+    
+    // Make sure form submissions include the updated temas
+    document.querySelector('form').addEventListener('submit', function(e) {
+        updateTemasInput();
+        console.log('Form submission temas value:', temasInput.value);
+    });
 });
 </script>
+
+<style>
+.tema-item {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #dee2e6;
+}
+</style>
 {% endblock %}

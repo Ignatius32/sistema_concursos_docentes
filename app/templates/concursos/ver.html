@@ -8,14 +8,20 @@
         <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
         <div class="btn-group">
             <a href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}" class="btn btn-warning">Editar</a>
+            
+            {% if available_documents %}
             <div class="btn-group">
                 <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     Generar Documentos
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ url_for('concursos.generar_resolucion_llamado_tribunal', concurso_id=concurso.id) }}">Resolución Llamado y Tribunal</a></li>
+                    {% for doc in available_documents %}
+                    <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
+                    {% endfor %}
                 </ul>
             </div>
+            {% endif %}
+            
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal">
                 Eliminar
             </button>
@@ -190,6 +196,21 @@
                             <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
                         </tr>
                         {% endif %}
+                        
+                        {% if concurso.sustanciacion.temas_exposicion %}
+                        <tr>
+                            <th>Temas de Exposición:</th>
+                            <td>
+                                <div class="temas-list">
+                                    {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                                        {% if tema.strip() %}
+                                        <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ tema.strip() }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
 
                         <!-- Exposicion section -->
                         <tr>
@@ -246,12 +267,16 @@
                                 <td>
                                     {% if documento.tipo == 'RESOLUCION_LLAMADO_TRIBUNAL' %}
                                     Resolución de Llamado y Tribunal
+                                    {% elif documento.tipo == 'RESOLUCION_LLAMADO_REGULAR' %}
+                                    Resolución de Llamado Regular
+                                    {% elif documento.tipo == 'RESOLUCION_TRIBUNAL_REGULAR' %}
+                                    Resolución Tribunal Regular
                                     {% else %}
                                     {{ documento.tipo }}
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge {% if documento.estado == 'CREADA' %}bg-success{% else %}bg-warning{% endif %}">
+                                    <span class="badge {% if documento.estado == 'FIRMADO' %}bg-success{% elif documento.estado == 'CREADA' %}bg-info{% else %}bg-warning{% endif %}">
                                         {{ documento.estado }}
                                     </span>
                                 </td>
@@ -261,10 +286,44 @@
                                         <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-file-earmark-text"></i> Abrir
                                         </a>
+                                        {% if documento.estado != 'FIRMADO' and concurso.documentos_firmados_folder_id %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#subirFirmadoModal{{ documento.id }}">
+                                            <i class="bi bi-file-earmark-check"></i> Subir Firmado
+                                        </button>
+                                        {% endif %}
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarDocumentoModal{{ documento.id }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
+                                    
+                                    <!-- Modal para subir documento firmado -->
+                                    <div class="modal fade" id="subirFirmadoModal{{ documento.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Subir Documento Firmado</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form action="{{ url_for('concursos.subir_documento_firmado', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" enctype="multipart/form-data">
+                                                    <div class="modal-body">
+                                                        <p>Seleccione el documento firmado para subir. El archivo será guardado en la carpeta de documentos firmados.</p>
+                                                        <div class="mb-3">
+                                                            <label for="documento_firmado{{ documento.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
+                                                            <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required
+                                                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-success">Subir</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Modal de confirmación de eliminación de documento -->
                                     <div class="modal fade" id="eliminarDocumentoModal{{ documento.id }}" tabindex="-1">
                                         <div class="modal-dialog">
@@ -303,16 +362,46 @@
         <div class="row mt-4">
             <div class="col-12">
                 <h4>Estado y Tribunal</h4>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }} fs-6">
-                        Estado: {{ concurso.estado_actual }}
-                    </span>
-                    <div>
-                        <span class="me-2">Miembros del Tribunal: {{ concurso.tribunal.count() }}</span>
-                        <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-outline-primary">
-                            Ver Tribunal
-                        </a>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Rol</th>
+                                <th>Nombre</th>
+                                <th>Apellido</th>
+                                <th>DNI</th>
+                                <th>Correo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for miembro in concurso.tribunal %}
+                            <tr>
+                                <td>{{ miembro.rol }}</td>
+                                <td>{{ miembro.nombre }}</td>
+                                <td>{{ miembro.apellido }}</td>
+                                <td>{{ miembro.dni }}</td>
+                                <td>{{ miembro.correo }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">No hay miembros en el tribunal</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-2">
+                    <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-primary">
+                        Ver Tribunal Completo
+                    </a>
                 </div>
             </div>
         </div>
@@ -320,10 +409,45 @@
         <div class="row mt-4">
             <div class="col-12">
                 <h4>Postulantes</h4>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>Total Postulantes: {{ concurso.postulantes.count() }}</span>
-                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-outline-primary">
-                        Ver Postulantes
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Apellido</th>
+                                <th>DNI</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for postulante in concurso.postulantes %}
+                            <tr>
+                                <td>{{ postulante.nombre }}</td>
+                                <td>{{ postulante.apellido }}</td>
+                                <td>{{ postulante.dni }}</td>
+                                <td>{{ postulante.correo }}</td>
+                                <td>{{ postulante.telefono or '-' }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">No hay postulantes inscriptos</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-2">
+                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">
+                        Ver Postulantes Completo
                     </a>
                 </div>
             </div>
@@ -385,4 +509,16 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.temas-list {
+    display: flex;
+    flex-wrap: wrap;
+}
+.temas-list .badge {
+    border: 1px solid #dee2e6;
+}
+</style>
 {% endblock %}

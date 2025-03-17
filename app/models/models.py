@@ -74,7 +74,8 @@ class Concurso(db.Model):
     borradores_folder_id = db.Column(db.String(100), nullable=True)  # Borradores subfolder ID
     postulantes_folder_id = db.Column(db.String(100), nullable=True)  # Postulantes subfolder ID
     documentos_firmados_folder_id = db.Column(db.String(100), nullable=True)  # Documentos firmados subfolder ID
-    
+    tribunal_folder_id = db.Column(db.String(100), nullable=True)  # Tribunal subfolder ID
+
     # New fields for committee and council information
     fecha_comision_academica = db.Column(db.Date, nullable=True)
     despacho_comision_academica = db.Column(db.String(255), nullable=True)
@@ -100,7 +101,17 @@ class TribunalMiembro(db.Model):
     apellido = db.Column(db.String(100), nullable=False)
     dni = db.Column(db.String(20), nullable=False)
     correo = db.Column(db.String(100))
+    drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
     recusaciones = db.relationship('Recusacion', backref='miembro', lazy='dynamic')
+    documentos = db.relationship('DocumentoTribunal', backref='miembro', lazy='dynamic')
+
+class DocumentoTribunal(db.Model):
+    __tablename__ = 'documentos_tribunal'
+    id = db.Column(db.Integer, primary_key=True)
+    miembro_id = db.Column(db.Integer, db.ForeignKey('tribunal_miembros.id'), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)  # CV, DNI
+    url = db.Column(db.String(255), nullable=False)
+    creado = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Postulante(db.Model):
     __tablename__ = 'postulantes'
@@ -158,6 +169,7 @@ class Sustanciacion(db.Model):
     sorteo_lugar = db.Column(db.String(100))
     sorteo_observaciones = db.Column(db.Text)
     sorteo_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
+    temas_exposicion = db.Column(db.Text, nullable=True)  # List of topics for exposition
     
     # Exposición
     exposicion_fecha = db.Column(db.DateTime)

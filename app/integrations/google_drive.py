@@ -6,7 +6,9 @@ import base64
 class GoogleDriveAPI:
     def __init__(self):
         self.api_url = "https://script.google.com/macros/s/AKfycbzu1aD_-L822DTVyLgqfqkn5eytgJNkorivbtXAiwlSd2dzqA5PCHyVtA9y5lHAXizu/exec"
-        self.secure_token = os.environ.get('SECURE_TOKEN')
+        self.secure_token = os.environ.get('GOOGLE_DRIVE_SECURE_TOKEN')
+        if not self.secure_token:
+            raise ValueError("GOOGLE_DRIVE_SECURE_TOKEN environment variable is not set")
 
     def create_concurso_folder(self, concurso_id, departamento, area, orientacion, categoria, dedicacion):
         """Create a folder in Google Drive for a new concurso."""
@@ -26,28 +28,40 @@ class GoogleDriveAPI:
         if folder_data.get('status') != 'success':
             raise Exception(f"Error from Google Drive API: {folder_data.get('message')}")
         
-        # Create a postulantes folder inside the main folder
-        postulantes_folder_name = f"postulantes_{departamento}_{categoria}_{dedicacion}_{concurso_id}"
-        postulantes_response = requests.post(self.api_url, json={
-            'action': 'createNestedFolder',
-            'parentFolderId': folder_data.get('folderId'),
-            'folderName': postulantes_folder_name,
-            'token': self.secure_token
-        })
+        # Create subfolders inside the main folder with descriptive names
+        subfolders = {
+            'borradores': f"borradores_{departamento}_{categoria}_{dedicacion}_{concurso_id}",
+            'postulantes': f"postulantes_{departamento}_{categoria}_{dedicacion}_{concurso_id}",
+            'documentos_firmados': f"documentos_firmados_{departamento}_{categoria}_{dedicacion}_{concurso_id}",
+            'tribunal': f"tribunal_{departamento}_{categoria}_{dedicacion}_{concurso_id}"
+        }
         
-        if postulantes_response.status_code != 200:
-            raise Exception(f"Error creating postulantes folder: {postulantes_response.text}")
+        subfolder_ids = {}
+        
+        for folder_type, subfolder_name in subfolders.items():
+            subfolder_response = requests.post(self.api_url, json={
+                'action': 'createNestedFolder',
+                'parentFolderId': folder_data.get('folderId'),
+                'folderName': subfolder_name,
+                'token': self.secure_token
+            })
             
-        postulantes_data = postulantes_response.json()
-        if postulantes_data.get('status') != 'success':
-            raise Exception(f"Error from Google Drive API when creating postulantes folder: {postulantes_data.get('message')}")
+            if subfolder_response.status_code != 200:
+                raise Exception(f"Error creating {folder_type} folder: {subfolder_response.text}")
+                
+            subfolder_data = subfolder_response.json()
+            if subfolder_data.get('status') != 'success':
+                raise Exception(f"Error from Google Drive API when creating {folder_type} folder: {subfolder_data.get('message')}")
+            
+            subfolder_ids[f"{folder_type}FolderId"] = subfolder_data.get('folderId')
             
         # Return all folder IDs
         return {
             'folderId': folder_data.get('folderId'),
-            'borradoresFolderId': folder_data.get('borradoresFolderId'),
-            'postulantesFolderId': postulantes_data.get('folderId'),
-            'documentosFirmadosFolderId': folder_data.get('documentosFirmadosFolderId')
+            'borradoresFolderId': subfolder_ids['borradoresFolderId'],
+            'postulantesFolderId': subfolder_ids['postulantesFolderId'],
+            'documentosFirmadosFolderId': subfolder_ids['documentos_firmadosFolderId'],
+            'tribunalFolderId': subfolder_ids['tribunalFolderId']
         }
 
     def create_postulante_folder(self, concurso_folder_id, dni, apellido, nombre, categoria, dedicacion):
@@ -228,3 +242,34 @@ class GoogleDriveAPI:
             raise Exception(f"Error from Google Drive API: {rename_data.get('message')}")
 
         return rename_data.get('success')
+
+    def create_tribunal_folder(self, parent_folder_id, nombre, apellido, dni, rol):
+        """Create a folder in Google Drive for a tribunal member inside the tribunal folder.
+        
+        Args:
+            parent_folder_id (str): The ID of the parent tribunal folder
+            nombre (str): First name of the tribunal member
+            apellido (str): Last name of the tribunal member
+            dni (str): DNI of the tribunal member
+            rol (str): Role in the tribunal (Presidente/Vocal/Suplente)
+            
+        Returns:
+            str: The ID of the created folder
+        """
+        folder_name = f"{rol}_{apellido}_{nombre}_{dni}"
+
+        response = requests.post(self.api_url, json={
+            'action': 'createNestedFolder',
+            'parentFolderId': parent_folder_id,
+            'folderName': folder_name,
+            'token': self.secure_token
+        })
+
+        if response.status_code != 200:
+            raise Exception(f"Error creating tribunal member folder: {response.text}")
+
+        folder_data = response.json()
+        if folder_data.get('status') != 'success':
+            raise Exception(f"Error from Google Drive API: {folder_data.get('message')}")
+
+        return folder_data.get('folderId')

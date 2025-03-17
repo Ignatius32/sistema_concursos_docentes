@@ -8,12 +8,39 @@ from app.models.models import Departamento
 from app.helpers.text_formatting import format_cargos_text, format_descripcion_cargo
 from datetime import datetime
 
-def prepare_data_resolucion_llamado_tribunal(concurso):
-    """Prepare data for the resolucion llamado tribunal template."""
-    # Check if tribunal members are assigned
-    tribunal_members = concurso.tribunal.all()
-    if not tribunal_members:
-        return None, 'No hay miembros del tribunal asignados para este concurso.'
+# Document configurations for special handling
+DOCUMENT_CONFIG = {
+    'RESOLUCION_LLAMADO_TRIBUNAL': {
+        'requires_tribunal': True,
+    },
+    'RESOLUCION_LLAMADO_REGULAR': {
+        'requires_tribunal': False,
+    },
+    'RESOLUCION_TRIBUNAL_REGULAR': {
+        'requires_tribunal': True,
+    },
+    # Add more document types here with their configurations
+}
+
+def prepare_data_resolucion_llamado_tribunal(concurso, document_type=None):
+    """
+    Prepare data for resolution templates.
+    
+    Args:
+        concurso: The concurso object containing all relevant information
+        document_type: The type of document being generated (e.g., 'RESOLUCION_LLAMADO_TRIBUNAL')
+        
+    Returns:
+        tuple: (data dict, error message or None)
+    """
+    # Get document configuration
+    doc_config = DOCUMENT_CONFIG.get(document_type, {'requires_tribunal': True})
+    
+    # Check if tribunal members are required and assigned
+    if doc_config['requires_tribunal']:
+        tribunal_members = concurso.tribunal.all()
+        if not tribunal_members:
+            return None, 'No hay miembros del tribunal asignados para este concurso.'
     
     # Get related data
     departamento = Departamento.query.get(concurso.departamento_id)
@@ -21,24 +48,28 @@ def prepare_data_resolucion_llamado_tribunal(concurso):
     # Format dates for display
     current_year = datetime.now().year
     
-    # Format tribunal members
-    titulares = []
-    suplentes = []
+    # Format tribunal members if required
+    tribunal_titular_text = ""
+    tribunal_suplentes_text = ""
     
-    for miembro in tribunal_members:
-        member_info = f"{miembro.apellido}, {miembro.nombre} (DNI: {miembro.dni})"
+    if doc_config['requires_tribunal']:
+        titulares = []
+        suplentes = []
         
-        if miembro.rol == "Presidente":
-            # Presidente always goes first in the titulares list
-            titulares.insert(0, f"{member_info}")
-        elif miembro.rol == "Suplente":
-            suplentes.append(member_info)
-        else:  # Vocal
-            titulares.append(member_info)
-    
-    # Join lists with line breaks for the document
-    tribunal_titular_text = "\n".join(titulares)
-    tribunal_suplentes_text = "\n".join(suplentes)
+        for miembro in concurso.tribunal.all():
+            member_info = f"{miembro.apellido}, {miembro.nombre} (DNI: {miembro.dni})"
+            
+            if miembro.rol == "Presidente":
+                # Presidente always goes first in the titulares list
+                titulares.insert(0, f"{member_info}")
+            elif miembro.rol == "Suplente":
+                suplentes.append(member_info)
+            else:  # Vocal
+                titulares.append(member_info)
+        
+        # Join lists with line breaks for the document
+        tribunal_titular_text = "\n".join(titulares)
+        tribunal_suplentes_text = "\n".join(suplentes)
     
     # Ensure we have the categoria_nombre
     categoria_nombre = concurso.categoria_nombre

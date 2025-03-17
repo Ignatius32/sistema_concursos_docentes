@@ -1,4 +1,4 @@
-// IMPORTANT: Make sure to add SECURE_TOKEN in Script Properties with the value from your .env file
+// IMPORTANT: Make sure to add GOOGLE_DRIVE_SECURE_TOKEN in Script Properties with the value from your .env file
 
 // Template IDs for document generation
 // Add your actual template document IDs here
@@ -6,18 +6,24 @@ const TEMPLATES = {
   'concursoResolucion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
   'actaSustanciacion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',  // Replace with actual template ID
   'certificadoPostulante': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
-  'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', // Real template ID
+  'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', // 
+  'resLlamadoRegular': '1Eg0N5s4H_wGEHUZClYZs-jF4ED2pjHbT-KsUoSSLOX8',
+  'resTribunalRegular': '119a255YfBWEdqu_IEJT1vYWSLAP9KhVk4G5NHPTYD6Q',
   // Add more templates as needed
 };
 
-// Function to sanitize folder name
+// Utility functions
 function sanitizeFolderName(name) {
-  // Replace spaces with underscores
-  // Remove or replace special characters that might cause issues
-  return name.replace(/\s+/g, '_')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // Remove accents
-            .replace(/[^a-zA-Z0-9_-]/g, '_'); // Replace other special chars with underscore
+  // First normalize accented characters
+  const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Then replace any remaining invalid characters with underscore
+  return normalized.replace(/[^a-z0-9]/gi, '_');
+}
+
+function verifyToken(token) {
+  var scriptProperties = PropertiesService.getScriptProperties();
+  var validToken = scriptProperties.getProperty('GOOGLE_DRIVE_SECURE_TOKEN');
+  return token === validToken;
 }
 
 // Function to create a document from template
@@ -87,43 +93,28 @@ function crearConcurso(folderName) {
   // Create the new folder with sanitized name
   var newFolder = root.createFolder(sanitizedName);
   
-  // Extract concurso ID from the folder name (it's the first part before _)
-  var concursoId = sanitizedName.split('_')[0];
-  
-  // Create borradores subfolder
-  var borradoresName = 'borradores_' + concursoId;
-  var borradoresFolder = newFolder.createFolder(borradoresName);
-  
-  // Create documentos_firmados_seleccion subfolder
-  var documentosFirmadosName = 'documentos_firmados_seleccion_' + concursoId;
-  var documentosFirmadosFolder = newFolder.createFolder(documentosFirmadosName);
-  
   return {
-    folderId: newFolder.getId(),
-    borradoresFolderId: borradoresFolder.getId(),
-    documentosFirmadosFolderId: documentosFirmadosFolder.getId()
+    folderId: newFolder.getId()
   };
 }
 
 // Function to create a nested folder inside a parent folder
 function createNestedFolder(parentFolderId, folderName) {
-  // Basic validation
-  if (!parentFolderId || !folderName) {
-    throw new Error("Parent folder ID and folder name are required.");
-  }
-
-  // Sanitize the folder name
-  var sanitizedName = sanitizeFolderName(folderName);
-  
-  // Get the parent folder
+  // Get parent folder
   var parentFolder = DriveApp.getFolderById(parentFolderId);
   
-  // Create the new folder with sanitized name
-  var newFolder = parentFolder.createFolder(sanitizedName);
+  // Sanitize folder name
+  var sanitizedName = sanitizeFolderName(folderName);
   
-  return {
-    folderId: newFolder.getId()
-  };
+  // Check if folder already exists
+  var folders = parentFolder.getFoldersByName(sanitizedName);
+  if (folders.hasNext()) {
+    throw new Error("Folder already exists.");
+  }
+  
+  // Create new folder
+  var newFolder = parentFolder.createFolder(sanitizedName);
+  return newFolder.getId();
 }
 
 // Function to create a postulante folder inside a concurso folder
@@ -263,82 +254,215 @@ function renameFolder(folderId, newName) {
   }
 }
 
-// Web app entry point to handle POST requests.
+// Function to handle HTTP requests
 function doPost(e) {
   try {
-    // Parse the incoming JSON data.
-    var params = JSON.parse(e.postData.contents);
+    // Parse request data
+    var data = JSON.parse(e.postData.contents);
     
-    // Retrieve the secure token from script properties.
-    var secureToken = PropertiesService.getScriptProperties().getProperty('SECURE_TOKEN');
-    
-    // Validate the token from the client.
-    if (params.token !== secureToken) {
-      throw new Error("Unauthorized request.");
+    // Verify token
+    if (!data.token || !verifyToken(data.token)) {
+      throw new Error("Invalid token");
     }
     
-    var response = {
-      status: "success"
-    };
-    
-    // Handle different types of requests
-    switch(params.action) {
-      case 'createPostulanteFolder':
-        response.folderId = crearPostulante(params.concursoFolderId, params.folderName);
-        break;
-      case 'createFolder':
-        var folderResult = crearConcurso(params.folderName);
-        response.folderId = folderResult.folderId;
-        response.borradoresFolderId = folderResult.borradoresFolderId;
-        response.documentosFirmadosFolderId = folderResult.documentosFirmadosFolderId;
-        break;
-      case 'createNestedFolder':
-        var nestedFolderResult = createNestedFolder(params.parentFolderId, params.folderName);
-        response.folderId = nestedFolderResult.folderId;
-        break;
-      case 'uploadFile':
-        var uploadResult = uploadFile(params.folderId, params.fileName, params.fileData);
-        response.fileId = uploadResult.fileId;
-        response.webViewLink = uploadResult.webViewLink;
-        break;
-      case 'deleteFile':
-        response.success = deleteFile(params.fileId);
-        break;
-      case 'deleteFolder':
-        response.success = deleteFolder(params.folderId);
-        break;
-      case 'overwriteFile':
-        var overwriteResult = overwriteFile(params.fileId, params.fileData);
-        response.fileId = overwriteResult.fileId;
-        response.webViewLink = overwriteResult.webViewLink;
-        break;
-      case 'renameFolder':
-        response.success = renameFolder(params.folderId, params.newName);
-        break;
-      case 'createDocFromTemplate':
-        var docResult = createDocFromTemplate(
-          params.templateName, 
-          params.data, 
-          params.folderId, 
-          params.fileName
-        );
-        response.fileId = docResult.fileId;
-        response.webViewLink = docResult.webViewLink;
-        break;
+    // Handle different actions
+    switch (data.action) {
+      case "createFolder":
+        return handleCreateFolder(data);
+      case "createNestedFolder":
+        return handleCreateNestedFolder(data);
+      case "createPostulanteFolder":
+        return handleCreatePostulanteFolder(data);
+      case "createDocFromTemplate":
+        return handleCreateDocFromTemplate(data);
+      case "uploadFile":
+        return handleUploadFile(data);
+      case "deleteFile":
+        return handleDeleteFile(data);
+      case "deleteFolder":
+        return handleDeleteFolder(data);
+      case "overwriteFile":
+        return handleOverwriteFile(data);
+      case "renameFolder":
+        return handleRenameFolder(data);
       default:
-        throw new Error("Unknown action: " + params.action);
+        throw new Error("Invalid action");
     }
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    var errorResponse = {
-      status: "error",
-      message: err.message
-    };
-    return ContentService
-      .createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return createErrorResponse(error.message);
   }
+}
+
+// Response creators
+function createSuccessResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    ...data
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function createErrorResponse(message) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "error",
+    message: message
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Action handlers
+function handleCreateFolder(data) {
+  if (!data.folderName) {
+    throw new Error("Folder name is required.");
+  }
+
+  // Sanitize the folder name
+  var sanitizedName = sanitizeFolderName(data.folderName);
+  
+  // Your folder ID from the Google Drive URL
+  var root = DriveApp.getFolderById("1BD6fp88EQTwW9yhw4USkJjaRlbmeSHHa");
+  
+  // Check if a folder with the same name already exists
+  var folders = root.getFoldersByName(sanitizedName);
+  if (folders.hasNext()) {
+    throw new Error("Folder already exists.");
+  }
+  
+  // Create the new folder with sanitized name
+  var newFolder = root.createFolder(sanitizedName);
+  
+  return createSuccessResponse({
+    folderId: newFolder.getId()
+  });
+}
+
+function handleCreateNestedFolder(data) {
+  if (!data.parentFolderId || !data.folderName) {
+    throw new Error("Parent folder ID and folder name are required.");
+  }
+
+  var folderId = createNestedFolder(data.parentFolderId, data.folderName);
+  
+  return createSuccessResponse({
+    folderId: folderId
+  });
+}
+
+function handleCreatePostulanteFolder(data) {
+  if (!data.concursoFolderId || !data.folderName) {
+    throw new Error("Concurso folder ID and folder name are required.");
+  }
+
+  var folderId = createNestedFolder(data.concursoFolderId, data.folderName);
+  
+  return createSuccessResponse({
+    folderId: folderId
+  });
+}
+
+function handleCreateDocFromTemplate(data) {
+  if (!data.templateName || !data.folderId || !data.fileName || !data.data) {
+    throw new Error("Template name, folder ID, file name, and data are required.");
+  }
+  
+  // Get the template file
+  var templateFile = DriveApp.getFileById(TEMPLATES[data.templateName]);
+  
+  // Create a copy in the destination folder
+  var folder = DriveApp.getFolderById(data.folderId);
+  var newDoc = templateFile.makeCopy(data.fileName, folder);
+  
+  // Get the document body as Google Docs document
+  var doc = DocumentApp.openById(newDoc.getId());
+  var body = doc.getBody();
+  
+  // Replace all placeholders
+  for (var key in data.data) {
+    body.replaceText('<<' + key + '>>', data.data[key] || '');
+  }
+  
+  // Save and close the document
+  doc.saveAndClose();
+  
+  return createSuccessResponse({
+    fileId: newDoc.getId(),
+    webViewLink: newDoc.getUrl()
+  });
+}
+
+function handleUploadFile(data) {
+  if (!data.folderId || !data.fileName || !data.fileData) {
+    throw new Error("Folder ID, file name, and file data are required.");
+  }
+  
+  // Decode base64 file data
+  var blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), "application/pdf", data.fileName);
+  
+  // Get the destination folder
+  var folder = DriveApp.getFolderById(data.folderId);
+  
+  // Create the file
+  var file = folder.createFile(blob);
+  
+  return createSuccessResponse({
+    fileId: file.getId(),
+    webViewLink: file.getUrl()
+  });
+}
+
+function handleDeleteFile(data) {
+  if (!data.fileId) {
+    throw new Error("File ID is required.");
+  }
+  
+  var file = DriveApp.getFileById(data.fileId);
+  file.setTrashed(true);
+  
+  return createSuccessResponse({
+    success: true
+  });
+}
+
+function handleDeleteFolder(data) {
+  if (!data.folderId) {
+    throw new Error("Folder ID is required.");
+  }
+  
+  var folder = DriveApp.getFolderById(data.folderId);
+  folder.setTrashed(true);
+  
+  return createSuccessResponse({
+    success: true
+  });
+}
+
+function handleOverwriteFile(data) {
+  if (!data.fileId || !data.fileData) {
+    throw new Error("File ID and file data are required.");
+  }
+  
+  var file = DriveApp.getFileById(data.fileId);
+  
+  // Decode base64 file data
+  var blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), file.getMimeType(), file.getName());
+  
+  // Update the file content
+  file.setContent(blob.getBytes());
+  
+  return createSuccessResponse({
+    fileId: file.getId(),
+    webViewLink: file.getUrl()
+  });
+}
+
+function handleRenameFolder(data) {
+  if (!data.folderId || !data.newName) {
+    throw new Error("Folder ID and new name are required.");
+  }
+  
+  var folder = DriveApp.getFolderById(data.folderId);
+  var sanitizedName = sanitizeFolderName(data.newName);
+  folder.setName(sanitizedName);
+  
+  return createSuccessResponse({
+    success: true
+  });
 }

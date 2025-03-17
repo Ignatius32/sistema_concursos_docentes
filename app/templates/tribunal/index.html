@@ -23,6 +23,7 @@
                         <th>Apellido</th>
                         <th>DNI</th>
                         <th>Correo</th>
+                        <th>Documentos</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -35,12 +36,29 @@
                         <td>{{ miembro.dni }}</td>
                         <td>{{ miembro.correo }}</td>
                         <td>
+                            {% if miembro.drive_folder_id %}
+                            <a href="https://drive.google.com/drive/folders/{{ miembro.drive_folder_id }}" 
+                               target="_blank" class="btn btn-sm btn-success">
+                                <i class="fas fa-folder-open"></i> Ver Documentos
+                            </a>
+                            {% else %}
+                            <span class="badge bg-warning">Sin carpeta</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <div class="btn-group">
-                                <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                                <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
                                 <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ miembro.id }}">
-                                    Eliminar
+                                    <i class="fas fa-trash"></i> Eliminar
                                 </button>
-                                <a href="{{ url_for('tribunal.recusar', miembro_id=miembro.id) }}" class="btn btn-sm btn-info">Recusar</a>
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal{{ miembro.id }}">
+                                    <i class="fas fa-upload"></i> Subir Documentos
+                                </button>
+                                <a href="{{ url_for('tribunal.recusar', miembro_id=miembro.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-gavel"></i> Recusar
+                                </a>
                             </div>
 
                             <!-- Modal de confirmación de eliminación -->
@@ -58,6 +76,40 @@
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                             <form action="{{ url_for('tribunal.eliminar', miembro_id=miembro.id) }}" method="POST" style="display: inline;">
                                                 <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal de subida de documentos -->
+                            <div class="modal fade" id="uploadModal{{ miembro.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Subir Documentos - {{ miembro.nombre }} {{ miembro.apellido }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form action="{{ url_for('tribunal.subir_documento', miembro_id=miembro.id) }}" method="POST" enctype="multipart/form-data">
+                                                <div class="mb-3">
+                                                    <label for="tipo_{{ miembro.id }}" class="form-label">Tipo de Documento</label>
+                                                    <select class="form-select" id="tipo_{{ miembro.id }}" name="tipo" required>
+                                                        <option value="">Seleccione...</option>
+                                                        <option value="CV">Curriculum Vitae</option>
+                                                        <option value="DNI">DNI</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="documento_{{ miembro.id }}" class="form-label">Archivo</label>
+                                                    <input type="file" class="form-control" id="documento_{{ miembro.id }}" name="documento" 
+                                                           accept=".doc,.docx,.pdf,.odt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/vnd.oasis.opendocument.text" required>
+                                                    <div class="form-text">Formatos aceptados: DOC, DOCX, PDF, ODT</div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-primary">Subir</button>
+                                                </div>
                                             </form>
                                         </div>
                                     </div>
