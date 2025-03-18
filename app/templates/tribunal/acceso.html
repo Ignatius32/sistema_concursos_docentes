@@ -1,33 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Iniciar Sesión - {{ super() }}{% endblock %}
+{% block title %}Portal de Tribunal - Acceso - {{ super() }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h4 class="mb-0">Iniciar Sesión</h4>
+                <h4 class="mb-0">Acceso al Portal de Tribunal</h4>
             </div>
             <div class="card-body">
                 <form method="POST">
                     <div class="mb-3">
-                        <label for="username" class="form-label">Usuario</label>
+                        <label for="username" class="form-label">DNI (Usuario)</label>
                         <input type="text" class="form-control" id="username" name="username" required>
+                        <small class="form-text text-muted">Ingrese su DNI como nombre de usuario</small>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Contraseña</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Ingresar</button>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Ingresar</button>
+                    </div>
                 </form>
                 
                 <hr>
                 
                 <div class="text-center">
-                    <p>¿Es miembro de un tribunal? <a href="{{ url_for('tribunal.acceso') }}">Acceder al Portal de Tribunal</a></p>
-                    <p><a href="{{ url_for('tribunal.activar_cuenta') }}" class="btn btn-outline-primary">Primera vez? Activar cuenta</a></p>
-                    <p><a href="{{ url_for('tribunal.recuperar_password') }}" class="btn btn-outline-secondary">¿Olvidó su contraseña?</a></p>
+                    <p><a href="{{ url_for('tribunal.recuperar_password') }}">¿Olvidó su contraseña?</a></p>
+                    <p>¿No es miembro del tribunal? <a href="{{ url_for('auth.login') }}">Volver al inicio de sesión principal</a></p>
                 </div>
             </div>
         </div>

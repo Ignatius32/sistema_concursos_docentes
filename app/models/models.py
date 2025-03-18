@@ -10,6 +10,9 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
+    role = db.Column(db.String(20), default='admin')  # admin, staff, etc.
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -76,6 +79,10 @@ class Concurso(db.Model):
     documentos_firmados_folder_id = db.Column(db.String(100), nullable=True)  # Documentos firmados subfolder ID
     tribunal_folder_id = db.Column(db.String(100), nullable=True)  # Tribunal subfolder ID
 
+    nro_res_llamado_interino = db.Column(db.String(50), nullable=True)
+    nro_res_llamado_regular = db.Column(db.String(50), nullable=True)
+    nro_res_tribunal_regular = db.Column(db.String(50), nullable=True)
+
     # New fields for committee and council information
     fecha_comision_academica = db.Column(db.Date, nullable=True)
     despacho_comision_academica = db.Column(db.String(255), nullable=True)
@@ -95,15 +102,58 @@ class Concurso(db.Model):
 class TribunalMiembro(db.Model):
     __tablename__ = 'tribunal_miembros'
     id = db.Column(db.Integer, primary_key=True)
-    concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id'))
+    concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id', name='fk_tribunal_miembro_concurso'))
     rol = db.Column(db.String(50), nullable=False)  # Presidente, Vocal, Suplente
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100), nullable=False)
     dni = db.Column(db.String(20), nullable=False)
     correo = db.Column(db.String(100))
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
+    
+    # Authentication and notification fields
+    username = db.Column(db.String(50), nullable=True)
+    password_hash = db.Column(db.String(128), nullable=True)
+    reset_token = db.Column(db.String(100), nullable=True)  # For password setup
+    notificado = db.Column(db.Boolean, default=False)
+    notificado_sustanciacion = db.Column(db.Boolean, default=False)  # New field
+    fecha_notificacion = db.Column(db.DateTime, nullable=True)
+    fecha_notificacion_sustanciacion = db.Column(db.DateTime, nullable=True)  # New field
+    ultimo_acceso = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
     recusaciones = db.relationship('Recusacion', backref='miembro', lazy='dynamic')
     documentos = db.relationship('DocumentoTribunal', backref='miembro', lazy='dynamic')
+    firmas = db.relationship('FirmaDocumento', 
+                           back_populates='miembro',
+                           overlaps="miembro_tribunal,firmas_realizadas",
+                           lazy=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('username', name='uq_tribunal_miembro_username'),
+    )
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+        self.reset_token = None  # Clear reset token after password is set
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password) if self.password_hash else False
+    
+    def generate_reset_token(self):
+        """Generate a unique token for password setup."""
+        from secrets import token_urlsafe
+        self.reset_token = token_urlsafe(32)
+        return self.reset_token
+    
+    def check_reset_token(self, token):
+        """Check if a reset token is valid."""
+        if not self.reset_token or self.reset_token != token:
+            return False
+        # Could add expiration check here if needed
+        return True
+    
+    def get_concursos(self):
+        return Concurso.query.join(TribunalMiembro).filter(TribunalMiembro.id == self.id).all()
 
 class DocumentoTribunal(db.Model):
     __tablename__ = 'documentos_tribunal'
@@ -131,9 +181,9 @@ class Postulante(db.Model):
 class DocumentoPostulante(db.Model):
     __tablename__ = 'documentos_postulante'
     id = db.Column(db.Integer, primary_key=True)
-    postulante_id = db.Column(db.Integer, db.ForeignKey('postulantes.id'))
+    postulante_id = db.Column(db.Integer, db.ForeignKey('postulantes.id', name='fk_postulante_documentos'))
     tipo = db.Column(db.String(50), nullable=False)  # CV, DNI, etc.
-    url = db.Column(db.String(255))
+    url = db.Column(db.String(255), nullable=False)
     creado = db.Column(db.DateTime, default=datetime.utcnow)
 
 class DocumentoConcurso(db.Model):
@@ -144,6 +194,43 @@ class DocumentoConcurso(db.Model):
     url = db.Column(db.String(255))
     estado = db.Column(db.String(20), default="CREADA")
     creado = db.Column(db.DateTime, default=datetime.utcnow)
+    firma_count = db.Column(db.Integer, nullable=False, default=0)
+    # Add direct file_id column
+    file_id = db.Column(db.String(100), nullable=True)
+    firmas = db.relationship('FirmaDocumento', 
+                           back_populates='documento_concurso',
+                           lazy=True,
+                           cascade='all, delete-orphan')
+
+    def ya_firmado_por(self, miembro_id):
+        """Check if a tribunal member has already signed this document."""
+        return any(firma.miembro_id == miembro_id for firma in self.firmas)
+
+    # Keep the property for backward compatibility, but make it read/write
+    @property
+    def drive_file_id(self):
+        """Extract Google Drive file ID from URL."""
+        if self.file_id:
+            return self.file_id
+        
+        if not self.url:
+            return None
+        try:
+            # URLs are in format https://drive.google.com/file/d/FILE_ID/view
+            return self.url.split('/d/')[1].split('/')[0]
+        except (IndexError, AttributeError):
+            return None
+
+class FirmaDocumento(db.Model):
+    __tablename__ = 'firmas_documento'
+    id = db.Column(db.Integer, primary_key=True)
+    documento_id = db.Column(db.Integer, db.ForeignKey('documentos_concurso.id', ondelete='CASCADE'), nullable=False)
+    miembro_id = db.Column(db.Integer, db.ForeignKey('tribunal_miembros.id', ondelete='CASCADE'), nullable=False)
+    fecha_firma = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Update relationships with back_populates
+    documento_concurso = db.relationship('DocumentoConcurso', back_populates='firmas')
+    miembro = db.relationship('TribunalMiembro', back_populates='firmas')
 
 class HistorialEstado(db.Model):
     __tablename__ = 'historial_estados'

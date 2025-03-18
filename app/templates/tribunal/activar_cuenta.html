@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Activar Cuenta de Tribunal - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Activar Cuenta de Tribunal</h4>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Ingrese su DNI y correo electrónico para activar su cuenta.</p>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="dni" class="form-label">DNI</label>
+                        <input type="text" class="form-control" id="dni" name="dni" required 
+                               pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
+                    </div>
+                    <div class="mb-3">
+                        <label for="correo" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="correo" name="correo" required>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('tribunal.acceso') }}" class="btn btn-secondary">Volver</a>
+                        <button type="submit" class="btn btn-primary">Enviar Enlace de Activación</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

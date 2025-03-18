@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Notificar al Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="mb-0">Notificar al Tribunal - Concurso #{{ concurso.id }}</h2>
+    </div>
+    <div class="card-body">
+        {% if not sustanciacion %}
+        <div class="alert alert-warning">
+            Para notificar al tribunal, primero debe cargar la información de sustanciación.
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <h5>Esta acción enviará un correo a cada miembro del tribunal con:</h5>
+            <ul>
+                <li>Sus credenciales de acceso al portal del tribunal</li>
+                <li>La información de sustanciación del concurso</li>
+                <li>El mensaje personalizado que usted redacte a continuación</li>
+            </ul>
+        </div>
+        
+        <form method="POST">
+            <div class="mb-4">
+                <h4>Mensaje para los miembros del tribunal:</h4>
+                <textarea class="form-control" name="mensaje" rows="8" required>Estimado/a <<nombre>> <<apellido>>:
+
+Por medio de la presente, le notifico que ha sido designado/a como <<rol>> para el Concurso #{{concurso.id}} del Departamento de <<departamento>>, Área <<area>>, cargo <<categoria>> <<dedicacion>>.
+
+A continuación encontrará sus credenciales de acceso al Portal del Tribunal, donde podrá consultar toda la información relacionada con el concurso y los postulantes:
+                </textarea>
+                <small class="form-text text-muted">
+                    Puede usar los siguientes marcadores en el mensaje: &lt;&lt;nombre&gt;&gt;, &lt;&lt;apellido&gt;&gt;, &lt;&lt;rol&gt;&gt;, &lt;&lt;concurso_id&gt;&gt;, &lt;&lt;departamento&gt;&gt;, &lt;&lt;area&gt;&gt;, &lt;&lt;categoria&gt;&gt;, &lt;&lt;dedicacion&gt;&gt;
+                </small>
+            </div>
+            
+            <h4>Información de sustanciación que se incluirá en la notificación:</h4>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Fecha de constitución:</strong> {{ sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if sustanciacion.constitucion_fecha else 'No definida' }}</p>
+                            <p><strong>Lugar:</strong> {{ sustanciacion.constitucion_lugar or 'No definido' }}</p>
+                            {% if sustanciacion.constitucion_virtual_link %}
+                            <p><strong>Enlace para reunión virtual:</strong> <a href="{{ sustanciacion.constitucion_virtual_link }}">{{ sustanciacion.constitucion_virtual_link }}</a></p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if sustanciacion.constitucion_observaciones %}
+                            <p><strong>Observaciones:</strong> {{ sustanciacion.constitucion_observaciones }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h4>Miembros del tribunal a notificar:</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Rol</th>
+                            <th>Correo</th>
+                            <th>Estado</th>
+                            <th>Credenciales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for miembro in miembros %}
+                        <tr>
+                            <td>{{ miembro.nombre }} {{ miembro.apellido }}</td>
+                            <td>{{ miembro.rol }}</td>
+                            <td>{{ miembro.correo }}</td>
+                            <td>
+                                {% if miembro.notificado %}
+                                <span class="badge bg-success">Notificado el {{ miembro.fecha_notificacion.strftime('%d/%m/%Y') }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">No notificado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if miembro.username %}
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ miembro.username }}</span>
+                                    <input type="text" class="form-control" name="password_{{ miembro.id }}" placeholder="Nueva contraseña (opcional)">
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Se generará automáticamente</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="d-flex justify-content-end mt-4">
+                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary me-2">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Enviar Notificaciones</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Portal del Tribunal - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Portal del Tribunal - {{ miembro.nombre }} {{ miembro.apellido }}</h2>
+    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-box-arrow-right"></i> Salir
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h4 class="mb-0">Información Personal</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Nombre:</strong> {{ miembro.nombre }} {{ miembro.apellido }}</p>
+                <p><strong>DNI:</strong> {{ miembro.dni }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Correo:</strong> {{ miembro.correo }}</p>
+                <p><strong>Último acceso:</strong> {{ miembro.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if miembro.ultimo_acceso else 'Primer acceso' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mb-3">Concursos Asignados</h3>
+
+{% if concursos %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Departamento</th>
+                <th>Área</th>
+                <th>Categoría</th>
+                <th>Dedicación</th>
+                <th>Su Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for concurso in concursos %}
+            <tr>
+                <td>{{ concurso.id }}</td>
+                <td>{{ concurso.departamento_rel.nombre }}</td>
+                <td>{{ concurso.area }}</td>
+                <td>{{ concurso.categoria }}</td>
+                <td>{{ concurso.dedicacion }}</td>
+                <td>
+                    {% for miembro_tribunal in concurso.tribunal %}
+                        {% if miembro_tribunal.id == miembro.id %}
+                            <span class="badge bg-primary">{{ miembro_tribunal.rol }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    <span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">
+                        {{ concurso.estado_actual }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" 
+                       class="btn btn-sm btn-primary">
+                        Ver Detalles
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No tiene concursos asignados actualmente.
+</div>
+{% endif %}
+{% endblock %}

@@ -34,26 +34,26 @@ def get_considerandos_data(document_type, tipo_concurso=None):
                 if not tipo_concurso or 'visibility' not in item or not item.get('visibility'):
                     return item
                 
-                # Normalize both values for comparison
-                visibility = item.get('visibility', '').strip().lower()
+                # Get visibility values and normalize them
+                visibility_values = [v.strip().lower() for v in item.get('visibility', '').split(',')]
                 tipo = tipo_concurso.strip().lower()
                 
                 print(f"Document type: {document_type}")
-                print(f"Visibility from API: '{visibility}'")
+                print(f"Visibility from API: '{visibility_values}'")
                 print(f"Tipo concurso: '{tipo}'")
                 
+                # If 'both' is in visibility values, return the item
+                if 'both' in visibility_values:
+                    print(f"Visibility match: 'both' allows access to both types")
+                    return item
+                
                 # Special handling for regular/interino
-                if visibility == 'regular' and tipo in ('regular', 'ordinario'):
-                    print(f"Visibility match: '{visibility}' matches '{tipo}'")
-                    return item
-                elif visibility == 'interino' and tipo in ('interino', 'suplente'):
-                    print(f"Visibility match: '{visibility}' matches '{tipo}'")
-                    return item
-                elif visibility == tipo:
-                    print(f"Exact visibility match: '{visibility}' == '{tipo}'")
+                if ('regular' in visibility_values and tipo in ('regular', 'ordinario')) or \
+                   ('interino' in visibility_values and tipo in ('interino', 'suplente')):
+                    print(f"Visibility match: '{visibility_values}' matches '{tipo}'")
                     return item
                 else:
-                    print(f"Visibility mismatch: '{visibility}' != '{tipo}'")
+                    print(f"Visibility mismatch: '{visibility_values}' doesn't match '{tipo}'")
                     return None
                 
         return None

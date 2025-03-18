@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Editar Miembro del Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+{% block title %}Editar Miembro del Tribunal - {{ miembro.nombre }} {{ miembro.apellido }} - {{ super() }}{% endblock %}
 
 {% block content %}
 <div class="card">
@@ -24,30 +24,36 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" 
-                           value="{{ miembro.nombre }}" required>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ miembro.nombre }}" required>
                 </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="apellido" class="form-label">Apellido</label>
-                    <input type="text" class="form-control" id="apellido" name="apellido" 
-                           value="{{ miembro.apellido }}" required>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="{{ miembro.apellido }}" required>
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="dni" class="form-label">DNI</label>
-                    <input type="text" class="form-control" id="dni" name="dni" 
-                           value="{{ miembro.dni }}" required 
+                    <input type="text" class="form-control" id="dni" name="dni" value="{{ miembro.dni }}" required 
                            pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
                 </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="correo" class="form-label">Correo Electrónico</label>
-                    <input type="email" class="form-control" id="correo" name="correo" 
-                           value="{{ miembro.correo }}" required>
+                    <input type="email" class="form-control" id="correo" name="correo" value="{{ miembro.correo }}" required>
                 </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="regenerate_password" name="regenerate_password">
+                <label class="form-check-label" for="regenerate_password">
+                    Enviar nuevo enlace de configuración de contraseña
+                </label>
+                <small class="form-text text-muted d-block">
+                    Se enviará un correo al miembro con un enlace para configurar una nueva contraseña.
+                </small>
             </div>
 
             <div class="text-end">

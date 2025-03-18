@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Concurso #{{ concurso.id }} - Portal del Tribunal - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ url_for('tribunal.portal') }}" class="btn btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Volver al Portal
+        </a>
+        <h2>Concurso #{{ concurso.id }}</h2>
+    </div>
+    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-box-arrow-right"></i> Salir
+    </a>
+</div>
+
+<div class="row">
+    <!-- Concurso information -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Información del Concurso</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
+                        <p><strong>Área:</strong> {{ concurso.area }}</p>
+                        <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
+                        <p><strong>Tipo:</strong> {{ concurso.tipo }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
+                        <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
+                        <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
+                        <p><strong>Estado:</strong> {{ concurso.estado_actual }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sustanciación information -->
+    {% if concurso.sustanciacion %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Información de Sustanciación</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Constitución del jurado -->
+                    <div class="col-md-4">
+                        <h5>Constitución del Jurado</h5>
+                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else 'No definida' }}</p>
+                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.constitucion_lugar or 'No definido' }}</p>
+                        {% if concurso.sustanciacion.constitucion_virtual_link %}
+                        <p>
+                            <strong>Enlace virtual:</strong> 
+                            <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-link-45deg"></i> Abrir enlace
+                            </a>
+                        </p>
+                        {% endif %}
+                        {% if concurso.sustanciacion.constitucion_observaciones %}
+                        <p><strong>Observaciones:</strong> {{ concurso.sustanciacion.constitucion_observaciones }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Sorteo de tema -->
+                    <div class="col-md-4">
+                        <h5>Sorteo de Tema</h5>
+                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'No definida' }}</p>
+                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.sorteo_lugar or 'No definido' }}</p>
+                        {% if concurso.sustanciacion.sorteo_virtual_link %}
+                        <p>
+                            <strong>Enlace virtual:</strong> 
+                            <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-link-45deg"></i> Abrir enlace
+                            </a>
+                        </p>
+                        {% endif %}
+                        {% if concurso.sustanciacion.temas_exposicion %}
+                        <div>
+                            <strong>Temas de exposición:</strong>
+                            <div class="temas-list mt-2">
+                                {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                                    {% if tema.strip() %}
+                                    <span class="badge bg-light text-dark me-2 mb-2 p-2">{{ tema.strip() }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Exposición -->
+                    <div class="col-md-4">
+                        <h5>Exposición</h5>
+                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'No definida' }}</p>
+                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.exposicion_lugar or 'No definido' }}</p>
+                        {% if concurso.sustanciacion.exposicion_virtual_link %}
+                        <p>
+                            <strong>Enlace virtual:</strong> 
+                            <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-link-45deg"></i> Abrir enlace
+                            </a>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Documents section -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Documentos del Concurso</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for documento in concurso.documentos %}
+                            <tr>
+                                <td>
+                                    {% if documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}
+                                    Acta de Constitución del Tribunal
+                                    {% elif documento.tipo == 'ACTA_DICTAMEN' %}
+                                    Acta de Dictamen
+                                    {% elif documento.tipo == 'ACTA_SORTEO' %}
+                                    Acta de Sorteo de Tema
+                                    {% else %}
+                                    {{ documento.tipo }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if documento.estado == 'FIRMADO' %}bg-success{% elif documento.estado == 'PENDIENTE DE FIRMA' %}bg-info{% else %}bg-warning{% endif %}">
+                                        {{ documento.estado }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-file-earmark-text"></i> Ver Documento
+                                        </a>
+                                        {% if documento.estado == 'PENDIENTE DE FIRMA' and not documento.ya_firmado_por(miembro.id) %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#firmarModal{{ documento.id }}">
+                                            <i class="bi bi-pen"></i> Firmar
+                                        </button>
+                                        {% endif %}
+                                        {% if documento.estado != 'FIRMADO' and miembro.rol == 'Presidente' %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#uploadModal{{ documento.id }}">
+                                            <i class="bi bi-upload"></i> Subir Firmado
+                                        </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Firma Modal -->
+                                    {% if documento.estado == 'PENDIENTE DE FIRMA' and not documento.ya_firmado_por(miembro.id) %}
+                                    <div class="modal fade" id="firmarModal{{ documento.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Firmar Documento</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form action="{{ url_for('tribunal.firmar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                                                      method="POST" 
+                                                      id="firmaForm{{ documento.id }}"
+                                                      onsubmit="startFirmaLoading({{ documento.id }})">
+                                                    <div class="modal-body">
+                                                        <div id="firmaInfo{{ documento.id }}">
+                                                            <p>¿Está seguro que desea firmar este documento?</p>
+                                                            <p>Se agregará una marca digital con sus datos y la fecha y hora actual en cada página.</p>
+                                                            {% if documento.firma_count > 0 %}
+                                                            <p>Este documento ya tiene {{ documento.firma_count }} firma(s).</p>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div id="firmaLoading{{ documento.id }}" style="display: none;" class="text-center">
+                                                            <div class="spinner-border text-primary" role="status">
+                                                                <span class="visually-hidden">Firmando documento...</span>
+                                                            </div>
+                                                            <p class="mt-2">Firmando documento, por favor espere...</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-success" id="firmaButton{{ documento.id }}">
+                                                            <i class="bi bi-pen"></i> Firmar
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Upload Modal -->
+                                    {% if documento.estado != 'FIRMADO' and miembro.rol == 'Presidente' %}
+                                    <div class="modal fade" id="uploadModal{{ documento.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Subir Documento Firmado</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form action="{{ url_for('tribunal.subir_acta_firmada', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                                                          method="POST" 
+                                                          enctype="multipart/form-data">
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Seleccione el documento firmado (PDF)</label>
+                                                            <input type="file" class="form-control" name="documento" accept=".pdf" required>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-success">Subir</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tribunal information -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Miembros del Tribunal</h4>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for miembro_tribunal in miembros %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ miembro_tribunal.nombre }} {{ miembro_tribunal.apellido }}</h5>
+                            <span class="badge bg-{{ 'primary' if miembro_tribunal.id == miembro.id else 'secondary' }}">
+                                {{ miembro_tribunal.rol }}
+                            </span>
+                        </div>
+                        <p class="mb-1"><small>DNI: {{ miembro_tribunal.dni }}</small></p>
+                        {% if miembro_tribunal.correo %}
+                        <p class="mb-1"><small>Correo: {{ miembro_tribunal.correo }}</small></p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Postulantes information -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">Postulantes Inscriptos</h4>
+            </div>
+            <div class="card-body">
+                {% if postulantes %}
+                <div class="list-group">
+                    {% for postulante in postulantes %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ postulante.nombre }} {{ postulante.apellido }}</h5>
+                        </div>
+                        <p class="mb-1"><small>DNI: {{ postulante.dni }}</small></p>
+                        {% if postulante.documentos.count() > 0 %}
+                        <div class="mt-2">
+                            <strong>Documentos:</strong>
+                            <div class="mt-1">
+                                {% for doc in postulante.documentos %}
+                                <a href="{{ doc.url }}" target="_blank" class="btn btn-sm btn-outline-secondary m-1">
+                                    <i class="bi bi-file-earmark-pdf"></i> {{ doc.tipo }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No hay postulantes inscriptos en este concurso.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.temas-list {
+    display: flex;
+    flex-wrap: wrap;
+}
+.temas-list .badge {
+    border: 1px solid #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function startFirmaLoading(documentoId) {
+    // Hide info and show loading
+    document.getElementById('firmaInfo' + documentoId).style.display = 'none';
+    document.getElementById('firmaLoading' + documentoId).style.display = 'block';
+    
+    // Disable submit button
+    document.getElementById('firmaButton' + documentoId).disabled = true;
+    
+    // Return true to allow form submission
+    return true;
+}
+</script>
+{% endblock %}

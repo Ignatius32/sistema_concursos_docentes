@@ -18,6 +18,24 @@
                         <option value="Interino" {% if concurso.tipo == 'Interino' %}selected{% endif %}>Interino</option>
                     </select>
                 </div>
+
+                <!-- Resolution number fields -->
+                <div class="col-md-6 mb-3" id="nro_res_llamado_interino_group" {% if concurso.tipo != 'Interino' %}style="display:none;"{% endif %}>
+                    <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino" value="{{ concurso.nro_res_llamado_interino or '' }}">
+                </div>
+
+                <div class="col-md-6 mb-3" id="nro_res_llamado_regular_group" {% if concurso.tipo != 'Regular' %}style="display:none;"{% endif %}>
+                    <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular" value="{{ concurso.nro_res_llamado_regular or '' }}">
+                </div>
+
+                <div class="col-md-6 mb-3" id="nro_res_tribunal_regular_group" {% if concurso.tipo != 'Regular' %}style="display:none;"{% endif %}>
+                    <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
+                    <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular" value="{{ concurso.nro_res_tribunal_regular or '' }}">
+                </div>
+                <!-- End resolution number fields -->
+            </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
@@ -415,6 +433,28 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('form').addEventListener('submit', function(e) {
         updateTemasInput();
         console.log('Form submission temas value:', temasInput.value);
+    });
+
+    // Add fields visibility handling based on tipo
+    const tipoSelect = document.getElementById('tipo');
+    const nroResLlamadoInterinoGroup = document.getElementById('nro_res_llamado_interino_group');
+    const nroResLlamadoRegularGroup = document.getElementById('nro_res_llamado_regular_group');
+    const nroResTribunalRegularGroup = document.getElementById('nro_res_tribunal_regular_group');
+
+    tipoSelect.addEventListener('change', function() {
+        if (this.value === 'Interino') {
+            nroResLlamadoInterinoGroup.style.display = 'block';
+            nroResLlamadoRegularGroup.style.display = 'none';
+            nroResTribunalRegularGroup.style.display = 'none';
+        } else if (this.value === 'Regular') {
+            nroResLlamadoInterinoGroup.style.display = 'none';
+            nroResLlamadoRegularGroup.style.display = 'block';
+            nroResTribunalRegularGroup.style.display = 'block';
+        } else {
+            nroResLlamadoInterinoGroup.style.display = 'none';
+            nroResLlamadoRegularGroup.style.display = 'none';
+            nroResTribunalRegularGroup.style.display = 'none';
+        }
     });
 });
 </script>

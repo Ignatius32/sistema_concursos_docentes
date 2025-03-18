@@ -2,6 +2,10 @@ import os
 import requests
 from datetime import datetime, timezone
 import base64
+import logging
+
+# Set up logger for debugging
+logger = logging.getLogger(__name__)
 
 class GoogleDriveAPI:
     def __init__(self):
@@ -144,6 +148,124 @@ class GoogleDriveAPI:
 
         return upload_data.get('fileId'), upload_data.get('webViewLink')
 
+    def get_file_content(self, file_id):
+        """
+        Retrieve the content of a file from Google Drive.
+        
+        Args:
+            file_id (str): The ID of the file to retrieve
+            
+        Returns:
+            dict: Contains fileData (base64 encoded content), fileName, and mimeType
+        """
+        try:
+            logger.info(f"Getting file content for file_id: {file_id}")
+            response = requests.post(self.api_url, json={
+                'action': 'getFileContent',
+                'fileId': file_id,
+                'token': self.secure_token
+            }, timeout=30)
+
+            if response.status_code != 200:
+                error_message = f"Error retrieving file from Google Drive: {response.text}"
+                logger.error(error_message)
+                raise Exception(error_message)
+
+            data = response.json()
+            if data.get('status') != 'success':
+                error_message = f"Error from Google Drive API: {data.get('message')}"
+                logger.error(error_message)
+                raise Exception(error_message)
+
+            return {
+                'fileData': data.get('fileData'),
+                'fileName': data.get('fileName'),
+                'mimeType': data.get('mimeType', 'application/pdf')
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting file content from Drive: {str(e)}")
+            raise
+
+    def add_signature_to_pdf(self, file_id, nombre, apellido, dni, firma_count=0):
+        """
+        Add a signature directly to a PDF file in Google Drive.
+        This method is deprecated. Instead, use get_file_content to download,
+        add_signature_stamp from pdf_utils to stamp, and overwrite_file to upload.
+        
+        Args:
+            file_id (str): The ID of the PDF file to sign
+            nombre (str): First name of the signer
+            apellido (str): Last name of the signer
+            dni (str): DNI of the signer
+            firma_count (int): Current count of signatures on the document
+            
+        Returns:
+            tuple: (new_file_id, web_view_link) - ID and URL of the signed document
+        """
+        logger.warning("add_signature_to_pdf method is deprecated. Use the Python PDF stamping instead.")
+        response = requests.post(self.api_url, json={
+            'action': 'addSignatureToPdf',
+            'fileId': file_id,
+            'nombre': nombre,
+            'apellido': apellido,
+            'dni': dni,
+            'firmaCount': firma_count,
+            'token': self.secure_token
+        })
+
+        if response.status_code != 200:
+            raise Exception(f"Error adding signature to PDF: {response.text}")
+
+        signature_data = response.json()
+        if signature_data.get('status') != 'success':
+            raise Exception(f"Error from Google Drive API: {signature_data.get('message')}")
+
+        return signature_data.get('fileId'), signature_data.get('webViewLink')
+
+    def overwrite_file(self, file_id, file_data):
+        """
+        Overwrite an existing file in Google Drive.
+        
+        Args:
+            file_id (str): The ID of the file to overwrite
+            file_data (str): The base64-encoded file content
+            
+        Returns:
+            tuple: (file_id, web_view_link) - ID and URL of the updated file
+        """
+        try:
+            logger.info(f"Overwriting file: {file_id}")
+            response = requests.post(self.api_url, json={
+                'action': 'overwriteFile',
+                'fileId': file_id,
+                'fileData': file_data,
+                'mimeType': 'application/pdf',  # Explicitly set PDF MIME type
+                'token': self.secure_token
+            }, timeout=30)
+            
+            if response.status_code != 200:
+                error_message = f"Error from Google Drive API: {response.text}"
+                logger.error(error_message)
+                raise Exception(error_message)
+
+            data = response.json()
+            if data.get('status') != 'success':
+                error_message = f"Error from Google Drive API: {data.get('message')}"
+                logger.error(error_message)
+                raise Exception(error_message)
+
+            new_file_id = data.get('fileId')
+            web_view_link = data.get('webViewLink')
+            logger.info(f"Successfully overwrote file. New file ID: {new_file_id}")
+            
+            # Return as tuple since that's what's expected by the calling code
+            return new_file_id, web_view_link
+            
+        except Exception as e:
+            logger.error(f"Error overwriting file in Drive: {str(e)}")
+            raise
+
     def delete_file(self, file_id):
         """
         Delete a file from Google Drive.
@@ -165,33 +287,6 @@ class GoogleDriveAPI:
             raise Exception(f"Error from Google Drive API: {delete_data.get('message')}")
 
         return delete_data.get('success')
-
-    def overwrite_file(self, file_id, file_data):
-        """
-        Overwrite an existing file in Google Drive.
-        
-        Args:
-            file_id (str): The ID of the file to overwrite
-            file_data (bytes): The new file content as bytes
-        """
-        # Encode file data as base64 for transmission
-        file_data_b64 = base64.b64encode(file_data).decode('utf-8')
-        
-        response = requests.post(self.api_url, json={
-            'action': 'overwriteFile',
-            'fileId': file_id,
-            'fileData': file_data_b64,
-            'token': self.secure_token
-        })
-
-        if response.status_code != 200:
-            raise Exception(f"Error overwriting file in Google Drive: {response.text}")
-
-        overwrite_data = response.json()
-        if overwrite_data.get('status') != 'success':
-            raise Exception(f"Error from Google Drive API: {overwrite_data.get('message')}")
-
-        return overwrite_data.get('fileId'), overwrite_data.get('webViewLink')
 
     def delete_folder(self, folder_id):
         """
@@ -273,3 +368,49 @@ class GoogleDriveAPI:
             raise Exception(f"Error from Google Drive API: {folder_data.get('message')}")
 
         return folder_data.get('folderId')
+
+    def send_email(self, to_email, subject, html_body, sender_name=None, attachment_ids=None, placeholders=None):
+        """
+        Send an email using Gmail with optional attachments and placeholder replacement.
+        
+        Args:
+            to_email (str): Email address of the recipient
+            subject (str): Email subject line (can contain placeholders)
+            html_body (str): HTML content of the email (can contain placeholders)
+            sender_name (str, optional): Name to display as the sender
+            attachment_ids (list, optional): List of Google Drive file IDs to attach to the email
+            placeholders (dict, optional): Dictionary of placeholder values to replace in subject and body
+                                          Format: {'placeholder_name': 'replacement_value'}
+                                          
+        Returns:
+            dict: Result information about the sent email
+            
+        Example:
+            send_email(
+                'recipient@example.com',
+                'Your application for <<position>> position',
+                '<p>Dear <<name>>,</p><p>Your application has been received.</p>',
+                'HR Department',
+                ['1Ab2Cd3Ef4Gh5Ij6Kl7Mn8Op'],
+                {'name': 'John Doe', 'position': 'Professor'}
+            )
+        """
+        response = requests.post(self.api_url, json={
+            'action': 'sendEmail',
+            'to': to_email,
+            'subject': subject,
+            'htmlBody': html_body,
+            'senderName': sender_name,
+            'attachmentIds': attachment_ids or [],
+            'placeholders': placeholders or {},
+            'token': self.secure_token
+        })
+
+        if response.status_code != 200:
+            raise Exception(f"Error sending email: {response.text}")
+
+        email_data = response.json()
+        if email_data.get('status') != 'success':
+            raise Exception(f"Error from Google API: {email_data.get('message')}")
+
+        return email_data

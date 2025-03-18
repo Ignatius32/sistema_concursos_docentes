@@ -7,7 +7,7 @@
         "nombre": "Profesor Titular",
         "documentacionRequerida": {
           "base": [
-            "CV",
+            "CV prueba cambio base",
             "PLAN_TRABAJO",
             "DNI",
             "TITULO_GRADO"

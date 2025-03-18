@@ -6,7 +6,6 @@ from app.integrations.google_drive import GoogleDriveAPI
 from app.helpers.text_formatting import format_descripcion_cargo
 from app.helpers.api_services import get_considerandos_data, get_departamento_heads_data
 from app.document_generation.document_generator import generar_documento_desde_template
-from app.document_generation.resolucion_templates import prepare_data_resolucion_llamado_tribunal
 import json
 import os
 import requests
@@ -31,6 +30,18 @@ def nuevo():
         try:
             # Extract data from form
             tipo = request.form.get('tipo')
+            
+            # Get resolution numbers based on tipo
+            nro_res_llamado_interino = None
+            nro_res_llamado_regular = None
+            nro_res_tribunal_regular = None
+            
+            if tipo == 'Interino':
+                nro_res_llamado_interino = request.form.get('nro_res_llamado_interino')
+            elif tipo == 'Regular':
+                nro_res_llamado_regular = request.form.get('nro_res_llamado_regular')
+                nro_res_tribunal_regular = request.form.get('nro_res_tribunal_regular')
+            
             cerrado_abierto = request.form.get('cerrado_abierto')
             cant_cargos = int(request.form.get('cant_cargos'))
             departamento_id = int(request.form.get('departamento_id'))
@@ -76,6 +87,9 @@ def nuevo():
             # Create new concurso first to get its ID
             concurso = Concurso(
                 tipo=tipo,
+                nro_res_llamado_interino=nro_res_llamado_interino,
+                nro_res_llamado_regular=nro_res_llamado_regular,
+                nro_res_tribunal_regular=nro_res_tribunal_regular,
                 cerrado_abierto=cerrado_abierto,
                 cant_cargos=cant_cargos,
                 departamento_id=departamento_id,
@@ -199,15 +213,19 @@ def ver(concurso_id):
         },
         {
             'id': 'RESOLUCION_LLAMADO_REGULAR',
-            'name': 'Resolución Llamado Regular',
+            'name': 'Resolución Llamado Regular', 
             'url_generator': lambda c_id: url_for('concursos.generar_resolucion_llamado_regular', concurso_id=c_id)
         },
         {
             'id': 'RESOLUCION_TRIBUNAL_REGULAR',
             'name': 'Resolución Tribunal Regular',
             'url_generator': lambda c_id: url_for('concursos.generar_resolucion_tribunal_regular', concurso_id=c_id)
+        },
+        {
+            'id': 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR',
+            'name': 'Crear Borrador Acta Constitución de Tribunal Regular',
+            'url_generator': lambda c_id: url_for('concursos.generar_acta_constitucion_tribunal_regular', concurso_id=c_id)
         }
-        # Add more document types here in the future
     ]
     
     # Check each document type's visibility
@@ -257,14 +275,47 @@ def generar_resolucion_tribunal_regular(concurso_id):
                            document_type='RESOLUCION_TRIBUNAL_REGULAR', 
                            template_name='resTribunalRegular'))
 
+@concursos.route('/<int:concurso_id>/generar-acta-constitucion-tribunal-regular', methods=['GET'])
+@login_required
+def generar_acta_constitucion_tribunal_regular(concurso_id):
+    """Handle the request to generate a regular tribunal constitution document."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+
+    # Check document visibility and uniqueness from API
+    doc_data = get_considerandos_data('ACTA_CONSTITUCION_TRIBUNAL_REGULAR', concurso.tipo)
+    if not doc_data:
+        flash('Este documento no está disponible para este tipo de concurso.', 'warning')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+    # Check if unique document already exists
+    if doc_data.get('unique', 0) == 1:
+        existing_document = DocumentoConcurso.query.filter_by(
+            concurso_id=concurso_id,
+            tipo='ACTA_CONSTITUCION_TRIBUNAL_REGULAR'
+        ).first()
+        if existing_document:
+            flash('Ya existe un acta de constitución para este concurso. Por favor, elimine la existente antes de generar una nueva.', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+    # Generate the document directly using the consolidated function
+    success, message, url = generar_documento_desde_template(
+        concurso_id,
+        'actaConstitucionTribunalRegular',
+        'ACTA_CONSTITUCION_TRIBUNAL_REGULAR'
+    )
+
+    if success:
+        flash(f'{message} <a href="{url}" target="_blank" class="alert-link">Abrir documento</a>', 'success')
+    else:
+        flash(message, 'danger')
+
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
 @concursos.route('/<int:concurso_id>/considerandos-builder', methods=['GET', 'POST'])
 @login_required
 def considerandos_builder(concurso_id):
     """
     Handle the considerandos builder interface.
-    
-    This route displays a form to select considerandos options and then generates
-    the document with those options.
     """
     concurso = Concurso.query.get_or_404(concurso_id)
     
@@ -380,34 +431,15 @@ def considerandos_builder(concurso_id):
         # Compile considerandos text with single line breaks
         considerandos_text = "\n".join(selected_considerandos)
         
-        # Proceed with document generation based on document type
-        if document_type == 'RESOLUCION_LLAMADO_TRIBUNAL':
-            success, message, url = generar_documento_desde_template(
-                concurso_id,
-                template_name,
-                document_type,
-                prepare_data_resolucion_llamado_tribunal,
-                considerandos_text
-            )
-        elif document_type == 'RESOLUCION_LLAMADO_REGULAR':
-            success, message, url = generar_documento_desde_template(
-                concurso_id,
-                template_name,
-                document_type,
-                prepare_data_resolucion_llamado_tribunal,  # We can reuse the same data prep function
-                considerandos_text
-            )
-        elif document_type == 'RESOLUCION_TRIBUNAL_REGULAR':
-            success, message, url = generar_documento_desde_template(
-                concurso_id,
-                template_name,
-                document_type,
-                prepare_data_resolucion_llamado_tribunal,  # We can reuse the same data prep function
-                considerandos_text
-            )
-        else:
-            flash('Tipo de documento no soportado', 'danger')
-            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        # Proceed with document generation
+        # Using the new simplified document generator that doesn't need a separate data preparation function
+        success, message, url = generar_documento_desde_template(
+            concurso_id,
+            template_name,
+            document_type,
+            None,  # Using the default prepare_data_for_document function now
+            considerandos_text
+        )
         
         if success:
             flash(f'{message} <a href="{url}" target="_blank" class="alert-link">Abrir documento</a>', 'success')
@@ -443,7 +475,24 @@ def editar(concurso_id):
             old_dedicacion = concurso.dedicacion
 
             # Update concurso data from form
-            concurso.tipo = request.form.get('tipo')
+            tipo = request.form.get('tipo')
+            concurso.tipo = tipo
+            
+            # Handle resolution numbers based on tipo
+            if tipo == 'Interino':
+                concurso.nro_res_llamado_interino = request.form.get('nro_res_llamado_interino')
+                concurso.nro_res_llamado_regular = None
+                concurso.nro_res_tribunal_regular = None
+            elif tipo == 'Regular':
+                concurso.nro_res_llamado_interino = None
+                concurso.nro_res_llamado_regular = request.form.get('nro_res_llamado_regular')
+                concurso.nro_res_tribunal_regular = request.form.get('nro_res_tribunal_regular')
+            else:
+                concurso.nro_res_llamado_interino = None
+                concurso.nro_res_llamado_regular = None
+                concurso.nro_res_tribunal_regular = None
+            
+            # Rest of the existing update code...
             concurso.cerrado_abierto = request.form.get('cerrado_abierto')
             concurso.cant_cargos = int(request.form.get('cant_cargos'))
             concurso.departamento_id = int(request.form.get('departamento_id'))
@@ -628,21 +677,13 @@ def eliminar(concurso_id):
     try:
         # Delete Google Drive folder if it exists
         if concurso.drive_folder_id:
-            try:
-                drive_api.delete_folder(concurso.drive_folder_id)
-            except Exception as e:
-                flash(f'Advertencia: No se pudo eliminar la carpeta de Google Drive: {str(e)}', 'warning')
+            drive_api.delete_folder(concurso.drive_folder_id)
         
         # Delete all related data
         concurso.tribunal.delete()
         for postulante in concurso.postulantes:
-            # Delete postulante's Drive folder if it exists
             if postulante.drive_folder_id:
-                try:
-                    drive_api.delete_folder(postulante.drive_folder_id)
-                except Exception as e:
-                    flash(f'Advertencia: No se pudo eliminar la carpeta del postulante {postulante.apellido} {postulante.nombre} en Drive: {str(e)}', 'warning')
-            postulante.documentos.delete()
+                drive_api.delete_folder(postulante.drive_folder_id)
         concurso.postulantes.delete()
         concurso.documentos.delete()
         concurso.historial_estados.delete()
@@ -762,5 +803,330 @@ def subir_documento_firmado(concurso_id, documento_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al subir el documento firmado: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documentos/<int:documento_id>/enviar-firma', methods=['POST'])
+@login_required
+def enviar_firma(concurso_id, documento_id):
+    """Send a document for signature via email."""
+    try:
+        concurso = Concurso.query.get_or_404(concurso_id)
+        documento = DocumentoConcurso.query.get_or_404(documento_id)
+        
+        # Validate document state and type
+        if (documento.estado not in ['BORRADOR', 'ENVIADO PARA FIRMAR']) or 'RESOLUCION' not in documento.tipo:
+            flash('Solo se pueden enviar para firma resoluciones en estado borrador o enviado para firma.', 'error')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Get form data
+        destinatario = request.form.get('destinatario')
+        observaciones = request.form.get('observaciones', '')
+        
+        if not destinatario:
+            flash('El correo del destinatario es requerido.', 'error')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Get the Google Drive API instance
+        drive_api = GoogleDriveAPI()
+        
+        # Prepare email content
+        doc_name = documento.tipo.replace('_', ' ').title()
+        subject = f'Solicitud de firma: {doc_name} - Exp. {concurso.expediente or "S/N"}'
+        html_body = f"""
+        <p>Se solicita la firma del siguiente documento:</p>
+        <p><strong>{doc_name}</strong></p>
+        <p><strong>Detalles del concurso:</strong></p>
+        <ul>
+            <li>Departamento: {concurso.departamento_rel.nombre}</li>
+            <li>Área: {concurso.area}</li>
+            <li>Orientación: {concurso.orientacion}</li>
+            <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
+            <li>Dedicación: {concurso.dedicacion}</li>
+        </ul>
+        """
+        
+        if observaciones:
+            html_body += f"<p><strong>Observaciones:</strong></p><p>{observaciones}</p>"
+            
+        # Send email with document as attachment
+        drive_api.send_email(
+            to_email=destinatario,
+            subject=subject,
+            html_body=html_body,
+            sender_name='Sistema de Concursos Docentes',
+            attachment_ids=[documento.file_id],
+            placeholders={
+                'expediente': concurso.expediente or 'S/N',
+                'departamento': concurso.departamento_rel.nombre,
+                'area': concurso.area,
+                'orientacion': concurso.orientacion,
+                'categoria': concurso.categoria_nombre,
+                'dedicacion': concurso.dedicacion
+            }
+        )
+        
+        # Update document state
+        documento.estado = 'ENVIADO PARA FIRMAR'
+        db.session.commit()
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_ENVIADO_FIRMA",
+            observaciones=f"Documento {doc_name} enviado para firma a {destinatario}"
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        flash(f'El documento ha sido enviado a {destinatario} para su firma.', 'success')
+        
+    except Exception as e:
+        flash(f'Error al enviar el documento: {str(e)}', 'error')
+        
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/nueva-version', methods=['POST'])
+@login_required
+def nueva_version_documento(concurso_id, documento_id):
+    """Create a new version of a document."""
+    try:
+        concurso = Concurso.query.get_or_404(concurso_id)
+        documento = DocumentoConcurso.query.get_or_404(documento_id)
+        
+        # Verify the document belongs to the concurso
+        if documento.concurso_id != concurso_id:
+            flash('El documento no pertenece a este concurso.', 'danger')
+            return redirect(url_for('concursos.ver_versiones', concurso_id=concurso_id, documento_id=documento_id))
+        
+        # Get form data
+        observaciones = request.form.get('observaciones', '')
+        file = request.files.get('documento')
+        
+        if not file:
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return redirect(url_for('concursos.ver_versiones', concurso_id=concurso_id, documento_id=documento_id))
+        
+        # Get the latest version number
+        latest_version = db.session.query(db.func.max(DocumentoVersion.version)).filter_by(documento_id=documento_id).scalar() or 0
+        
+        # Create a new filename with version
+        file_name = f"{documento.tipo.lower().replace('_', ' ')}_{concurso.id}_v{latest_version + 1}.pdf"
+        
+        # Upload the new file to Google Drive
+        file_data = file.read()
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.borradores_folder_id,
+            file_name,
+            file_data
+        )
+        
+        # Update the current document URL
+        documento.url = web_view_link
+        
+        # Create a new version record
+        version = DocumentoVersion(
+            documento_id=documento_id,
+            version=latest_version + 1,
+            url=web_view_link,
+            file_id=file_id,
+            creado_por=current_user.username,
+            observaciones=observaciones
+        )
+        db.session.add(version)
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="NUEVA_VERSION_DOCUMENTO",
+            observaciones=f"Nueva versión del documento {documento.tipo} creada por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash(f'Nueva versión del documento creada exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al crear nueva versión: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver_versiones', concurso_id=concurso_id, documento_id=documento_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-firmado', methods=['POST'])
+@login_required
+def eliminar_documento_firmado(concurso_id, documento_id):
+    """Delete a signed version of a document."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    documento = DocumentoConcurso.query.get_or_404(documento_id)
+    
+    # Verify the document belongs to the concurso
+    if documento.concurso_id != concurso_id:
+        flash('El documento no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        # Update document status back to BORRADOR
+        documento.estado = 'BORRADOR'
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_FIRMADO_ELIMINADO",
+            observaciones=f"Documento firmado {documento.tipo} eliminado por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash('Documento firmado eliminado exitosamente. El documento volvió al estado borrador.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el documento firmado: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-pendiente-firma', methods=['POST'])
+@login_required
+def eliminar_documento_pendiente_firma(concurso_id, documento_id):
+    """Delete a document that is pending signature, resetting it back to BORRADOR state."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    documento = DocumentoConcurso.query.get_or_404(documento_id)
+    
+    # Verify the document belongs to the concurso
+    if documento.concurso_id != concurso_id:
+        flash('El documento no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        # Check if document is in PENDIENTE DE FIRMA state
+        if documento.estado != 'PENDIENTE DE FIRMA':
+            flash('El documento no está pendiente de firma.', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Delete the file from Google Drive if file_id exists
+        if documento.file_id:
+            try:
+                drive_api.delete_file(documento.file_id)
+                documento.file_id = None  # Clear the file_id after successful deletion
+                documento.url = None      # Clear the URL as well
+            except Exception as e:
+                flash(f'Advertencia: No se pudo eliminar el archivo de Google Drive: {str(e)}', 'warning')
+        
+        # Remove all signatures associated with this document
+        for firma in documento.firmas:
+            db.session.delete(firma)
+        
+        # Reset firma count
+        documento.firma_count = 0
+        
+        # Update document status back to BORRADOR
+        documento.estado = 'BORRADOR'
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_PENDIENTE_FIRMA_ELIMINADO",
+            observaciones=f"Documento pendiente de firma {documento.tipo} eliminado por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash('Documento pendiente de firma eliminado exitosamente. El documento volvió al estado borrador y puede ser subido nuevamente por el tribunal.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el documento pendiente de firma: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-borrador', methods=['POST'])
+@login_required
+def eliminar_borrador(concurso_id, documento_id):
+    """Delete a draft document from the borradores folder."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    documento = DocumentoConcurso.query.get_or_404(documento_id)
+    
+    # Verify the document belongs to the concurso
+    if documento.concurso_id != concurso_id:
+        flash('El documento no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        # Delete the file from Google Drive borradores folder
+        if documento.file_id:
+            try:
+                drive_api.delete_file(documento.file_id)
+                documento.file_id = None  # Clear the file_id after successful deletion
+                documento.url = None  # Clear the URL as well since the file no longer exists
+            except Exception as e:
+                flash(f'Advertencia: No se pudo eliminar el archivo de Google Drive: {str(e)}', 'warning')
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="BORRADOR_ELIMINADO",
+            observaciones=f"Borrador de {documento.tipo} eliminado por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        # If this is the only version (no signed document exists), delete the document record
+        if documento.estado == 'BORRADOR':
+            db.session.delete(documento)
+        else:
+            documento.estado = 'CREADO'  # Reset state if there's still a signed version
+        
+        db.session.commit()
+        flash('Borrador eliminado exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el borrador: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-subido', methods=['POST'])
+@login_required
+def eliminar_subido(concurso_id, documento_id):
+    """Delete an uploaded/signed document from the firmados folder."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    documento = DocumentoConcurso.query.get_or_404(documento_id)
+    
+    # Verify the document belongs to the concurso
+    if documento.concurso_id != concurso_id:
+        flash('El documento no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        # Delete the file from Google Drive firmados folder
+        if documento.file_id:
+            try:
+                drive_api.delete_file(documento.file_id)
+            except Exception as e:
+                flash(f'Advertencia: No se pudo eliminar el archivo de Google Drive: {str(e)}', 'warning')
+        
+        # Remove all signatures associated with this document
+        for firma in documento.firmas:
+            db.session.delete(firma)
+        
+        # Reset firma count
+        documento.firma_count = 0
+        
+        # Reset document status to allow new upload
+        documento.estado = 'BORRADOR'
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_SUBIDO_ELIMINADO",
+            observaciones=f"Documento subido {documento.tipo} eliminado por {current_user.username}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash('Documento subido eliminado exitosamente. El tribunal puede subir un nuevo documento.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el documento subido: {str(e)}', 'danger')
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))

@@ -9,6 +9,7 @@ const TEMPLATES = {
   'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', // 
   'resLlamadoRegular': '1Eg0N5s4H_wGEHUZClYZs-jF4ED2pjHbT-KsUoSSLOX8',
   'resTribunalRegular': '119a255YfBWEdqu_IEJT1vYWSLAP9KhVk4G5NHPTYD6Q',
+  'actaConstitucionTribunalRegular': '1Gid4o-lkDfuhNb0g_QHdVvlPoQfS5lR8AtnIxtuLsdI',
   // Add more templates as needed
 };
 
@@ -24,6 +25,179 @@ function verifyToken(token) {
   var scriptProperties = PropertiesService.getScriptProperties();
   var validToken = scriptProperties.getProperty('GOOGLE_DRIVE_SECURE_TOKEN');
   return token === validToken;
+}
+
+// Function to add a signature stamp to a PDF
+function addSignatureToPdf(fileId, nombre, apellido, dni, firmaCount) {
+  // Verify the file exists and is accessible
+  var file;
+  try {
+    file = DriveApp.getFileById(fileId);
+  } catch (e) {
+    throw new Error("File not found or not accessible: " + e.message);
+  }
+  
+  // Get the file content as PDF
+  var fileBlob = file.getBlob();
+  var pdfBytes = fileBlob.getBytes();
+  
+  // Create a temporary file to store the PDF
+  var tempFile = DriveApp.createFile(fileBlob);
+  
+  // Use PDF.js library or Google's built-in PDF service to add a signature
+  // For now, we'll use a simpler text-based approach
+  
+  // Get the current timestamp
+  var timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+  
+  // Create signature text with metadata
+  var signature = "Firmado por: " + apellido + ", " + nombre + " (DNI: " + dni + ") - " + timestamp;
+  
+  // Calculate position based on signature count
+  // Each signature will be placed at a different position
+  // Base signature position
+  var yPosition = 20 + (12 * firmaCount); // Start at 20 points from bottom, add 12 points for each signature
+  
+  // Maximum of 10 signatures before starting a second column
+  var xOffset = 0;
+  if (firmaCount >= 10) {
+    // Use columns for overflow signatures
+    var column = Math.floor(firmaCount / 10) + 1;
+    yPosition = 20 + (12 * (firmaCount % 10));
+    xOffset = -200 * column; // Move left for each additional column
+  }
+  
+  // Get parent folder to upload stamped PDF
+  var parentFolder = file.getParents().next();
+  
+  // Generate a new filename
+  var newFilename = file.getName().replace(".pdf", "") + "_signed_" + firmaCount + ".pdf";
+  
+  // Add the signature stamp to the PDF
+  // This is a simplified version - in a real implementation you would use PDF libraries
+  var stampedPdfBytes = addTextStampToPdf(pdfBytes, signature, yPosition, xOffset, firmaCount);
+  
+  // Create a new file with the stamped PDF
+  var stampedFile = parentFolder.createFile(Utilities.newBlob(stampedPdfBytes, "application/pdf", newFilename));
+  
+  // Clean up the temporary file
+  tempFile.setTrashed(true);
+  
+  // Return the new file information
+  return {
+    fileId: stampedFile.getId(),
+    webViewLink: stampedFile.getUrl()
+  };
+}
+
+// Helper function to add a text stamp to a PDF (placeholder implementation)
+function addTextStampToPdf(pdfBytes, signature, yPosition, xOffset, firmaCount) {
+  // In a real implementation, this would use PDF libraries to properly stamp the document
+  // For now, returning the original bytes as a placeholder
+  
+  // Note: In a production environment, you would:
+  // 1. Use a PDF manipulation library to add the text at the specific position
+  // 2. Consider adding a visual border or background to the signature
+  // 3. Properly handle multi-page documents
+  
+  return pdfBytes;
+}
+
+// Function to get file content
+function getFileContent(fileId) {
+  // Verify the file exists and is accessible
+  var file;
+  try {
+    file = DriveApp.getFileById(fileId);
+  } catch (e) {
+    throw new Error("File not found or not accessible: " + e.message);
+  }
+  
+  // Get the file content as bytes and encode as base64
+  var fileBlob = file.getBlob();
+  var bytes = fileBlob.getBytes();
+  var base64Content = Utilities.base64Encode(bytes);
+  
+  return {
+    fileId: fileId,
+    fileName: file.getName(),
+    fileData: base64Content,
+    mimeType: file.getMimeType()
+  };
+}
+
+// Function to send email with attachments and placeholder support
+function sendEmail(to, subject, htmlBody, senderName, attachmentIds, placeholders) {
+  // Basic validation
+  if (!to || !subject || !htmlBody) {
+    throw new Error("Recipient, subject, and body are required.");
+  }
+
+  try {
+    // Process placeholders in subject and body if provided
+    if (placeholders) {
+      Object.keys(placeholders).forEach(function(key) {
+        const placeholder = '<<' + key + '>>';
+        subject = subject.replace(new RegExp(placeholder, 'g'), placeholders[key] || '');
+        htmlBody = htmlBody.replace(new RegExp(placeholder, 'g'), placeholders[key] || '');
+      });
+    }
+    
+    // Configure email options
+    let options = {
+      htmlBody: htmlBody,
+      name: senderName || 'Sistema de Concursos Docentes'
+    };
+    
+    // Add attachments if provided
+    if (attachmentIds && attachmentIds.length > 0) {
+      const attachments = attachmentIds.map(fileId => {
+        // Get the original file
+        const file = DriveApp.getFileById(fileId);
+        const mimeType = file.getMimeType();
+        
+        // If it's a PDF, keep it as is
+        if (mimeType === MimeType.PDF) {
+          return file.getBlob();
+        }
+        
+        // If it's a Google Doc, use the export method
+        if (mimeType === MimeType.GOOGLE_DOCS) {
+          try {
+            const url = "https://www.googleapis.com/drive/v3/files/" + fileId + "/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            const token = ScriptApp.getOAuthToken();
+            const response = UrlFetchApp.fetch(url, {
+              headers: {
+                'Authorization': 'Bearer ' + token
+              }
+            });
+            const blob = response.getBlob();
+            blob.setName(file.getName().replace(/\.[^/.]+$/, "") + ".docx");
+            return blob;
+          } catch (convErr) {
+            // If conversion fails, try to get the document as PDF
+            Logger.log("Failed to convert to DOCX: " + convErr + ". Falling back to PDF.");
+            return file.getAs(MimeType.PDF);
+          }
+        }
+        
+        // For any other type, return as is
+        return file.getBlob();
+      });
+      options.attachments = attachments;
+    }
+    
+    // Send the email
+    GmailApp.sendEmail(to, subject, '', options);
+    
+    return {
+      success: true,
+      to: to,
+      subject: subject
+    };
+  } catch (err) {
+    throw new Error("Error sending email: " + err.message);
+  }
 }
 
 // Function to create a document from template
@@ -203,7 +377,7 @@ function deleteFolder(folderId) {
 }
 
 // Function to overwrite an existing file
-function overwriteFile(fileId, fileData) {
+function overwriteFile(fileId, fileData, mimeType) {
   // Basic validation
   if (!fileId || !fileData) {
     throw new Error("File ID and file data are required.");
@@ -215,19 +389,31 @@ function overwriteFile(fileId, fileData) {
     var fileName = existingFile.getName();
     var parentFolder = existingFile.getParents().next();
     
+    // Convert base64 data to bytes
+    var decodedData = Utilities.base64Decode(fileData);
+    
+    // Create blob with explicit PDF MIME type
+    var blob = Utilities.newBlob(decodedData);
+    blob.setName(fileName);
+    blob.setContentType(mimeType || "application/pdf");
+    
+    // Create new file and copy permissions
+    var newFile = parentFolder.createFile(blob);
+    
+    // Copy permissions from old file to new file
+    var permissions = existingFile.getSharingAccess();
+    var isPublic = permissions == DriveApp.Access.ANYONE || permissions == DriveApp.Access.ANYONE_WITH_LINK;
+    if (isPublic) {
+      newFile.setSharing(permissions, DriveApp.Permission.VIEW);
+    }
+    
     // Delete the existing file
     existingFile.setTrashed(true);
     
-    // Convert base64 data to bytes
-    var decodedData = Utilities.base64Decode(fileData);
-    var blob = Utilities.newBlob(decodedData, "application/pdf", fileName);
-    
-    // Create the new file in the same folder
-    var newFile = parentFolder.createFile(blob);
-    
     return {
+      status: "success",
       fileId: newFile.getId(),
-      webViewLink: newFile.getUrl()
+      webViewLink: newFile.getUrl(),
     };
   } catch (err) {
     throw new Error("Error overwriting file: " + err.message);
@@ -256,40 +442,49 @@ function renameFolder(folderId, newName) {
 
 // Function to handle HTTP requests
 function doPost(e) {
+  // Verify secure token using correct property name
+  const secureToken = PropertiesService.getScriptProperties().getProperty('GOOGLE_DRIVE_SECURE_TOKEN');
+  
   try {
     // Parse request data
-    var data = JSON.parse(e.postData.contents);
+    const data = JSON.parse(e.postData.contents);
     
-    // Verify token
-    if (!data.token || !verifyToken(data.token)) {
-      throw new Error("Invalid token");
+    // Verify token for security
+    if (data.token !== secureToken) {
+      return createErrorResponse('Invalid token');
     }
     
-    // Handle different actions
+    // Route the request to the appropriate function
     switch (data.action) {
-      case "createFolder":
+      case 'createFolder':
         return handleCreateFolder(data);
-      case "createNestedFolder":
+      case 'createNestedFolder':
         return handleCreateNestedFolder(data);
-      case "createPostulanteFolder":
+      case 'createPostulanteFolder':
         return handleCreatePostulanteFolder(data);
-      case "createDocFromTemplate":
+      case 'createDocFromTemplate':
         return handleCreateDocFromTemplate(data);
-      case "uploadFile":
+      case 'uploadFile':
         return handleUploadFile(data);
-      case "deleteFile":
+      case 'getFileContent':
+        return handleGetFileContent(data);
+      case 'addSignatureToPdf':
+        return handleAddSignatureToPdf(data);
+      case 'deleteFile':
         return handleDeleteFile(data);
-      case "deleteFolder":
-        return handleDeleteFolder(data);
-      case "overwriteFile":
+      case 'overwriteFile':
         return handleOverwriteFile(data);
-      case "renameFolder":
+      case 'deleteFolder':
+        return handleDeleteFolder(data);
+      case 'renameFolder':
         return handleRenameFolder(data);
+      case 'sendEmail':
+        return handleSendEmail(data);
       default:
-        throw new Error("Invalid action");
+        return createErrorResponse(`Unknown action: ${data.action}`);
     }
   } catch (error) {
-    return createErrorResponse(error.message);
+    return createErrorResponse(`Error processing request: ${error.toString()}`);
   }
 }
 
@@ -435,22 +630,47 @@ function handleDeleteFolder(data) {
 }
 
 function handleOverwriteFile(data) {
+  // Basic validation
   if (!data.fileId || !data.fileData) {
     throw new Error("File ID and file data are required.");
   }
-  
-  var file = DriveApp.getFileById(data.fileId);
-  
-  // Decode base64 file data
-  var blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), file.getMimeType(), file.getName());
-  
-  // Update the file content
-  file.setContent(blob.getBytes());
-  
-  return createSuccessResponse({
-    fileId: file.getId(),
-    webViewLink: file.getUrl()
-  });
+
+  try {
+    // Get the existing file to copy its permissions
+    var existingFile = DriveApp.getFileById(data.fileId);
+    var fileName = existingFile.getName();
+    var parentFolder = existingFile.getParents().next();
+    
+    // Decode base64 file data
+    var decodedData = Utilities.base64Decode(data.fileData);
+    
+    // Create a new blob with explicit PDF mime type
+    var blob = Utilities.newBlob(decodedData, "application/pdf", fileName);
+    
+    // Create a new file with the updated content
+    var newFile = parentFolder.createFile(blob);
+    
+    // Copy sharing permissions from old file
+    var permissions = existingFile.getSharingAccess();
+    var permissionType = existingFile.getSharingPermission();
+    newFile.setSharing(permissions, permissionType);
+    
+    // If the file was publicly accessible, make sure to maintain that
+    if (existingFile.isShareableByEditors()) {
+      newFile.setShareableByEditors(true);
+    }
+    
+    // Move the old file to trash
+    existingFile.setTrashed(true);
+    
+    return createSuccessResponse({
+      fileId: newFile.getId(),
+      webViewLink: newFile.getUrl()
+    });
+    
+  } catch (err) {
+    return createErrorResponse("Error overwriting file: " + err.toString());
+  }
 }
 
 function handleRenameFolder(data) {
@@ -465,4 +685,102 @@ function handleRenameFolder(data) {
   return createSuccessResponse({
     success: true
   });
+}
+
+// Add handler for send email action
+function handleSendEmail(data) {
+  if (!data.to || !data.subject || !data.htmlBody) {
+    throw new Error("Recipient, subject, and HTML body are required.");
+  }
+  
+  const result = sendEmail(
+    data.to,
+    data.subject,
+    data.htmlBody,
+    data.senderName || null,
+    data.attachmentIds || [],
+    data.placeholders || null
+  );
+  
+  return createSuccessResponse(result);
+}
+
+// Handler for getting file content
+function handleGetFileContent(data) {
+  if (!data.fileId) {
+    throw new Error("File ID is required.");
+  }
+  
+  try {
+    const file = DriveApp.getFileById(data.fileId);
+    const blob = file.getBlob();
+    const content = blob.getBytes();
+    const base64Content = Utilities.base64Encode(content);
+    
+    return createSuccessResponse({
+      fileData: base64Content,
+      fileName: file.getName(),
+      mimeType: file.getMimeType() || 'application/pdf'
+    });
+  } catch (err) {
+    return createErrorResponse("Error getting file content: " + err.toString());
+  }
+}
+
+// Handler for adding signature to PDF
+function handleAddSignatureToPdf(data) {
+  if (!data.fileId || !data.nombre || !data.apellido || !data.dni) {
+    throw new Error("File ID, nombre, apellido, and DNI are required.");
+  }
+  
+  const result = addSignatureToPdf(
+    data.fileId,
+    data.nombre,
+    data.apellido,
+    data.dni,
+    data.firmaCount || 0
+  );
+  
+  return createSuccessResponse(result);
+}
+
+// Handler for overwriting file
+function handleOverwriteFile(data) {
+  if (!data.fileId || !data.fileData) {
+    throw new Error("File ID and file data are required.");
+  }
+  
+  try {
+    // Get the existing file
+    const existingFile = DriveApp.getFileById(data.fileId);
+    const fileName = existingFile.getName();
+    const parentFolder = existingFile.getParents().next();
+    
+    // Decode base64 data to bytes
+    const decodedData = Utilities.base64Decode(data.fileData);
+    
+    // Create blob with PDF MIME type
+    const blob = Utilities.newBlob(decodedData, 'application/pdf', fileName);
+    
+    // Create new file
+    const newFile = parentFolder.createFile(blob);
+    
+    // Copy permissions from old file
+    const permissions = existingFile.getSharingAccess();
+    const isPublic = permissions == DriveApp.Access.ANYONE || 
+                    permissions == DriveApp.Access.ANYONE_WITH_LINK;
+    if (isPublic) {
+      newFile.setSharing(permissions, DriveApp.Permission.VIEW);
+    }
+    
+    // Move old file to trash
+    existingFile.setTrashed(true);
+    
+    return createSuccessResponse({
+      fileId: newFile.getId(),
+      webViewLink: newFile.getUrl()
+    });
+  } catch (err) {
+    return createErrorResponse("Error overwriting file: " + err.toString());
+  }
 }

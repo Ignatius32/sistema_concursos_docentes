@@ -18,6 +18,23 @@
                         <option value="Interino">Interino</option>
                     </select>
                 </div>
+
+                <!-- New resolution number fields -->
+                <div class="col-md-6 mb-3" id="nro_res_llamado_interino_group" style="display:none;">
+                    <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino">
+                </div>
+
+                <div class="col-md-6 mb-3" id="nro_res_llamado_regular_group" style="display:none;">
+                    <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular">
+                </div>
+
+                <div class="col-md-6 mb-3" id="nro_res_tribunal_regular_group" style="display:none;">
+                    <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
+                    <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular">
+                </div>
+                <!-- End new fields -->
                 
                 <div class="col-md-6 mb-3">
                     <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
@@ -104,7 +121,9 @@
                     <label for="expediente" class="form-label">Expediente</label>
                     <input type="text" class="form-control" id="expediente" name="expediente" placeholder="Opcional">
                 </div>
+            </div>
 
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion">
@@ -133,7 +152,9 @@
                     <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
                     <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" placeholder="Opcional">
                 </div>
+            </div>
 
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="categoria_vacante" class="form-label">Categoría de la vacante</label>
                     <select class="form-select" id="categoria_vacante" name="categoria_vacante">
@@ -253,6 +274,28 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Add this at the beginning of your existing DOMContentLoaded handler
+    const tipoSelect = document.getElementById('tipo');
+    const nroResLlamadoInterinoGroup = document.getElementById('nro_res_llamado_interino_group');
+    const nroResLlamadoRegularGroup = document.getElementById('nro_res_llamado_regular_group');
+    const nroResTribunalRegularGroup = document.getElementById('nro_res_tribunal_regular_group');
+
+    tipoSelect.addEventListener('change', function() {
+        if (this.value === 'Interino') {
+            nroResLlamadoInterinoGroup.style.display = 'block';
+            nroResLlamadoRegularGroup.style.display = 'none';
+            nroResTribunalRegularGroup.style.display = 'none';
+        } else if (this.value === 'Regular') {
+            nroResLlamadoInterinoGroup.style.display = 'none';
+            nroResLlamadoRegularGroup.style.display = 'block';
+            nroResTribunalRegularGroup.style.display = 'block';
+        } else {
+            nroResLlamadoInterinoGroup.style.display = 'none';
+            nroResLlamadoRegularGroup.style.display = 'none';
+            nroResTribunalRegularGroup.style.display = 'none';
+        }
+    });
+
     const deptoSelect = document.getElementById('departamento_id');
     const areaSelect = document.getElementById('area');
     const orientacionSelect = document.getElementById('orientacion');

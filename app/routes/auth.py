@@ -14,14 +14,22 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Direct comparison with environment variables
-        if username == os.environ.get('ADMIN_USERNAME') and password == os.environ.get('ADMIN_PASSWORD'):
-            user = User.query.filter_by(username=username).first()
-            if not user:
-                user = User(username=username)
-                db.session.add(user)
-                db.session.commit()
-            
+        # Find user by username
+        user = User.query.filter_by(username=username).first()
+        
+        # If user doesn't exist and it's the admin username, create it
+        if not user and username == os.environ.get('ADMIN_USERNAME', 'admin'):
+            user = User(
+                username=username,
+                role='admin',
+                is_active=True
+            )
+            user.set_password(os.environ.get('ADMIN_PASSWORD', 'admin123'))
+            db.session.add(user)
+            db.session.commit()
+        
+        # Verify password
+        if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get('next')
             if next_page:
