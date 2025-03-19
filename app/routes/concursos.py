@@ -103,6 +103,9 @@ def nuevo():
                 expediente=expediente,
                 origen_vacante=request.form.get('origen_vacante'),
                 docente_vacante=request.form.get('docente_vacante'),
+                categoria_vacante=request.form.get('categoria_vacante'),
+                dedicacion_vacante=request.form.get('dedicacion_vacante'), 
+                id_designacion_mocovi=request.form.get('id_designacion_mocovi'),
                 cierre_inscripcion=cierre_inscripcion,
                 vencimiento=vencimiento,
                 estado_actual="CREADO"
@@ -467,168 +470,85 @@ def editar(concurso_id):
     
     if request.method == 'POST':
         try:
-            # Store old data for comparison
-            old_departamento_id = concurso.departamento_id
-            old_area = concurso.area
-            old_orientacion = concurso.orientacion
-            old_categoria = concurso.categoria
-            old_dedicacion = concurso.dedicacion
-
-            # Update concurso data from form
+            # Extract data from form
             tipo = request.form.get('tipo')
-            concurso.tipo = tipo
             
-            # Handle resolution numbers based on tipo
+            # Get resolution numbers based on tipo
+            nro_res_llamado_interino = None
+            nro_res_llamado_regular = None
+            nro_res_tribunal_regular = None
+            
             if tipo == 'Interino':
-                concurso.nro_res_llamado_interino = request.form.get('nro_res_llamado_interino')
-                concurso.nro_res_llamado_regular = None
-                concurso.nro_res_tribunal_regular = None
+                nro_res_llamado_interino = request.form.get('nro_res_llamado_interino')
             elif tipo == 'Regular':
-                concurso.nro_res_llamado_interino = None
-                concurso.nro_res_llamado_regular = request.form.get('nro_res_llamado_regular')
-                concurso.nro_res_tribunal_regular = request.form.get('nro_res_tribunal_regular')
-            else:
-                concurso.nro_res_llamado_interino = None
-                concurso.nro_res_llamado_regular = None
-                concurso.nro_res_tribunal_regular = None
+                nro_res_llamado_regular = request.form.get('nro_res_llamado_regular')
+                nro_res_tribunal_regular = request.form.get('nro_res_tribunal_regular')
             
-            # Rest of the existing update code...
+            # Update concurso
+            concurso.tipo = tipo
+            concurso.nro_res_llamado_interino = nro_res_llamado_interino
+            concurso.nro_res_llamado_regular = nro_res_llamado_regular
+            concurso.nro_res_tribunal_regular = nro_res_tribunal_regular
             concurso.cerrado_abierto = request.form.get('cerrado_abierto')
             concurso.cant_cargos = int(request.form.get('cant_cargos'))
             concurso.departamento_id = int(request.form.get('departamento_id'))
             concurso.area = request.form.get('area')
             concurso.orientacion = request.form.get('orientacion')
             concurso.categoria = request.form.get('categoria')
+            concurso.categoria_nombre = request.form.get('categoria_nombre')
             concurso.dedicacion = request.form.get('dedicacion')
             concurso.localizacion = request.form.get('localizacion')
             concurso.asignaturas = request.form.get('asignaturas')
             concurso.expediente = request.form.get('expediente')
+            
+            # Update vacancy data
             concurso.origen_vacante = request.form.get('origen_vacante')
             concurso.docente_vacante = request.form.get('docente_vacante')
-            
-            # Get categoria name from roles_categorias.json
-            import json
-            import os
-            
-            # Load roles_categorias.json data
-            json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'roles_categorias.json')
-            with open(json_path, 'r', encoding='utf-8') as f:
-                roles_data = json.load(f)
-            
-            # Find categoria name by codigo
-            categoria_nombre = None
-            for rol in roles_data:
-                for cat in rol['categorias']:
-                    if cat['codigo'] == concurso.categoria:
-                        categoria_nombre = cat['nombre']
-                        break
-                if categoria_nombre:
-                    break
-                    
-            # Set the categoria_nombre from roles_categorias.json
-            concurso.categoria_nombre = categoria_nombre or concurso.categoria
-            
-            # Handle optional cierre_inscripcion
+            concurso.categoria_vacante = request.form.get('categoria_vacante')
+            concurso.dedicacion_vacante = request.form.get('dedicacion_vacante')
+            concurso.id_designacion_mocovi = request.form.get('id_designacion_mocovi')
+
+            # Handle cierre_inscripcion
             cierre_inscripcion_str = request.form.get('cierre_inscripcion')
             if cierre_inscripcion_str:
                 concurso.cierre_inscripcion = datetime.strptime(cierre_inscripcion_str, '%Y-%m-%d').date()
             else:
                 concurso.cierre_inscripcion = None
-            
-            # Handle optional vencimiento
+
+            # Handle vencimiento
             vencimiento_str = request.form.get('vencimiento')
             if vencimiento_str:
                 concurso.vencimiento = datetime.strptime(vencimiento_str, '%Y-%m-%d').date()
             else:
                 concurso.vencimiento = None
             
-            # Update Google Drive folder names if relevant fields changed
-            if concurso.drive_folder_id and (
-                old_departamento_id != concurso.departamento_id or 
-                old_area != concurso.area or 
-                old_orientacion != concurso.orientacion or 
-                old_categoria != concurso.categoria or 
-                old_dedicacion != concurso.dedicacion
-            ):
-                try:
-                    # Get the department name for the folder
-                    departamento = Departamento.query.get(concurso.departamento_id)
-                    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
-                    
-                    # Update main concurso folder
-                    new_folder_name = f"{concurso.id}_{departamento.nombre}_{concurso.area}_{concurso.orientacion}_{concurso.categoria}_{concurso.dedicacion}_{timestamp}"
-                    drive_api.update_folder_name(concurso.drive_folder_id, new_folder_name)
-                    
-                    # Update subfolder names
-                    if old_categoria != concurso.categoria or old_dedicacion != concurso.dedicacion:
-                        subfolders = {
-                            'borradores': (concurso.borradores_folder_id, f"borradores_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
-                            'postulantes': (concurso.postulantes_folder_id, f"postulantes_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
-                            'documentos_firmados': (concurso.documentos_firmados_folder_id, f"documentos_firmados_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}"),
-                            'tribunal': (concurso.tribunal_folder_id, f"tribunal_{departamento.nombre}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}")
-                        }
-
-                        for folder_type, (folder_id, new_name) in subfolders.items():
-                            if folder_id:
-                                try:
-                                    drive_api.update_folder_name(folder_id, new_name)
-                                except Exception as e:
-                                    flash(f'Error al renombrar la carpeta {folder_type}: {str(e)}', 'warning')
-                        
-                        # Update postulante folder names since they include categoria and dedicacion
-                        for postulante in concurso.postulantes:
-                            if postulante.drive_folder_id:
-                                try:
-                                    new_postulante_folder_name = f"{postulante.apellido}_{postulante.nombre}_{postulante.dni}_{concurso.categoria}_{concurso.dedicacion}"
-                                    drive_api.update_folder_name(postulante.drive_folder_id, new_postulante_folder_name)
-                                except Exception as e:
-                                    flash(f'Error al renombrar la carpeta del postulante {postulante.apellido} {postulante.nombre}: {str(e)}', 'warning')
-
-                except Exception as e:
-                    flash(f'El concurso fue actualizado pero hubo un error al renombrar su carpeta en Drive: {str(e)}', 'warning')
-            
-            # Update or create Sustanciacion record
+            # Update sustanciacion
             constitucion_fecha_str = request.form.get('constitucion_fecha')
             sorteo_fecha_str = request.form.get('sorteo_fecha')
             exposicion_fecha_str = request.form.get('exposicion_fecha')
-            temas_exposicion = request.form.get('temas_exposicion')
-
-            # Check if a Sustanciacion record needs to be created
-            if not concurso.sustanciacion:
-                if (constitucion_fecha_str or request.form.get('constitucion_lugar') or 
-                    request.form.get('constitucion_virtual_link') or request.form.get('constitucion_observaciones') or
-                    sorteo_fecha_str or request.form.get('sorteo_lugar') or
-                    request.form.get('sorteo_virtual_link') or request.form.get('sorteo_observaciones') or
-                    temas_exposicion or  # Added this check
-                    exposicion_fecha_str or request.form.get('exposicion_lugar') or
-                    request.form.get('exposicion_virtual_link') or request.form.get('exposicion_observaciones')):
-                    
-                    concurso.sustanciacion = Sustanciacion(concurso=concurso)
-                    db.session.add(concurso.sustanciacion)
             
-            if concurso.sustanciacion:
-                # Update dates if provided
-                if constitucion_fecha_str:
-                    concurso.sustanciacion.constitucion_fecha = datetime.strptime(constitucion_fecha_str, '%Y-%m-%dT%H:%M')
-                if sorteo_fecha_str:
-                    concurso.sustanciacion.sorteo_fecha = datetime.strptime(sorteo_fecha_str, '%Y-%m-%dT%H:%M')
-                if exposicion_fecha_str:
-                    concurso.sustanciacion.exposicion_fecha = datetime.strptime(exposicion_fecha_str, '%Y-%m-%dT%H:%M')
-                
-                # Add logging for debugging
-                print(f"Saving temas_exposicion: {temas_exposicion}")
-                
-                # Update other fields
-                concurso.sustanciacion.constitucion_lugar = request.form.get('constitucion_lugar')
-                concurso.sustanciacion.constitucion_virtual_link = request.form.get('constitucion_virtual_link')
-                concurso.sustanciacion.constitucion_observaciones = request.form.get('constitucion_observaciones')
-                concurso.sustanciacion.sorteo_lugar = request.form.get('sorteo_lugar')
-                concurso.sustanciacion.sorteo_virtual_link = request.form.get('sorteo_virtual_link')
-                concurso.sustanciacion.sorteo_observaciones = request.form.get('sorteo_observaciones')
-                concurso.sustanciacion.temas_exposicion = temas_exposicion
-                concurso.sustanciacion.exposicion_lugar = request.form.get('exposicion_lugar')
-                concurso.sustanciacion.exposicion_virtual_link = request.form.get('exposicion_virtual_link')
-                concurso.sustanciacion.exposicion_observaciones = request.form.get('exposicion_observaciones')
+            # Parse datetime fields
+            constitucion_fecha = datetime.strptime(constitucion_fecha_str, '%Y-%m-%dT%H:%M') if constitucion_fecha_str else None
+            sorteo_fecha = datetime.strptime(sorteo_fecha_str, '%Y-%m-%dT%H:%M') if sorteo_fecha_str else None
+            exposicion_fecha = datetime.strptime(exposicion_fecha_str, '%Y-%m-%dT%H:%M') if exposicion_fecha_str else None
+            
+            # Create or update sustanciacion
+            if not concurso.sustanciacion:
+                concurso.sustanciacion = Sustanciacion()
+            
+            concurso.sustanciacion.constitucion_fecha = constitucion_fecha
+            concurso.sustanciacion.constitucion_lugar = request.form.get('constitucion_lugar')
+            concurso.sustanciacion.constitucion_virtual_link = request.form.get('constitucion_virtual_link')
+            concurso.sustanciacion.constitucion_observaciones = request.form.get('constitucion_observaciones')
+            concurso.sustanciacion.sorteo_fecha = sorteo_fecha
+            concurso.sustanciacion.sorteo_lugar = request.form.get('sorteo_lugar')
+            concurso.sustanciacion.sorteo_virtual_link = request.form.get('sorteo_virtual_link')
+            concurso.sustanciacion.sorteo_observaciones = request.form.get('sorteo_observaciones')
+            concurso.sustanciacion.temas_exposicion = request.form.get('temas_exposicion')
+            concurso.sustanciacion.exposicion_fecha = exposicion_fecha
+            concurso.sustanciacion.exposicion_lugar = request.form.get('exposicion_lugar')
+            concurso.sustanciacion.exposicion_virtual_link = request.form.get('exposicion_virtual_link')
+            concurso.sustanciacion.exposicion_observaciones = request.form.get('exposicion_observaciones')
             
             db.session.commit()
             flash('Concurso actualizado exitosamente.', 'success')

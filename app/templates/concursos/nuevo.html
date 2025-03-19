@@ -19,7 +19,7 @@
                     </select>
                 </div>
 
-                <!-- New resolution number fields -->
+                <!-- Resolution number fields -->
                 <div class="col-md-6 mb-3" id="nro_res_llamado_interino_group" style="display:none;">
                     <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
                     <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino">
@@ -34,8 +34,10 @@
                     <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
                     <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular">
                 </div>
-                <!-- End new fields -->
+                <!-- End resolution number fields -->
+            </div>
                 
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
                     <select class="form-select" id="cerrado_abierto" name="cerrado_abierto" required>
@@ -84,9 +86,7 @@
                     </select>
                     <input type="hidden" name="categoria_nombre" id="categoria_nombre">
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="dedicacion" class="form-label">Dedicación</label>
                     <select class="form-select" id="dedicacion" name="dedicacion" required>
@@ -97,14 +97,14 @@
                         <option value="Abierta">Abierta</option>
                     </select>
                 </div>
+            </div>
 
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
                     <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="1">
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="localizacion" class="form-label">Localización</label>
                     <input type="text" class="form-control" id="localizacion" name="localizacion" required>
@@ -121,9 +121,7 @@
                     <label for="expediente" class="form-label">Expediente</label>
                     <input type="text" class="form-control" id="expediente" name="expediente" placeholder="Opcional">
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion">
@@ -152,9 +150,7 @@
                     <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
                     <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" placeholder="Opcional">
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="categoria_vacante" class="form-label">Categoría de la vacante</label>
                     <select class="form-select" id="categoria_vacante" name="categoria_vacante">
@@ -236,7 +232,7 @@
                         <button class="btn btn-outline-secondary" type="button" id="btn-add-tema">+ Agregar</button>
                     </div>
                     <!-- Hidden textarea to store concatenated temas for form submission -->
-                    <input type="hidden" id="temas_exposicion" name="temas_exposicion" value="">
+                    <input type="hidden" id="temas_exposicion" name="temas_exposicion">
                     <small class="form-text text-muted">Agregue los temas uno por uno. Puede eliminar cualquier tema haciendo clic en la X.</small>
                 </div>
 
