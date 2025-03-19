@@ -195,8 +195,10 @@ class DocumentoConcurso(db.Model):
     estado = db.Column(db.String(20), default="CREADA")
     creado = db.Column(db.DateTime, default=datetime.utcnow)
     firma_count = db.Column(db.Integer, nullable=False, default=0)
-    # Add direct file_id column
-    file_id = db.Column(db.String(100), nullable=True)
+    # Separate file IDs for borrador and firmado versions
+    borrador_file_id = db.Column(db.String(100), nullable=True)  # ID of the draft file in borradores folder
+    file_id = db.Column(db.String(100), nullable=True)  # ID of the uploaded/signed file in documentos_firmados folder
+
     firmas = db.relationship('FirmaDocumento', 
                            back_populates='documento_concurso',
                            lazy=True,
@@ -205,6 +207,51 @@ class DocumentoConcurso(db.Model):
     def ya_firmado_por(self, miembro_id):
         """Check if a tribunal member has already signed this document."""
         return any(firma.miembro_id == miembro_id for firma in self.firmas)
+
+    def is_visible_to_tribunal(self):
+        """
+        Determine if this document should be visible to tribunal members.
+        
+        Returns:
+            bool: True if the document should be visible to tribunal members
+        """
+        # Document types that are always visible to tribunal members regardless of state
+        always_visible = [
+            'ACTA_CONSTITUCION_TRIBUNAL_REGULAR',
+            'ACTA_DICTAMEN',
+            'ACTA_SORTEO'
+        ]
+        
+        if self.tipo in always_visible:
+            return True
+            
+        # Documents with FIRMADO state are always visible
+        if self.estado == 'FIRMADO':
+            return True
+            
+        # Documents in PENDIENTE DE FIRMA state are visible
+        if self.estado == 'PENDIENTE DE FIRMA':
+            return True
+            
+        # All other documents (typically BORRADOR) are not visible to tribunal
+        return False
+        
+    def get_friendly_name(self):
+        """
+        Convert the document type code to a friendly display name.
+        Example: 'RESOLUCION_LLAMADO_TRIBUNAL' -> 'Resolución Llamado Tribunal'
+        
+        Returns:
+            str: A user-friendly name for the document type
+        """
+        # Split by underscore
+        words = self.tipo.split('_')
+        
+        # Convert each word to title case (first letter uppercase, rest lowercase)
+        words = [word.title() for word in words]
+        
+        # Join with spaces
+        return ' '.join(words)
 
     # Keep the property for backward compatibility, but make it read/write
     @property

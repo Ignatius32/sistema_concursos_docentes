@@ -33,24 +33,33 @@ DOCUMENT_CONFIG = {
 def prepare_data_for_document(concurso_id, document_type):
     """
     Prepare data for document templates based on document type.
-    
-    Args:
-        concurso_id (int): ID of the concurso
-        document_type (str): Type of document to generate
-        
-    Returns:
-        tuple: (data_dict, error_message) - Data for template or error message if failed
     """
     concurso = Concurso.query.get(concurso_id)
     if not concurso:
         return None, "Concurso no encontrado"
 
+    # Get related data
+    departamento = Departamento.query.get(concurso.departamento_id)
+    departamento_nombre = departamento.nombre if departamento else ""
+    
+    # Add department head information from the API
+    departamento_heads = get_departamento_heads_data()
+    dept_head = None
+    if departamento_heads:
+        # Find matching department head
+        for head in departamento_heads:
+            if head.get('departamento', '').strip().lower() == departamento_nombre.strip().lower():
+                dept_head = head
+                break
+                
     # Basic data common to all document types
     data = {
         'concurso_id': concurso.id,
         'res_llamado_interino': concurso.nro_res_llamado_interino or '',
         'res_llamado_regular': concurso.nro_res_llamado_regular or '',
         'res_tribunal_regular': concurso.nro_res_tribunal_regular or '',
+        'resp_departamento': dept_head.get('responsable', '') if dept_head else '',
+        'prefijo_resp_departamento': dept_head.get('prefijo', '') if dept_head else ''
     }
 
     # Get document configuration
@@ -176,8 +185,8 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
         
         if not concurso.borradores_folder_id:
             return False, 'El concurso no tiene una carpeta de borradores asociada.', None
-        
-        # Get data for template from the prepare_data function
+            
+        # If no prepare_data_function is provided, use the default one
         if prepare_data_func is None:
             prepare_data_func = prepare_data_for_document
         
@@ -385,12 +394,13 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
             file_name
         )
         
-        # Create document record
+        # Create document record with borrador_file_id
         documento = DocumentoConcurso(
             concurso=concurso,
             tipo=doc_tipo,
             url=web_link,
-            estado='BORRADOR'
+            estado='BORRADOR',
+            borrador_file_id=file_id  # Store as borrador_file_id instead of file_id
         )
         db.session.add(documento)
         

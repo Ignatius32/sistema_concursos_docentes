@@ -133,28 +133,33 @@
                         </thead>
                         <tbody>
                             {% for documento in concurso.documentos %}
+                            {% if documento.is_visible_to_tribunal() %}
                             <tr>
                                 <td>
-                                    {% if documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}
-                                    Acta de Constitución del Tribunal
-                                    {% elif documento.tipo == 'ACTA_DICTAMEN' %}
-                                    Acta de Dictamen
-                                    {% elif documento.tipo == 'ACTA_SORTEO' %}
-                                    Acta de Sorteo de Tema
+                                    {{ documento.get_friendly_name() }}
+                                </td>
+                                <td>
+                                    {% if documento.estado == 'FIRMADO' %}
+                                    <span class="badge bg-success">
+                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                                    </span>
+                                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                                    <span class="badge bg-info">
+                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                                    </span>
                                     {% else %}
-                                    {{ documento.tipo }}
+                                    <span class="badge bg-warning">
+                                        {{ documento.estado }}
+                                    </span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge {% if documento.estado == 'FIRMADO' %}bg-success{% elif documento.estado == 'PENDIENTE DE FIRMA' %}bg-info{% else %}bg-warning{% endif %}">
-                                        {{ documento.estado }}
-                                    </span>
-                                </td>
-                                <td>
                                     <div class="btn-group">
-                                        <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#pdfViewerModal{{ documento.id }}">
                                             <i class="bi bi-file-earmark-text"></i> Ver Documento
-                                        </a>
+                                        </button>
                                         {% if documento.estado == 'PENDIENTE DE FIRMA' and not documento.ya_firmado_por(miembro.id) %}
                                         <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
@@ -169,6 +174,28 @@
                                             <i class="bi bi-upload"></i> Subir Firmado
                                         </button>
                                         {% endif %}
+                                    </div>
+
+                                    <!-- PDF Viewer Modal -->
+                                    <div class="modal fade" id="pdfViewerModal{{ documento.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">{{ documento.get_friendly_name() }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-0">
+                                                    <iframe src="{{ url_for('tribunal.ver_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                                                            style="width: 100%; height: 80vh;" frameborder="0"></iframe>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <a href="{{ documento.url }}" target="_blank" class="btn btn-primary">
+                                                        <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
+                                                    </a>
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Firma Modal -->
@@ -240,9 +267,9 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
-                    </table>
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file
 from flask_login import login_required, current_user
 from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento
 from app.integrations.google_drive import GoogleDriveAPI
@@ -9,6 +9,7 @@ import random
 import string
 from werkzeug.utils import secure_filename
 from functools import wraps
+import io
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
 drive_api = GoogleDriveAPI()
@@ -910,10 +911,10 @@ def subir_documento_presidente(concurso_id, documento_id):
             file_data
         )
         
-        # Update document status to PENDIENTE DE FIRMA (with spaces to match template) and link
+        # Update document status and store the file_id 
         documento.estado = 'PENDIENTE DE FIRMA'
+        documento.file_id = file_id  # Store the file_id for the uploaded version
         documento.url = web_view_link
-        documento.file_id = file_id  # Also store file_id for easier access
         documento.firma_count = 0  # Reset firma count since this is a new document
         
         # Add entry to history
@@ -1089,4 +1090,47 @@ def subir_acta_firmada(concurso_id, documento_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al subir el documento: {str(e)}', 'danger')
+        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+
+@tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/view', methods=['GET'])
+@tribunal_login_required
+def ver_documento(concurso_id, documento_id):
+    """Display document content in a viewer."""
+    try:
+        # Get concurso, documento and current tribunal member
+        concurso = Concurso.query.get_or_404(concurso_id)
+        documento = DocumentoConcurso.query.get_or_404(documento_id)
+        miembro = TribunalMiembro.query.filter_by(
+            id=session['tribunal_miembro_id'],
+            concurso_id=concurso_id
+        ).first_or_404()
+        
+        # Verify the document belongs to this concurso
+        if documento.concurso_id != concurso_id:
+            flash('El documento no pertenece a este concurso.', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
+        # Get correct file_id based on document state
+        if documento.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] and documento.file_id:
+            file_id = documento.file_id  # Use the signed/uploaded version
+        else:
+            file_id = documento.borrador_file_id  # Use the draft version
+            
+        # Get file content from Drive
+        file_content_response = drive_api.get_file_content(file_id)
+        if not file_content_response.get('fileData'):
+            raise Exception("No se pudo obtener el contenido del archivo")
+            
+        # Decode base64 content
+        import base64
+        pdf_content = base64.b64decode(file_content_response['fileData'])
+        
+        # Return the PDF content with proper headers
+        return send_file(
+            io.BytesIO(pdf_content),
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        flash(f'Error al obtener el documento: {str(e)}', 'danger')
         return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))

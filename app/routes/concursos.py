@@ -688,25 +688,21 @@ def subir_documento_firmado(concurso_id, documento_id):
             flash('No se seleccionó ningún archivo.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
         
-        # Get base filename from the original document
-        original_url = documento.url
-        original_file_id = original_url.split('/')[-2]  # Extract file ID from Google Drive URL
-        
-        # Create the new filename with _firmado suffix
-        original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso_id}"
+        # Create the filename with _firmado suffix
+        original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
         new_filename = f"{original_filename}_firmado.pdf"
         
-        # Convert to PDF if it's not already and get file data
+        # Upload to documentos_firmados folder
         file_data = file.read()
-        
-        # Upload to Google Drive in the documentos_firmados folder
         file_id, web_view_link = drive_api.upload_document(
             concurso.documentos_firmados_folder_id,
             new_filename,
             file_data
         )
         
-        # Update document status to FIRMADO
+        # Update document record for the signed version
+        documento.file_id = file_id  # Store the file ID of the signed version
+        documento.url = web_view_link
         documento.estado = 'FIRMADO'
         
         # Add entry to history
@@ -973,11 +969,10 @@ def eliminar_borrador(concurso_id, documento_id):
     
     try:
         # Delete the file from Google Drive borradores folder
-        if documento.file_id:
+        if documento.borrador_file_id:  # Use borrador_file_id instead of file_id
             try:
-                drive_api.delete_file(documento.file_id)
-                documento.file_id = None  # Clear the file_id after successful deletion
-                documento.url = None  # Clear the URL as well since the file no longer exists
+                drive_api.delete_file(documento.borrador_file_id)
+                documento.borrador_file_id = None  # Clear the borrador_file_id after successful deletion
             except Exception as e:
                 flash(f'Advertencia: No se pudo eliminar el archivo de Google Drive: {str(e)}', 'warning')
         
@@ -1021,6 +1016,7 @@ def eliminar_subido(concurso_id, documento_id):
         if documento.file_id:
             try:
                 drive_api.delete_file(documento.file_id)
+                documento.file_id = None  # Only clear the firmado file_id
             except Exception as e:
                 flash(f'Advertencia: No se pudo eliminar el archivo de Google Drive: {str(e)}', 'warning')
         
@@ -1031,8 +1027,12 @@ def eliminar_subido(concurso_id, documento_id):
         # Reset firma count
         documento.firma_count = 0
         
-        # Reset document status to allow new upload
-        documento.estado = 'BORRADOR'
+        # Reset document status to BORRADOR if there's still a draft version
+        if documento.borrador_file_id:
+            documento.estado = 'BORRADOR'
+            documento.url = None  # Clear the URL since it pointed to the firmado version
+        else:
+            documento.estado = 'CREADO'  # No versions exist
         
         # Add entry to history
         historial = HistorialEstado(

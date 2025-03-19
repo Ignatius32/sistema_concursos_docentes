@@ -285,22 +285,22 @@
                             {% for documento in concurso.documentos|sort(attribute='creado', reverse=true) %}
                             <tr>
                                 <td>
-                                    {% if documento.tipo == 'RESOLUCION_LLAMADO_TRIBUNAL' %}
-                                    Resolución de Llamado y Tribunal
-                                    {% elif documento.tipo == 'RESOLUCION_LLAMADO_REGULAR' %}
-                                    Resolución de Llamado Regular
-                                    {% elif documento.tipo == 'RESOLUCION_TRIBUNAL_REGULAR' %}
-                                    Resolución Tribunal Regular
-                                    {% elif documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}
-                                    Acta Constitución de Tribunal Regular
-                                    {% else %}
-                                    {{ documento.tipo }}
-                                    {% endif %}
+                                    {{ documento.get_friendly_name() }}
                                 </td>
                                 <td>
-                                    <span class="badge {% if documento.estado == 'FIRMADO' %}bg-success{% elif documento.estado == 'PENDIENTE DE FIRMA' %}bg-info{% elif documento.estado == 'CREADA' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {% if documento.estado == 'FIRMADO' %}
+                                    <span class="badge bg-success">
+                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                                    </span>
+                                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                                    <span class="badge bg-info">
+                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-warning">
                                         {{ documento.estado }}
                                     </span>
+                                    {% endif %}
                                 </td>
                                 <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
                                 <td>
