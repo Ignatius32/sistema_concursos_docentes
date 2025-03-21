@@ -1050,3 +1050,33 @@ def eliminar_subido(concurso_id, documento_id):
         flash(f'Error al eliminar el documento subido: {str(e)}', 'danger')
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/reset-temas', methods=['POST'])
+@login_required
+def reset_temas(concurso_id):
+    """Reset sorteo temas for a concurso. Only accessible by admin."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    if not concurso.sustanciacion:
+        flash('El concurso no tiene información de sustanciación.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        concurso.sustanciacion.temas_exposicion = None
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="TEMAS_SORTEO_ELIMINADOS",
+            observaciones=f"Temas de sorteo eliminados por administrador {current_user.username}"
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        flash('Temas de sorteo eliminados exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar los temas: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))

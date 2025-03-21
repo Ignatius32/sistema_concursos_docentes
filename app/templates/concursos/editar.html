@@ -234,21 +234,6 @@
                     <label for="sorteo_observaciones" class="form-label">Observaciones del Sorteo</label>
                     <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="3">{{ concurso.sustanciacion.sorteo_observaciones if concurso.sustanciacion and concurso.sustanciacion.sorteo_observaciones }}</textarea>
                 </div>
-                
-                <div class="col-md-12 mb-3">
-                    <label for="temas_exposicion" class="form-label">Temas de Exposición</label>
-                    <div id="temas-container" class="mb-2">
-                        <!-- Temas will be displayed here as separate items -->
-                    </div>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="nuevo-tema" placeholder="Escriba un nuevo tema y presione '+ Agregar'">
-                        <button class="btn btn-outline-secondary" type="button" id="btn-add-tema">+ Agregar</button>
-                    </div>
-                    <!-- Hidden textarea to store concatenated temas for form submission -->
-                    <input type="hidden" id="temas_exposicion" name="temas_exposicion" 
-                           value="{{ concurso.sustanciacion.temas_exposicion if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion }}">
-                    <small class="form-text text-muted">Agregue los temas uno por uno. Puede eliminar cualquier tema haciendo clic en la X.</small>
-                </div>
 
                 <!-- Exposición section -->
                 <div class="col-12">

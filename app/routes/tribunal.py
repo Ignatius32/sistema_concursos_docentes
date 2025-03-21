@@ -1134,3 +1134,78 @@ def ver_documento(concurso_id, documento_id):
     except Exception as e:
         flash(f'Error al obtener el documento: {str(e)}', 'danger')
         return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+
+@tribunal.route('/<int:concurso_id>/cargar-sorteos', methods=['GET', 'POST'])
+@tribunal_login_required
+def cargar_sorteos(concurso_id):
+    """Load sorteo temas for a concurso. Only accessible by tribunal presidente."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    miembro = TribunalMiembro.query.filter_by(
+        id=session['tribunal_miembro_id'],
+        concurso_id=concurso_id
+    ).first_or_404()
+    
+    if request.method == 'POST':
+        if miembro.rol != 'Presidente':
+            flash('Solo el presidente del tribunal puede cargar los temas.', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+        
+        temas = request.form.get('temas_exposicion')
+        if not temas:
+            flash('Debe ingresar al menos un tema.', 'warning')
+            return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro)
+        
+        try:
+            if not concurso.sustanciacion:
+                flash('El concurso no tiene información de sustanciación.', 'danger')
+                return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
+            concurso.sustanciacion.temas_exposicion = temas
+            
+            # Add entry to history
+            historial = HistorialEstado(
+                concurso=concurso,
+                estado="TEMAS_SORTEO_CARGADOS",
+                observaciones=f"Temas de sorteo cargados por el presidente del tribunal {miembro.nombre} {miembro.apellido}"
+            )
+            db.session.add(historial)
+            db.session.commit()
+            
+            flash('Temas de sorteo guardados exitosamente.', 'success')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar los temas: {str(e)}', 'danger')
+    
+    return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro)
+
+@tribunal.route('/<int:concurso_id>/reset-temas', methods=['POST'])
+@login_required
+def reset_temas(concurso_id):
+    """Reset sorteo temas for a concurso. Only accessible by admin."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    if not concurso.sustanciacion:
+        flash('El concurso no tiene información de sustanciación.', 'danger')
+        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+    
+    try:
+        concurso.sustanciacion.temas_exposicion = None
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="TEMAS_SORTEO_ELIMINADOS",
+            observaciones=f"Temas de sorteo eliminados por administrador {current_user.username}"
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        flash('Temas de sorteo eliminados exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar los temas: {str(e)}', 'danger')
+    
+    return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))

@@ -228,6 +228,11 @@
                                         {% endif %}
                                     {% endfor %}
                                 </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
+                                        <i class="bi bi-trash"></i> Eliminar Temas
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endif %}
@@ -643,6 +648,28 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <form action="{{ url_for('concursos.eliminar', concurso_id=concurso.id) }}" method="POST" style="display: inline;">
                     <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación de temas -->
+<div class="modal fade" id="resetTemasModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación de Temas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar todos los temas de sorteo?</p>
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('concursos.reset_temas', concurso_id=concurso.id) }}" method="POST">
+                    <button type="submit" class="btn btn-warning">Eliminar Temas</button>
                 </form>
             </div>
         </div>
