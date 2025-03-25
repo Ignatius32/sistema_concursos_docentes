@@ -648,6 +648,7 @@ def acceso():
             # Store tribunal member id in session
             session['tribunal_miembro_id'] = miembro.id
             session['tribunal_nombre'] = f"{miembro.nombre} {miembro.apellido}"
+            session['tribunal_rol'] = miembro.rol  # Store the role in session
             
             # Update last access time
             miembro.ultimo_acceso = datetime.utcnow()
@@ -806,8 +807,10 @@ def recuperar_password():
 @tribunal.route('/salir')
 def salir_tribunal():
     """Logout for tribunal members."""
+    # Make sure to clear all tribunal-related session data
     session.pop('tribunal_miembro_id', None)
     session.pop('tribunal_nombre', None)
+    session.pop('tribunal_rol', None)  # Also clear the role from session
     flash('Sesión cerrada exitosamente', 'success')
     return redirect(url_for('tribunal.acceso'))
 
@@ -853,6 +856,10 @@ def portal_concurso(concurso_id):
     
     # Get postulantes
     postulantes = concurso.postulantes.all()
+    
+    # Ensure role is set properly for template checks
+    if 'tribunal_rol' in session:
+        miembro.rol = session['tribunal_rol']
     
     return render_template('tribunal/portal_concurso.html',
                           miembro=miembro,
@@ -1145,9 +1152,13 @@ def cargar_sorteos(concurso_id):
         concurso_id=concurso_id
     ).first_or_404()
     
+    # Ensure role is set from session for proper template checks
+    if 'tribunal_rol' in session:
+        miembro.rol = session['tribunal_rol']
+    
     if request.method == 'POST':
         if miembro.rol != 'Presidente':
-            flash('Solo el presidente del tribunal puede cargar los temas.', 'danger')
+            flash('Solo el presidente del tribunal puede cargar los temas de sorteo.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         temas = request.form.get('temas_exposicion')
@@ -1156,11 +1167,14 @@ def cargar_sorteos(concurso_id):
             return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro)
         
         try:
-            if not concurso.sustanciacion:
-                flash('El concurso no tiene información de sustanciación.', 'danger')
+            # Create or update sustanciacion record
+            sustanciacion = concurso.sustanciacion
+            if not sustanciacion:
+                flash('No existe información de sustanciación para este concurso.', 'danger')
                 return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
             
-            concurso.sustanciacion.temas_exposicion = temas
+            # Update temas
+            sustanciacion.temas_exposicion = temas
             
             # Add entry to history
             historial = HistorialEstado(

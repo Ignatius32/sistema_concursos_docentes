@@ -225,6 +225,10 @@ class DocumentoConcurso(db.Model):
         if self.tipo in always_visible:
             return True
             
+        # Check if the document type contains "acta constitucion tribunal" (case insensitive)
+        if 'acta constitucion tribunal' in self.tipo.lower().replace('_', ' '):
+            return True
+
         # Documents with FIRMADO state are always visible
         if self.estado == 'FIRMADO':
             return True
@@ -304,6 +308,7 @@ class Sustanciacion(db.Model):
     sorteo_observaciones = db.Column(db.Text)
     sorteo_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
     temas_exposicion = db.Column(db.Text, nullable=True)  # List of topics for exposition
+    tema_sorteado = db.Column(db.Text, nullable=True)  # The randomly selected topic
     
     # Exposición
     exposicion_fecha = db.Column(db.DateTime)

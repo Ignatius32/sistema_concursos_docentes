@@ -18,23 +18,6 @@
                         <option value="Interino">Interino</option>
                     </select>
                 </div>
-
-                <!-- Resolution number fields -->
-                <div class="col-md-6 mb-3" id="nro_res_llamado_interino_group" style="display:none;">
-                    <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
-                    <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino">
-                </div>
-
-                <div class="col-md-6 mb-3" id="nro_res_llamado_regular_group" style="display:none;">
-                    <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
-                    <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular">
-                </div>
-
-                <div class="col-md-6 mb-3" id="nro_res_tribunal_regular_group" style="display:none;">
-                    <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
-                    <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular">
-                </div>
-                <!-- End resolution number fields -->
             </div>
                 
             <div class="row">
@@ -121,7 +104,27 @@
                     <label for="expediente" class="form-label">Expediente</label>
                     <input type="text" class="form-control" id="expediente" name="expediente" placeholder="Opcional">
                 </div>
+            </div>
 
+            <!-- Resolution number fields moved here -->
+            <div class="row">
+                <div class="col-md-4 mb-3" id="nro_res_llamado_interino_group" style="display:none;">
+                    <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino">
+                </div>
+
+                <div class="col-md-4 mb-3" id="nro_res_llamado_regular_group" style="display:none;">
+                    <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
+                    <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular">
+                </div>
+
+                <div class="col-md-4 mb-3" id="nro_res_tribunal_regular_group" style="display:none;">
+                    <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
+                    <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular">
+                </div>
+            </div>
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion">
