@@ -45,11 +45,11 @@ def format_cargos_text(cant_cargos, tipo, categoria=None, categoria_nombre=None,
         return f"{numero} ({cant_cargos}) {cargo_text} {tipo_text}"
     
     # Get dedication code if full information is provided
-    dedicacion_code = "1"  # Default: Simple
+    dedicacion_code = "3"  # Default: Simple
     if dedicacion == "Parcial":
         dedicacion_code = "2"
     elif dedicacion == "Exclusiva":
-        dedicacion_code = "3"
+        dedicacion_code = "1"
     
     # Full format with category and dedication
     return f"{numero} ({cant_cargos}) {cargo_text} {tipo_text} de {categoria_nombre} con dedicación {dedicacion.lower()} ({categoria}-{dedicacion_code})"
@@ -92,11 +92,11 @@ def format_descripcion_cargo(cant_cargos, tipo, categoria, categoria_nombre, ded
     tipo_text = tipo_text if cant_cargos == 1 else tipo_text + ("es" if tipo == "Regular" else "s")
     
     # Get dedication code
-    dedicacion_code = "1"  # Default: Simple
+    dedicacion_code = "3"  # Default: Simple
     if dedicacion == "Parcial":
         dedicacion_code = "2"
     elif dedicacion == "Exclusiva":
-        dedicacion_code = "3"
+        dedicacion_code = "1"
         
     # Format the full description with the full category name first, then code in parentheses
     return f"{numero} {cargo_text} ({cant_cargos}) {tipo_text} de {categoria_nombre} con dedicación {dedicacion.lower()} ({categoria}-{dedicacion_code})"
