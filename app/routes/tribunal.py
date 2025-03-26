@@ -907,8 +907,8 @@ def subir_documento_presidente(concurso_id, documento_id):
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
             
         # Create filename based on document type and concurso id
-        base_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
-        filename = secure_filename(f"{base_filename}_firmado.pdf")
+        base_filename = documento.tipo.lower().replace('_', ' ')
+        filename = secure_filename(f"{base_filename}_concurso_{concurso.id}_firmado.pdf")
         
         # Upload to documentos_firmados folder
         file_data = file.read()
@@ -1053,51 +1053,9 @@ def firmar_documento(concurso_id, documento_id):
 
 @tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir', methods=['POST'])
 def subir_acta_firmada(concurso_id, documento_id):
-    """Handle tribunal member uploading a signed document."""
-    if 'documento' not in request.files:
-        flash('No se seleccionó ningún archivo.', 'danger')
-        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-
-    file = request.files['documento']
-    if file.filename == '':
-        flash('No se seleccionó ningún archivo.', 'danger')
-        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-
-    try:
-        concurso = Concurso.query.get_or_404(concurso_id)
-        documento = DocumentoConcurso.query.get_or_404(documento_id)
-
-        # Upload file to Google Drive
-        file_data = file.read()
-        file_id, web_link = drive_api.upload_document(
-            concurso.documentos_firmados_folder_id,
-            file.filename,
-            file_data
-        )
-
-        # Update document record with consistent state
-        documento.url = web_link
-        documento.file_id = file_id
-        documento.estado = 'PENDIENTE DE FIRMA'  # Using spaces to match template check
-        documento.firma_count = 0  # Reset firma count for new document
-        
-        # Add history entry
-        historial = HistorialEstado(
-            concurso=concurso,
-            estado="DOCUMENTO_SUBIDO",
-            observaciones=f"Documento {documento.tipo} subido, pendiente de firma por el tribunal"
-        )
-        db.session.add(historial)
-        
-        db.session.commit()
-
-        flash('Documento subido exitosamente.', 'success')
-        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al subir el documento: {str(e)}', 'danger')
-        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+    """Handle tribunal member uploading a signed document. Redirects to subir_documento_presidente."""
+    # Redirect to the standard endpoint for consistency
+    return redirect(url_for('tribunal.subir_documento_presidente', concurso_id=concurso_id, documento_id=documento_id))
 
 @tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/view', methods=['GET'])
 @tribunal_login_required
@@ -1118,7 +1076,7 @@ def ver_documento(concurso_id, documento_id):
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
             
         # Get correct file_id based on document state
-        if documento.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] and documento.file_id:
+        if documento.estado in ['PENDIENTE_DE_FIRMA', 'FIRMADO'] and documento.file_id:
             file_id = documento.file_id  # Use the signed/uploaded version
         else:
             file_id = documento.borrador_file_id  # Use the draft version

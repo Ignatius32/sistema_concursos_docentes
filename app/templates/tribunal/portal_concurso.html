@@ -255,7 +255,7 @@
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <form action="{{ url_for('tribunal.subir_acta_firmada', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                                                    <form action="{{ url_for('tribunal.subir_documento_presidente', concurso_id=concurso.id, documento_id=documento.id) }}" 
                                                           method="POST" 
                                                           enctype="multipart/form-data">
                                                         <div class="mb-3">

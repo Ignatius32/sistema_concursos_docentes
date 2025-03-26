@@ -764,6 +764,16 @@ def enviar_firma(concurso_id, documento_id):
         
         if observaciones:
             html_body += f"<p><strong>Observaciones:</strong></p><p>{observaciones}</p>"
+        
+        # Ensure file_id is valid
+        if not documento.file_id and documento.borrador_file_id:
+            # Use borrador_file_id if file_id is not available
+            attachment_id = documento.borrador_file_id
+        elif documento.file_id:
+            attachment_id = documento.file_id
+        else:
+            flash('El documento no tiene un archivo asociado para enviar.', 'error')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
             
         # Send email with document as attachment
         drive_api.send_email(
@@ -771,7 +781,7 @@ def enviar_firma(concurso_id, documento_id):
             subject=subject,
             html_body=html_body,
             sender_name='Sistema de Concursos Docentes',
-            attachment_ids=[documento.file_id],
+            attachment_ids=[attachment_id],  # Make sure this is a list with a valid ID
             placeholders={
                 'expediente': concurso.expediente or 'S/N',
                 'departamento': concurso.departamento_rel.nombre,
