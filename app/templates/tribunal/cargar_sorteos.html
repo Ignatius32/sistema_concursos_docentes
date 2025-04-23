@@ -33,7 +33,7 @@
             {% endif %}
         </div>
         {% else %}
-            {% if miembro.rol == 'Presidente' %}
+            {% if miembro.can_add_tema %}
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label">Agregar Tema de Sorteo</label>

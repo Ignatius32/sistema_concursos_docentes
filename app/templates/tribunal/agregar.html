@@ -8,8 +8,7 @@
         <h2 class="mb-0">Agregar Miembro al Tribunal - Concurso #{{ concurso.id }}</h2>
     </div>
     <div class="card-body">
-        <form method="POST">
-            <div class="row">
+        <form method="POST">            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="rol" class="form-label">Rol en el Tribunal</label>
                     <select class="form-select" id="rol" name="rol" required>
@@ -17,6 +16,15 @@
                         <option value="Presidente">Presidente</option>
                         <option value="Vocal">Vocal</option>
                         <option value="Suplente">Suplente</option>
+                        <option value="Veedor">Veedor</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="claustro" class="form-label">Claustro</label>
+                    <select class="form-select" id="claustro" name="claustro" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Docente" selected>Docente</option>
+                        <option value="Estudiante">Estudiante</option>
                     </select>
                 </div>
             </div>

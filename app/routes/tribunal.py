@@ -64,9 +64,9 @@ def agregar(concurso_id):
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if request.method == 'POST':
-        try:
-            # Extract form data
+        try:            # Extract form data
             rol = request.form.get('rol')
+            claustro = request.form.get('claustro')
             nombre = request.form.get('nombre')
             apellido = request.form.get('apellido')
             dni = request.form.get('dni')
@@ -82,8 +82,7 @@ def agregar(concurso_id):
                 db.session.commit()
                 flash('Miembro del tribunal existente asignado a este concurso.', 'success')
                 return redirect(url_for('tribunal.index', concurso_id=concurso_id))
-            
-            # Create Google Drive folder for tribunal member
+              # Create Google Drive folder for tribunal member
             folder_name = f"{rol}_{apellido}_{nombre}_{dni}"
             folder_id = drive_api.create_tribunal_folder(
                 parent_folder_id=concurso.tribunal_folder_id,
@@ -97,6 +96,7 @@ def agregar(concurso_id):
             miembro = TribunalMiembro(
                 concurso_id=concurso_id,
                 rol=rol,
+                claustro=claustro,
                 nombre=nombre,
                 apellido=apellido,
                 dni=dni,
@@ -105,6 +105,20 @@ def agregar(concurso_id):
                 username=dni,  # Use DNI as username
                 notificado=False
             )
+            
+            # Set default permissions based on role
+            if rol == 'Presidente':
+                miembro.can_add_tema = True
+                miembro.can_upload_file = True
+                miembro.can_sign_file = True
+            elif rol == 'Vocal':
+                miembro.can_add_tema = True
+                miembro.can_sign_file = True
+                miembro.can_upload_file = False
+            else:  # Suplente and others
+                miembro.can_add_tema = False
+                miembro.can_upload_file = False
+                miembro.can_sign_file = False
             
             db.session.add(miembro)
             db.session.commit()
@@ -126,15 +140,21 @@ def editar(miembro_id):
     concurso = Concurso.query.get_or_404(miembro.concurso_id)
     
     if request.method == 'POST':
-        try:
+        try:            
             old_rol = miembro.rol
             # Update member data from form
             miembro.rol = request.form.get('rol')
+            miembro.claustro = request.form.get('claustro')
             miembro.nombre = request.form.get('nombre')
             miembro.apellido = request.form.get('apellido')
             miembro.dni = request.form.get('dni')
             miembro.correo = request.form.get('correo')
             miembro.username = miembro.dni  # Keep username as DNI
+            
+            # Handle permission checkboxes
+            miembro.can_add_tema = 'can_add_tema' in request.form
+            miembro.can_upload_file = 'can_upload_file' in request.form
+            miembro.can_sign_file = 'can_sign_file' in request.form
             
             # Update Drive folder name if needed
             if miembro.drive_folder_id:
@@ -870,7 +890,7 @@ def portal_concurso(concurso_id):
 @tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir-firmado', methods=['POST'])
 @tribunal_login_required
 def subir_documento_presidente(concurso_id, documento_id):
-    """Handle signed document upload from tribunal members - President only"""
+    """Handle signed document upload from tribunal members with upload permission"""
     
     try:
         concurso = Concurso.query.get_or_404(concurso_id)
@@ -885,9 +905,9 @@ def subir_documento_presidente(concurso_id, documento_id):
             flash('El documento no pertenece a este concurso.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
-        # Only allow Presidente to upload signed documents
-        if miembro.rol != 'Presidente':
-            flash('Solo el presidente del tribunal puede subir documentos firmados.', 'danger')
+        # Only allow members with upload permission to upload signed documents
+        if not miembro.can_upload_file:
+            flash('No tiene permisos para subir documentos firmados.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         # Check if document is already signed
@@ -959,14 +979,14 @@ def firmar_documento(concurso_id, documento_id):
             flash('El documento no pertenece a este concurso.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
-        # Check if document is pending signature - use consistent state
-        if documento.estado != 'PENDIENTE DE FIRMA':
-            flash('Este documento no está pendiente de firma.', 'danger')
-            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-        
         # Check if member already signed
         if documento.ya_firmado_por(miembro.id):
             flash('Ya ha firmado este documento.', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+        
+        # Check if document contains "resolucion" in its type (case insensitive)
+        if "resolucion" in documento.tipo.lower():
+            flash('No puede firmar documentos de tipo Resolución.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         try:
@@ -1019,22 +1039,23 @@ def firmar_documento(concurso_id, documento_id):
             )  # fecha_firma will be set automatically by the default value
             db.session.add(firma)
             
-            # Update document status if all tribunal members have signed
-            tribunal_titulares = TribunalMiembro.query.filter(
-                TribunalMiembro.concurso_id == concurso_id,
-                TribunalMiembro.rol != 'Suplente'
-            ).count()
-            
-            if documento.firma_count >= tribunal_titulares:
-                documento.estado = 'FIRMADO'
+            # If document is not already marked as FIRMADO, update status once all tribunal members have signed
+            if documento.estado != 'FIRMADO':
+                tribunal_titulares = TribunalMiembro.query.filter(
+                    TribunalMiembro.concurso_id == concurso_id,
+                    TribunalMiembro.rol != 'Suplente'
+                ).count()
                 
-                # Add entry to history
-                historial = HistorialEstado(
-                    concurso=concurso,
-                    estado="DOCUMENTO_FIRMADO",
-                    observaciones=f"Documento {documento.tipo} completamente firmado"
-                )
-                db.session.add(historial)
+                if documento.firma_count >= tribunal_titulares:
+                    documento.estado = 'FIRMADO'
+                    
+                    # Add entry to history
+                    historial = HistorialEstado(
+                        concurso=concurso,
+                        estado="DOCUMENTO_FIRMADO",
+                        observaciones=f"Documento {documento.tipo} completamente firmado"
+                    )
+                    db.session.add(historial)
             
             db.session.commit()
             flash('Documento firmado exitosamente.', 'success')
@@ -1103,7 +1124,7 @@ def ver_documento(concurso_id, documento_id):
 @tribunal.route('/<int:concurso_id>/cargar-sorteos', methods=['GET', 'POST'])
 @tribunal_login_required
 def cargar_sorteos(concurso_id):
-    """Load sorteo temas for a concurso. Only accessible by tribunal presidente."""
+    """Load sorteo temas for a concurso. Only accessible by members with can_add_tema permission."""
     concurso = Concurso.query.get_or_404(concurso_id)
     miembro = TribunalMiembro.query.filter_by(
         id=session['tribunal_miembro_id'],
@@ -1115,8 +1136,8 @@ def cargar_sorteos(concurso_id):
         miembro.rol = session['tribunal_rol']
     
     if request.method == 'POST':
-        if miembro.rol != 'Presidente':
-            flash('Solo el presidente del tribunal puede cargar los temas de sorteo.', 'danger')
+        if not miembro.can_add_tema:
+            flash('No tiene permisos para cargar los temas de sorteo.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         temas = request.form.get('temas_exposicion')
@@ -1138,7 +1159,7 @@ def cargar_sorteos(concurso_id):
             historial = HistorialEstado(
                 concurso=concurso,
                 estado="TEMAS_SORTEO_CARGADOS",
-                observaciones=f"Temas de sorteo cargados por el presidente del tribunal {miembro.nombre} {miembro.apellido}"
+                observaciones=f"Temas de sorteo cargados por el miembro del tribunal {miembro.nombre} {miembro.apellido}"
             )
             db.session.add(historial)
             db.session.commit()

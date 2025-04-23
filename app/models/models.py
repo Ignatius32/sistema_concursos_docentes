@@ -99,16 +99,22 @@ class Concurso(db.Model):
     impugnaciones = db.relationship('Impugnacion', backref='concurso', lazy='dynamic')
     recusaciones = db.relationship('Recusacion', backref='concurso', lazy='dynamic')
 
-class TribunalMiembro(db.Model):
+class TribunalMiembro(db.Model):    
     __tablename__ = 'tribunal_miembros'
     id = db.Column(db.Integer, primary_key=True)
     concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id', name='fk_tribunal_miembro_concurso'))
-    rol = db.Column(db.String(50), nullable=False)  # Presidente, Vocal, Suplente
+    rol = db.Column(db.String(50), nullable=False)  # Presidente, Vocal, Suplente, Veedor
+    claustro = db.Column(db.String(20), nullable=True, default='Docente')  # Docente, Estudiante
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100), nullable=False)
     dni = db.Column(db.String(20), nullable=False)
     correo = db.Column(db.String(100))
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
+    
+    # Permission fields
+    can_add_tema = db.Column(db.Boolean, default=False)  # Permission to add topics
+    can_upload_file = db.Column(db.Boolean, default=False)  # Permission to upload files
+    can_sign_file = db.Column(db.Boolean, default=False)  # Permission to sign documents
     
     # Authentication and notification fields
     username = db.Column(db.String(50), nullable=True)

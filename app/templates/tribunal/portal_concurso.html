@@ -93,7 +93,7 @@
                             </div>
                         </div>
                         {% endif %}
-                        {% if miembro.rol == 'Presidente' and not concurso.sustanciacion.temas_exposicion %}
+                        {% if miembro.can_add_tema and not concurso.sustanciacion.temas_exposicion %}
                         <div class="text-end mt-2">
                             <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary">
                                 <i class="bi bi-plus"></i> Cargar Temas de Sorteo
@@ -147,12 +147,18 @@
                                 </td>
                                 <td>
                                     {% if documento.estado == 'FIRMADO' %}
-                                    <span class="badge bg-success">
-                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
-                                    </span>
+                                        {% if "resolucion" in documento.tipo.lower() %}
+                                        <span class="badge bg-success">
+                                            FIRMADO
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">
+                                            FIRMADO POR {{ documento.firma_count }} MIEMBRO{% if documento.firma_count > 1 %}S{% endif %} DEL TRIBUNAL
+                                        </span>
+                                        {% endif %}
                                     {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
                                     <span class="badge bg-info">
-                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                                        PENDIENTE DE FIRMA {% if documento.firma_count > 0 %}({{ documento.firma_count }} firma{% if documento.firma_count > 1 %}s{% endif %}){% endif %}
                                     </span>
                                     {% else %}
                                     <span class="badge bg-warning">
@@ -167,14 +173,14 @@
                                                 data-bs-target="#pdfViewerModal{{ documento.id }}">
                                             <i class="bi bi-file-earmark-text"></i> Ver Documento
                                         </button>
-                                        {% if documento.estado == 'PENDIENTE DE FIRMA' and not documento.ya_firmado_por(miembro.id) %}
+                                        {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and "resolucion" not in documento.tipo.lower() %}
                                         <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#firmarModal{{ documento.id }}">
                                             <i class="bi bi-pen"></i> Firmar
                                         </button>
                                         {% endif %}
-                                        {% if documento.estado != 'FIRMADO' and miembro.rol == 'Presidente' %}
+                                        {% if documento.estado != 'FIRMADO' and miembro.can_upload_file %}
                                         <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#uploadModal{{ documento.id }}">
@@ -206,7 +212,7 @@
                                     </div>
 
                                     <!-- Firma Modal -->
-                                    {% if documento.estado == 'PENDIENTE DE FIRMA' and not documento.ya_firmado_por(miembro.id) %}
+                                    {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and "resolucion" not in documento.tipo.lower() %}
                                     <div class="modal fade" id="firmarModal{{ documento.id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
@@ -246,7 +252,7 @@
                                     {% endif %}
 
                                     <!-- Upload Modal -->
-                                    {% if documento.estado != 'FIRMADO' and miembro.rol == 'Presidente' %}
+                                    {% if documento.estado != 'FIRMADO' and miembro.can_upload_file %}
                                     <div class="modal fade" id="uploadModal{{ documento.id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">

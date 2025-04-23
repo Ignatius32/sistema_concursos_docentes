@@ -8,8 +8,7 @@
         <h2 class="mb-0">Editar Miembro del Tribunal - Concurso #{{ concurso.id }}</h2>
     </div>
     <div class="card-body">
-        <form method="POST">
-            <div class="row">
+        <form method="POST">            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="rol" class="form-label">Rol en el Tribunal</label>
                     <select class="form-select" id="rol" name="rol" required>
@@ -17,6 +16,15 @@
                         <option value="Presidente" {% if miembro.rol == 'Presidente' %}selected{% endif %}>Presidente</option>
                         <option value="Vocal" {% if miembro.rol == 'Vocal' %}selected{% endif %}>Vocal</option>
                         <option value="Suplente" {% if miembro.rol == 'Suplente' %}selected{% endif %}>Suplente</option>
+                        <option value="Veedor" {% if miembro.rol == 'Veedor' %}selected{% endif %}>Veedor</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="claustro" class="form-label">Claustro</label>
+                    <select class="form-select" id="claustro" name="claustro" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Docente" {% if miembro.claustro == 'Docente' or not miembro.claustro %}selected{% endif %}>Docente</option>
+                        <option value="Estudiante" {% if miembro.claustro == 'Estudiante' %}selected{% endif %}>Estudiante</option>
                     </select>
                 </div>
             </div>
@@ -43,6 +51,47 @@
                 <div class="col-md-6 mb-3">
                     <label for="correo" class="form-label">Correo Electrónico</label>
                     <input type="email" class="form-control" id="correo" name="correo" value="{{ miembro.correo }}" required>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Permisos del Miembro</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="can_add_tema" name="can_add_tema" value="1"
+                                               {% if miembro.can_add_tema %}checked{% endif %}>
+                                        <label class="form-check-label" for="can_add_tema">
+                                            Puede cargar temas de sorteo
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="can_upload_file" name="can_upload_file" value="1"
+                                               {% if miembro.can_upload_file %}checked{% endif %}>
+                                        <label class="form-check-label" for="can_upload_file">
+                                            Puede subir documentos
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="can_sign_file" name="can_sign_file" value="1"
+                                               {% if miembro.can_sign_file %}checked{% endif %}>
+                                        <label class="form-check-label" for="can_sign_file">
+                                            Puede firmar documentos
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
