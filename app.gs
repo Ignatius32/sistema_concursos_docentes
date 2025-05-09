@@ -1,17 +1,15 @@
 // IMPORTANT: Make sure to add GOOGLE_DRIVE_SECURE_TOKEN in Script Properties with the value from your .env file
 
-// Template IDs for document generation
-// Add your actual template document IDs here
+// The TEMPLATES mapping is no longer needed as template IDs are passed directly from the backend
+// Keeping this commented for backward compatibility reference
+/*
 const TEMPLATES = {
-  'concursoResolucion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
-  'actaSustanciacion': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',  // Replace with actual template ID
-  'certificadoPostulante': '1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual template ID
-  'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', // 
+  'resLlamadoTribunalInterino': '1Sb8TI4AJM6bIu-I-xGB-44ST6AltcQwIGZyN6F-sKHc', 
   'resLlamadoRegular': '1Eg0N5s4H_wGEHUZClYZs-jF4ED2pjHbT-KsUoSSLOX8',
   'resTribunalRegular': '119a255YfBWEdqu_IEJT1vYWSLAP9KhVk4G5NHPTYD6Q',
   'actaConstitucionTribunalRegular': '1Gid4o-lkDfuhNb0g_QHdVvlPoQfS5lR8AtnIxtuLsdI',
-  // Add more templates as needed
 };
+*/
 
 // Utility functions
 function sanitizeFolderName(name) {
@@ -316,10 +314,14 @@ function crearPostulante(concursoFolderId, folderName) {
 }
 
 // Function to upload a file to a specific folder
-function uploadFile(folderId, fileName, fileData) {
+function uploadFile(folderId, fileName, fileData, mimeType) {
   // Basic validation
   if (!folderId || !fileName || !fileData) {
     throw new Error("Folder ID, file name and file data are required.");
+  }
+
+  if (!mimeType) {
+    mimeType = "application/octet-stream"; // Default MIME type if not provided
   }
 
   try {
@@ -328,7 +330,7 @@ function uploadFile(folderId, fileName, fileData) {
     
     // Convert base64 data to bytes
     var decodedData = Utilities.base64Decode(fileData);
-    var blob = Utilities.newBlob(decodedData, "application/pdf", fileName);
+    var blob = Utilities.newBlob(decodedData, mimeType, fileName);
     
     // Create the file in Drive
     var file = folder.createFile(blob);
@@ -554,12 +556,17 @@ function handleCreatePostulanteFolder(data) {
 }
 
 function handleCreateDocFromTemplate(data) {
-  if (!data.templateName || !data.folderId || !data.fileName || !data.data) {
-    throw new Error("Template name, folder ID, file name, and data are required.");
+  if (!data.templateId || !data.folderId || !data.fileName || !data.data) {
+    throw new Error("Template ID, folder ID, file name, and data are required.");
   }
   
-  // Get the template file
-  var templateFile = DriveApp.getFileById(TEMPLATES[data.templateName]);
+  // Get the template file directly using the ID
+  var templateFile;
+  try {
+    templateFile = DriveApp.getFileById(data.templateId);
+  } catch (err) {
+    throw new Error("Template not found: " + err.message);
+  }
   
   // Create a copy in the destination folder
   var folder = DriveApp.getFolderById(data.folderId);
@@ -588,8 +595,11 @@ function handleUploadFile(data) {
     throw new Error("Folder ID, file name, and file data are required.");
   }
   
+  // Use the provided MIME type or default to application/pdf
+  var mimeType = data.mimeType || "application/pdf";
+  
   // Decode base64 file data
-  var blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), "application/pdf", data.fileName);
+  var blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), mimeType, data.fileName);
   
   // Get the destination folder
   var folder = DriveApp.getFolderById(data.folderId);

@@ -11,8 +11,6 @@
     <div class="card-body">
         <form method="POST" id="considerandosForm" onsubmit="return validateForm()">
             <input type="hidden" name="document_type" value="{{ document_type }}">
-            
-
 
             {% if error_message %}
             <div class="alert alert-danger">
@@ -20,13 +18,15 @@
             </div>
             {% endif %}
             
+
+
             <!-- Comisión Académica y Consejo Directivo Information -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h4 class="mb-0">Información de Comisión y Consejo</h4>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row">  
                         <div class="col-md-6">
                             <h5>Comisión Académica</h5>
                             <div class="mb-3">
@@ -272,16 +272,26 @@ document.addEventListener('DOMContentLoaded', function() {
         "<<Dedicacion>>": "{{ concurso.dedicacion or '' }}",
         "<<CantCargos>>": "{{ concurso.cant_cargos or '1' }}",
         "<<tipo>>": "{{ concurso.tipo or '' }}",
-        "<<descripcion_cargo>>": "{{ descripcion_cargo }}"
+        "<<descripcion_cargo>>": "{{ descripcion_cargo }}",
+        "<<TKD>>": "{{ concurso.tkd or '' }}"
         {% if departamento_heads %}
-        {% for head in departamento_heads %}
-        {% if departamento and head.departamento == departamento.nombre %}
-        , "<<resp_departamento>>": "{{ head.responsable }}"
-        , "<<prefijo_resp_departamento>>": "{{ head.prefijo }}"
-        {% endif %}
-        {% endfor %}
+            {% for head in departamento_heads %}
+                {% if departamento and head.departamento == departamento.nombre %}
+                    , "<<resp_departamento>>": "{{ head.responsable }}"
+                    , "<<prefijo_resp_departamento>>": "{{ head.prefijo }}"
+                {% endif %}
+            {% endfor %}
         {% endif %}
     };
+    
+    // Add event listener for TKD field
+    const tkdInput = document.getElementById('tkd');
+    if (tkdInput) {
+        tkdInput.addEventListener('input', function() {
+            placeholderValues['<<TKD>>'] = this.value;
+            updateConsiderandoTexts();
+        });
+    }
     
     // Initialize input placeholder values
     function initPlaceholders() {
@@ -500,45 +510,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const customPreviewDiv = document.getElementById('custom_preview');
     const customPreviewContent = customPreviewDiv.querySelector('.preview-content');
     
-    customTextarea.addEventListener('input', function() {
-        if (this.value.trim()) {
-            // Update preview content with placeholders replaced and show it
-            const replacedText = replacePlaceholders(this.value);
-            customPreviewContent.textContent = replacedText;
-            customPreviewDiv.style.display = 'block';
-        } else {
-            // Hide preview if nothing typed
-            customPreviewDiv.style.display = 'none';
-        }
-    });
+    if (customTextarea && customPreviewDiv && customPreviewContent) {
+        customTextarea.addEventListener('input', function() {
+            if (this.value.trim()) {
+                // Update preview content with placeholders replaced and show it
+                const replacedText = replacePlaceholders(this.value);
+                customPreviewContent.textContent = replacedText;
+                customPreviewDiv.style.display = 'block';
+            } else {
+                // Hide preview if nothing typed
+                customPreviewDiv.style.display = 'none';
+            }
+        });
+    }
     
     // Handle adding custom considerandos
-    document.getElementById('add-custom-btn').addEventListener('click', function() {
-        const text = customTextarea.value.trim();
-        
-        if (text) {
-            // Create a unique ID for the custom considerando
-            const customId = 'custom-' + Date.now();
+    const addCustomBtn = document.getElementById('add-custom-btn');
+    if (addCustomBtn && customTextarea) {
+        addCustomBtn.addEventListener('click', function() {
+            const text = customTextarea.value.trim();
             
-            // Replace placeholders in the custom text
-            const replacedText = replacePlaceholders(text);
-            
-            // Add the custom considerando to the list
-            const customItem = createConsiderandoItem(customId, 'custom', replacedText, replacedText);
-            selectedConsiderandosList.appendChild(customItem);
-            updateConsiderandosOrder();
-            
-            // Clear the textarea
-            customTextarea.value = '';
-            customPreviewDiv.style.display = 'none';
-        }
-    });
+            if (text) {
+                // Create a unique ID for the custom considerando
+                const customId = 'custom-' + Date.now();
+                
+                // Replace placeholders in the custom text
+                const replacedText = replacePlaceholders(text);
+                
+                // Add the custom considerando to the list
+                const customItem = createConsiderandoItem(customId, 'custom', replacedText, replacedText);
+                selectedConsiderandosList.appendChild(customItem);
+                updateConsiderandosOrder();
+                
+                // Clear the textarea
+                customTextarea.value = '';
+                customPreviewDiv.style.display = 'none';
+            }
+        });
+    }
     
     // Handle form submission
-    document.getElementById('considerandosForm').addEventListener('submit', function(e) {
-        // Final update of the order before submitting
-        updateConsiderandosOrder();
-    });
+    const considerandosForm = document.getElementById('considerandosForm');
+    if (considerandosForm) {
+        considerandosForm.addEventListener('submit', function(e) {
+            // Final update of the order before submitting
+            updateConsiderandosOrder();
+        });
+    }
     
     // Initialize placeholder values and update all considerando texts
     initPlaceholders();

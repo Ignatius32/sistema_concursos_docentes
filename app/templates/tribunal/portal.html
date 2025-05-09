@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Portal del Tribunal - {{ miembro.nombre }} {{ miembro.apellido }}</h2>
+    <h2>Portal del Tribunal - {{ persona.nombre }} {{ persona.apellido }}</h2>
     <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
         <i class="bi bi-box-arrow-right"></i> Salir
     </a>
@@ -17,11 +17,11 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
-                <p><strong>Nombre:</strong> {{ miembro.nombre }} {{ miembro.apellido }}</p>
-                <p><strong>DNI:</strong> {{ miembro.dni }}</p>
+                <p><strong>Nombre:</strong> {{ persona.nombre }} {{ persona.apellido }}</p>
+                <p><strong>DNI:</strong> {{ persona.dni }}</p>
             </div>
             <div class="col-md-6">
-                <p><strong>Correo:</strong> {{ miembro.correo }}</p>
+                <p><strong>Correo:</strong> {{ persona.correo }}</p>
                 <p><strong>Último acceso:</strong> {{ miembro.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if miembro.ultimo_acceso else 'Primer acceso' }}</p>
             </div>
         </div>
@@ -52,13 +52,8 @@
                 <td>{{ concurso.departamento_rel.nombre }}</td>
                 <td>{{ concurso.area }}</td>
                 <td>{{ concurso.categoria }}</td>
-                <td>{{ concurso.dedicacion }}</td>
-                <td>
-                    {% for miembro_tribunal in concurso.tribunal %}
-                        {% if miembro_tribunal.id == miembro.id %}
-                            <span class="badge bg-primary">{{ miembro_tribunal.rol }}</span>
-                        {% endif %}
-                    {% endfor %}
+                <td>{{ concurso.dedicacion }}</td>                <td>
+                    <span class="badge bg-primary">{{ concurso_roles[concurso.id] }}</span>
                 </td>
                 <td>
                     <span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">

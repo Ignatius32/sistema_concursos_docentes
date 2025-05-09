@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Persona - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Nueva Persona</h2>
+        <a href="{{ url_for('admin_personas.list_personas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="apellido" class="form-label">Apellido *</label>
+                    <input type="text" class="form-control" id="apellido" name="apellido" required>
+                </div>
+            </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dni" class="form-label">DNI *</label>
+                    <input type="text" class="form-control" id="dni" name="dni" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="correo" name="correo">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ej: +54 11 1234-5678">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <!-- Reserved for future fields -->
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Credenciales (Opcional)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="username" class="form-label">Nombre de Usuario</label>
+                                    <input type="text" class="form-control" id="username" name="username">
+                                    <div class="form-text">
+                                        Si se proporciona, la persona podrá iniciar sesión en el sistema.
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="password" name="password">
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
+                                <label class="form-check-label" for="is_admin">
+                                    Es Administrador
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Curriculum Vitae</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="cv_file" class="form-label">Cargar CV (sólo archivos PDF)</label>
+                                <input type="file" class="form-control" id="cv_file" name="cv_file" accept=".pdf">
+                                <div class="form-text">
+                                    El archivo será almacenado en Google Drive y vinculado a esta persona.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Persona
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

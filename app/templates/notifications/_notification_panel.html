@@ -1,0 +1,97 @@
+<!-- Notification Panel Partial Template -->
+<div class="card shadow">
+    <div class="card-header bg-info-subtle d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Panel de Notificaciones</h5>
+        <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-list"></i> Ver Todas las Campañas
+        </a>
+    </div>
+    <div class="card-body">
+        {% set all_campaigns = notification_campaigns %}
+        {% if all_campaigns %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre Campaña</th>
+                            <th>Asunto</th>
+                            <th>Creado Por</th>
+                            <th>Fecha Creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in all_campaigns %}
+                            <tr>
+                                <td>{{ campaign.nombre_campana }}</td>
+                                <td>{{ campaign.asunto_email }}</td>
+                                <td>{{ campaign.creado_por.username if campaign.creado_por else 'Sistema' }}</td>
+                                <td>{{ campaign.creado_en.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td class="d-flex">                                    <!-- Edit Button -->
+                                    <a href="{{ url_for('notifications.editar_notificacion_campaign_form', campaign_id=campaign.id) }}" 
+                                       class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <!-- Delete Button with Form -->
+                                    <form action="{{ url_for('notifications.eliminar_notificacion_campaign', campaign_id=campaign.id) }}" 
+                                          method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta campaña?');" class="me-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- Trigger Button with Form -->
+                                    <form action="{{ url_for('notifications.trigger_notification_campaign', concurso_id=concurso.id, campaign_id=campaign.id) }}" 
+                                          method="POST" onsubmit="return confirm('¿Estás seguro de enviar esta campaña a todos los destinatarios configurados?');">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Disparar Campaña">
+                                            <i class="fas fa-paper-plane"></i> Enviar
+                                        </button>
+                                    </form>
+                                </td>                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Campaign Logs Summary for this Concurso -->
+            <div class="mt-4">
+                <h6>Historial de Envíos para este Concurso</h6>
+                <ul class="list-group">
+                    {% set logs_by_campaign = notification_logs_by_campaign %}
+                    {% if logs_by_campaign %}
+                        {% for campaign_id, logs in logs_by_campaign.items() %}
+                            {% set campaign = all_campaigns|selectattr('id', 'equalto', campaign_id)|first %}
+                            {% if campaign %}
+                                {% set enviados = logs|selectattr('estado_envio', 'equalto', 'ENVIADO')|list|length %}
+                                {% set fallidos = logs|selectattr('estado_envio', 'equalto', 'FALLIDO')|list|length %}
+                                {% if enviados > 0 or fallidos > 0 %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ campaign.nombre_campana }}</span>
+                                        <div>
+                                            {% if enviados > 0 %}
+                                                <span class="badge bg-success">{{ enviados }} enviados</span>
+                                            {% endif %}
+                                            {% if fallidos > 0 %}
+                                                <span class="badge bg-danger ms-1">{{ fallidos }} fallidos</span>
+                                            {% endif %}
+                                        </div>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <li class="list-group-item">No hay historial de envíos para este concurso.</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No hay campañas de notificación disponibles.
+                <a href="{{ url_for('notifications.crear_notificacion_campaign_form') }}" class="alert-link">
+                    Crear una nueva campaña
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>

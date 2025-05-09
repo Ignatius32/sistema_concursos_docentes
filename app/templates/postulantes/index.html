@@ -15,14 +15,13 @@
     <div class="card-body">
         {% if postulantes %}
         <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
+            <table class="table table-striped">                <thead>
                     <tr>
                         <th>DNI</th>
-                        <th>Nombre</th>
-                        <th>Apellido</th>
+                        <th>Nombre Completo</th>
                         <th>Correo</th>
-                        <th>Documentos</th>
+                        <th>Teléfono</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -30,12 +29,10 @@
                     {% for postulante in postulantes %}
                     <tr>
                         <td>{{ postulante.dni }}</td>
-                        <td>{{ postulante.nombre }}</td>
-                        <td>{{ postulante.apellido }}</td>
+                        <td>{{ postulante.apellido }}, {{ postulante.nombre }}</td>
                         <td>{{ postulante.correo }}</td>
-                        <td>
-                            <span class="badge bg-info">{{ postulante.documentos.count() }} documentos</span>
-                        </td>
+                        <td>{{ postulante.telefono or '-' }}</td>
+                        <td><span class="badge bg-{{ 'success' if postulante.estado == 'activo' else 'secondary' }}">{{ postulante.estado | capitalize }}</span></td>
                         <td>
                             <div class="btn-group">
                                 <a href="{{ url_for('postulantes.ver', postulante_id=postulante.id) }}" class="btn btn-sm btn-info">Ver</a>

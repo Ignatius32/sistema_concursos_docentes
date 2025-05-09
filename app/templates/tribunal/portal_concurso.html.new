@@ -168,21 +168,21 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="btn-group">                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#pdfViewerModal{{ documento.id }}">
                                             <i class="bi bi-file-earmark-text"></i> Ver Documento
                                         </button>
-                                        
-                                        {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
+                                        {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and "resolucion" not in documento.tipo.lower() %}
                                         <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#firmarModal{{ documento.id }}">
                                             <i class="bi bi-pen"></i> Firmar
                                         </button>
                                         {% endif %}
-                                        
-                                        {% if documento.estado != 'FIRMADO' and miembro.can_upload_file and template_configs_dict.get(documento.tipo, {}).tribunal_can_upload_signed %}                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                        {% if documento.estado != 'FIRMADO' and miembro.can_upload_file %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#uploadModal{{ documento.id }}">
                                             <i class="bi bi-upload"></i> Subir Firmado
@@ -210,8 +210,10 @@
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>                                    <!-- Firma Modal -->
-                                    {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
+                                    </div>
+
+                                    <!-- Firma Modal -->
+                                    {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and "resolucion" not in documento.tipo.lower() %}
                                     <div class="modal fade" id="firmarModal{{ documento.id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">

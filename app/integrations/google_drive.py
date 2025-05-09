@@ -86,14 +86,14 @@ class GoogleDriveAPI:
         if folder_data.get('status') != 'success':
             raise Exception(f"Error from Google Drive API: {folder_data.get('message')}")
 
-        return folder_data.get('folderId')
-
+        return folder_data.get('folderId')    
+    
     def create_document_from_template(self, template_name, data, folder_id, file_name):
         """
         Create a document from a template in Google Drive.
         
         Args:
-            template_name (str): Name of the template to use (must be defined in TEMPLATES in the Apps Script)
+            template_name (str): Name of the template to use or the Google Doc ID directly
             data (dict): Dictionary of placeholder values to replace in the template
             folder_id (str): The ID of the Google Drive folder where the document should be created
             file_name (str): The name for the new document
@@ -101,9 +101,11 @@ class GoogleDriveAPI:
         Returns:
             tuple: (file_id, web_view_link) - ID and URL of the created document
         """
+        # We'll now pass the template_name parameter to the API which could be either a template key
+        # or directly the Google Doc ID
         response = requests.post(self.api_url, json={
             'action': 'createDocFromTemplate',
-            'templateName': template_name,
+            'templateId': template_name,  # This will now be the direct template ID
             'data': data,
             'folderId': folder_id,
             'fileName': file_name,
@@ -117,9 +119,8 @@ class GoogleDriveAPI:
         if doc_data.get('status') != 'success':
             raise Exception(f"Error from Google Drive API: {doc_data.get('message')}")
             
-        return doc_data.get('fileId'), doc_data.get('webViewLink')
-
-    def upload_document(self, folder_id, file_name, file_data):
+        return doc_data.get('fileId'), doc_data.get('webViewLink')    
+    def upload_document(self, folder_id, file_name, file_data, mime_type='application/octet-stream'):
         """
         Upload a document to Google Drive in the specified folder.
         
@@ -127,6 +128,7 @@ class GoogleDriveAPI:
             folder_id (str): The ID of the Google Drive folder
             file_name (str): The name to give the file in Drive
             file_data (bytes): The file content as bytes
+            mime_type (str): The MIME type of the file (default: application/octet-stream)
         """
         # Encode file data as base64 for transmission
         file_data_b64 = base64.b64encode(file_data).decode('utf-8')
@@ -136,6 +138,7 @@ class GoogleDriveAPI:
             'folderId': folder_id,
             'fileName': file_name,
             'fileData': file_data_b64,
+            'mimeType': mime_type,
             'token': self.secure_token
         })
 
@@ -342,11 +345,10 @@ class GoogleDriveAPI:
         """Create a folder in Google Drive for a tribunal member inside the tribunal folder.
         
         Args:
-            parent_folder_id (str): The ID of the parent tribunal folder
-            nombre (str): First name of the tribunal member
+            parent_folder_id (str): The ID of the parent tribunal folder            nombre (str): First name of the tribunal member
             apellido (str): Last name of the tribunal member
             dni (str): DNI of the tribunal member
-            rol (str): Role in the tribunal (Presidente/Vocal/Suplente)
+            rol (str): Role in the tribunal (Presidente/Titular/Suplente)
             
         Returns:
             str: The ID of the created folder

@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Administración de Plantillas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Administración de Plantillas</h1>
+        <a href="{{ url_for('admin_templates.nuevo') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nueva Plantilla
+        </a>
+    </div>
+
+    {% include '_flash_messages.html' %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Tipo de Documento</th>
+                            <th>Visibilidad Concurso</th>
+                            <th>Único por Concurso</th>
+                            <th>Considerandos</th>
+                            <th>Req. Tribunal</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for template in templates %}
+                        <tr>
+                            <td>{{ template.id }}</td>
+                            <td>{{ template.display_name }}</td>
+                            <td><code>{{ template.document_type_key }}</code></td>
+                            <td>
+                                {% if template.concurso_visibility == 'BOTH' %}
+                                <span class="badge bg-info">Ambos</span>
+                                {% elif template.concurso_visibility == 'REGULAR' %}
+                                <span class="badge bg-primary">Regular</span>
+                                {% elif template.concurso_visibility == 'INTERINO' %}
+                                <span class="badge bg-warning text-dark">Interino</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.is_unique_per_concurso %}
+                                <span class="badge bg-success">Único</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Múltiple</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.uses_considerandos_builder %}
+                                <span class="badge bg-success">Sí</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.requires_tribunal_info %}
+                                <span class="badge bg-info">Sí</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.is_active %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin_templates.editar', id=template.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmDelete({{ template.id }}, '{{ template.display_name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center">No hay plantillas configuradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar la plantilla <span id="templateName"></span>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(id, name) {
+    document.getElementById('templateName').textContent = name;
+    document.getElementById('deleteForm').action = "{{ url_for('admin_templates.eliminar', id=0) }}".replace('0', id);
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %}

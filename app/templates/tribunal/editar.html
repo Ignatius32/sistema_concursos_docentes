@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Editar Miembro del Tribunal - {{ miembro.nombre }} {{ miembro.apellido }} - {{ super() }}{% endblock %}
+{% block title %}Editar Miembro del Tribunal - {{ persona.nombre }} {{ persona.apellido }} - {{ super() }}{% endblock %}
 
 {% block content %}
 <div class="card">
@@ -12,9 +12,8 @@
                 <div class="col-md-6 mb-3">
                     <label for="rol" class="form-label">Rol en el Tribunal</label>
                     <select class="form-select" id="rol" name="rol" required>
-                        <option value="">Seleccione...</option>
-                        <option value="Presidente" {% if miembro.rol == 'Presidente' %}selected{% endif %}>Presidente</option>
-                        <option value="Vocal" {% if miembro.rol == 'Vocal' %}selected{% endif %}>Vocal</option>
+                        <option value="">Seleccione...</option>                        <option value="Presidente" {% if miembro.rol == 'Presidente' %}selected{% endif %}>Presidente</option>
+                        <option value="Titular" {% if miembro.rol == 'Titular' %}selected{% endif %}>Titular</option>
                         <option value="Suplente" {% if miembro.rol == 'Suplente' %}selected{% endif %}>Suplente</option>
                         <option value="Veedor" {% if miembro.rol == 'Veedor' %}selected{% endif %}>Veedor</option>
                     </select>
@@ -27,30 +26,44 @@
                         <option value="Estudiante" {% if miembro.claustro == 'Estudiante' %}selected{% endif %}>Estudiante</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ miembro.nombre }}" required>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ persona.nombre }}" required>
                 </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="apellido" class="form-label">Apellido</label>
-                    <input type="text" class="form-control" id="apellido" name="apellido" value="{{ miembro.apellido }}" required>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="{{ persona.apellido }}" required>
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="dni" class="form-label">DNI</label>
-                    <input type="text" class="form-control" id="dni" name="dni" value="{{ miembro.dni }}" required 
-                           pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="dni" name="dni" value="{{ persona.dni }}" required 
+                               pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
+                        <button class="btn btn-outline-secondary" type="button" id="btnBuscarDNI">
+                            <i class="bi bi-search"></i> Buscar
+                        </button>
+                    </div>
+                    <small class="form-text text-muted">Cambiar el DNI sólo si es necesario.</small>
                 </div>
                 
                 <div class="col-md-6 mb-3">
                     <label for="correo" class="form-label">Correo Electrónico</label>
-                    <input type="email" class="form-control" id="correo" name="correo" value="{{ miembro.correo }}" required>
+                    <input type="email" class="form-control" id="correo" name="correo" value="{{ persona.correo }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" value="{{ persona.telefono }}" placeholder="Ej: +54 11 1234-5678">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <!-- Reserved for future fields -->
                 </div>
             </div>
 
@@ -109,7 +122,77 @@
                 <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
             </div>
-        </form>
-    </div>
+        </form>    </div>
 </div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {    const dniInput = document.getElementById('dni');
+    const btnBuscarDNI = document.getElementById('btnBuscarDNI');
+    const nombreInput = document.getElementById('nombre');
+    const apellidoInput = document.getElementById('apellido');
+    const correoInput = document.getElementById('correo');
+    const telefonoInput = document.getElementById('telefono');
+    
+    // Store original DNI value
+    const originalDNI = dniInput.value;
+    
+    // Function to search for a persona by DNI
+    function buscarPersonaPorDNI() {
+        const dni = dniInput.value.trim();
+        if (!dni) {
+            alert('Por favor, ingrese un DNI');
+            return;
+        }
+        
+        // If the DNI is the same as the original, there's no need to search
+        if (dni === originalDNI) {
+            alert('Este es el DNI actual. No se requiere búsqueda.');
+            return;
+        }
+        
+        // Show loading state
+        btnBuscarDNI.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Buscando...';
+        btnBuscarDNI.disabled = true;
+        
+        // Make AJAX request to search for persona
+        fetch(`/tribunal/api/buscar-persona?dni=${dni}`)
+            .then(response => response.json())
+            .then(data => {
+                btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
+                btnBuscarDNI.disabled = false;
+                
+                if (data.encontrado) {
+                    // Ask for confirmation before replacing data
+                    if (confirm(`Se encontró una persona con DNI ${dni}: ${data.nombre} ${data.apellido}. ¿Desea cargar sus datos?`)) {                        // Autocomplete form fields
+                        nombreInput.value = data.nombre;
+                        apellidoInput.value = data.apellido;
+                        correoInput.value = data.correo;
+                        telefonoInput.value = data.telefono || '';
+                    }
+                } else {
+                    alert('No se encontró ninguna persona con ese DNI. Por favor complete los datos manualmente.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
+                btnBuscarDNI.disabled = false;
+                alert('Error al buscar la persona. Por favor intente nuevamente.');
+            });
+    }
+    
+    // Add event listeners
+    btnBuscarDNI.addEventListener('click', buscarPersonaPorDNI);
+    
+    // Also trigger search when pressing Enter in DNI field
+    dniInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            buscarPersonaPorDNI();
+        }
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

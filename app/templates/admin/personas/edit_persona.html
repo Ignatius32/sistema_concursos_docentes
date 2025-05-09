@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Persona - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Editar Persona</h2>
+        <a href="{{ url_for('admin_personas.list_personas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_personas.edit_persona', persona_id=persona.id) }}" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ persona.nombre }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="{{ persona.apellido }}" required>
+                </div>
+            </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="dni" name="dni" value="{{ persona.dni }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="correo" name="correo" value="{{ persona.correo }}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" value="{{ persona.telefono }}" placeholder="Ej: +54 11 1234-5678">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <!-- Reserved for future fields -->
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Curriculum Vitae</h5>
+                        </div>
+                        <div class="card-body">                            {% if persona.cv_drive_web_link %}
+                            <div class="mb-3">
+                                <p><strong>CV actual:</strong></p>
+                                <div class="d-flex align-items-center">
+                                    <a href="{{ persona.cv_drive_web_link }}" target="_blank" class="btn btn-info me-2">
+                                        <i class="fas fa-file-pdf"></i> Ver CV
+                                    </a>
+                                    <a href="#" class="btn btn-danger delete-cv-btn" data-persona-id="{{ persona.id }}">
+                                        <i class="fas fa-trash-alt"></i> Eliminar CV
+                                    </a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-muted mb-3">No hay CV registrado para esta persona.</p>
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <label for="cv_file" class="form-label">{% if persona.cv_drive_web_link %}Actualizar{% else %}Cargar{% endif %} CV (sólo archivos PDF)</label>
+                                <input type="file" class="form-control" id="cv_file" name="cv_file" accept=".pdf">
+                                <div class="form-text">
+                                    El archivo será almacenado en Google Drive y vinculado a esta persona.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary" id="submitButton" onclick="console.log('Button clicked')">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Page loaded');
+        
+        // Get the form and button
+        const form = document.querySelector('form');
+        const submitButton = document.getElementById('submitButton');
+        
+        // Add click event listener to the button
+        if (submitButton) {
+            console.log('Submit button found');
+            submitButton.addEventListener('click', function(e) {
+                console.log('Submit button clicked via event listener');
+            });
+        } else {
+            console.log('Submit button not found');
+        }
+        
+        // Add submit event listener to the form
+        if (form) {
+            console.log('Form found');
+            form.addEventListener('submit', function(e) {
+                console.log('Form submit event triggered');
+            });
+        } else {
+            console.log('Form not found');
+        }
+        
+        // Handle delete CV button
+        const deleteCvBtn = document.querySelector('.delete-cv-btn');
+        if (deleteCvBtn) {
+            deleteCvBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('¿Está seguro que desea eliminar el CV?')) {
+                    const personaId = this.getAttribute('data-persona-id');
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ url_for('admin_personas.delete_persona_cv', persona_id=0) }}".replace('0', personaId);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

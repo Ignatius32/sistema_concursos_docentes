@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file
 from flask_login import login_required, current_user
-from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento
+from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona
 from app.integrations.google_drive import GoogleDriveAPI
 from app.helpers.pdf_utils import add_signature_stamp, verify_signed_pdf
 from datetime import datetime
@@ -28,8 +28,8 @@ def generate_username(nombre, apellido, dni=None):
     # Create base username
     base_username = f"{nombre[0]}{apellido}"[:15]  # First letter of name + last name, max 15 chars
     
-    # Check if username exists
-    existing = TribunalMiembro.query.filter(TribunalMiembro.username.like(f"{base_username}%")).all()
+    # Check if username exists in Persona table instead of TribunalMiembro
+    existing = Persona.query.filter(Persona.username.like(f"{base_username}%")).all()
     
     if not existing:
         return base_username
@@ -43,7 +43,7 @@ def generate_username(nombre, apellido, dni=None):
 def tribunal_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'tribunal_miembro_id' not in session:
+        if 'persona_id' not in session:
             flash('Debe iniciar sesión como miembro del tribunal para acceder.', 'warning')
             return redirect(url_for('tribunal.acceso'))
         return f(*args, **kwargs)
@@ -54,7 +54,7 @@ def tribunal_login_required(f):
 def index(concurso_id):
     """Display tribunal members for a specific concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
-    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).all()
+    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
     return render_template('tribunal/index.html', concurso=concurso, miembros=miembros)
 
 @tribunal.route('/concurso/<int:concurso_id>/agregar', methods=['GET', 'POST'])
@@ -64,25 +64,48 @@ def agregar(concurso_id):
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if request.method == 'POST':
-        try:            # Extract form data
+        try:              # Extract form data
             rol = request.form.get('rol')
             claustro = request.form.get('claustro')
             nombre = request.form.get('nombre')
             apellido = request.form.get('apellido')
             dni = request.form.get('dni')
             correo = request.form.get('correo')
+            telefono = request.form.get('telefono')
             
-            # Check if tribunal member already exists with this DNI
-            existing_member = TribunalMiembro.query.filter_by(dni=dni).first()
+            # First, find or create a Persona based on DNI
+            persona = Persona.query.filter_by(dni=dni).first()
             
-            if existing_member:
-                # Add existing member to this concurso
-                existing_member.concurso_id = concurso_id
-                existing_member.rol = rol
-                db.session.commit()
-                flash('Miembro del tribunal existente asignado a este concurso.', 'success')
+            if persona:
+                # Update persona details if they've changed
+                if persona.nombre != nombre or persona.apellido != apellido or persona.correo != correo or persona.telefono != telefono:
+                    persona.nombre = nombre
+                    persona.apellido = apellido
+                    persona.correo = correo
+                    persona.telefono = telefono
+            else:                # Create new persona
+                persona = Persona(
+                    dni=dni,
+                    nombre=nombre,
+                    apellido=apellido,
+                    correo=correo,
+                    telefono=telefono,
+                    username=dni  # Use DNI as username by default
+                )
+                db.session.add(persona)
+                db.session.flush()  # To get the persona ID
+            
+            # Check if this persona is already assigned to this concurso
+            existing_assignment = TribunalMiembro.query.filter_by(
+                persona_id=persona.id, 
+                concurso_id=concurso_id
+            ).first()
+            
+            if existing_assignment:
+                flash(f'La persona {nombre} {apellido} ya está asignada a este concurso como {existing_assignment.rol}.', 'warning')
                 return redirect(url_for('tribunal.index', concurso_id=concurso_id))
-              # Create Google Drive folder for tribunal member
+            
+            # Create Google Drive folder for tribunal member
             folder_name = f"{rol}_{apellido}_{nombre}_{dni}"
             folder_id = drive_api.create_tribunal_folder(
                 parent_folder_id=concurso.tribunal_folder_id,
@@ -92,26 +115,22 @@ def agregar(concurso_id):
                 rol=rol
             )
             
-            # Create new tribunal member with DNI as username
+            # Create new tribunal member assignment
             miembro = TribunalMiembro(
                 concurso_id=concurso_id,
+                persona_id=persona.id,
                 rol=rol,
                 claustro=claustro,
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
-                correo=correo,
                 drive_folder_id=folder_id,
-                username=dni,  # Use DNI as username
                 notificado=False
             )
             
             # Set default permissions based on role
             if rol == 'Presidente':
-                miembro.can_add_tema = True
+                miembro.can_add_tema = True                
                 miembro.can_upload_file = True
                 miembro.can_sign_file = True
-            elif rol == 'Vocal':
+            elif rol == 'Titular':
                 miembro.can_add_tema = True
                 miembro.can_sign_file = True
                 miembro.can_upload_file = False
@@ -138,18 +157,22 @@ def editar(miembro_id):
     """Edit an existing tribunal member."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
     concurso = Concurso.query.get_or_404(miembro.concurso_id)
+    persona = miembro.persona
     
     if request.method == 'POST':
         try:            
             old_rol = miembro.rol
-            # Update member data from form
+              # Update persona data
+            persona.nombre = request.form.get('nombre')
+            persona.apellido = request.form.get('apellido')
+            persona.dni = request.form.get('dni')
+            persona.correo = request.form.get('correo')
+            persona.telefono = request.form.get('telefono')
+            persona.username = persona.dni  # Keep username as DNI
+            
+            # Update assignment data
             miembro.rol = request.form.get('rol')
             miembro.claustro = request.form.get('claustro')
-            miembro.nombre = request.form.get('nombre')
-            miembro.apellido = request.form.get('apellido')
-            miembro.dni = request.form.get('dni')
-            miembro.correo = request.form.get('correo')
-            miembro.username = miembro.dni  # Keep username as DNI
             
             # Handle permission checkboxes
             miembro.can_add_tema = 'can_add_tema' in request.form
@@ -158,19 +181,19 @@ def editar(miembro_id):
             
             # Update Drive folder name if needed
             if miembro.drive_folder_id:
-                new_folder_name = f"{miembro.rol}_{miembro.apellido}_{miembro.nombre}_{miembro.dni}"
+                new_folder_name = f"{miembro.rol}_{persona.apellido}_{persona.nombre}_{persona.dni}"
                 drive_api.update_folder_name(miembro.drive_folder_id, new_folder_name)
             
             # Handle password reset if requested
             if 'regenerate_password' in request.form:
                 # Generate reset token
-                reset_token = miembro.generate_reset_token()
+                reset_token = persona.generate_reset_token()
                 reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
                 
                 # Send password reset email
                 subject = f"Configuración de Nueva Contraseña - Portal de Tribunal"
                 message = f"""
-                <p>Estimado/a {miembro.nombre} {miembro.apellido}:</p>
+                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
                 
                 <p>Se ha solicitado un cambio de contraseña para su cuenta en el Portal de Tribunal.</p>
                 
@@ -188,7 +211,7 @@ def editar(miembro_id):
                 
                 try:
                     drive_api.send_email(
-                        to_email=miembro.correo,
+                        to_email=persona.correo,
                         subject=subject,
                         html_body=message,
                         sender_name='Sistema de Concursos Docentes'
@@ -199,9 +222,9 @@ def editar(miembro_id):
 
             db.session.commit()
 
-            # If this member is currently logged in, update their session data
-            if 'tribunal_miembro_id' in session and session['tribunal_miembro_id'] == miembro.id:
-                session['tribunal_nombre'] = f"{miembro.nombre} {miembro.apellido}"
+            # If this person is currently logged in, update their session data
+            if 'persona_id' in session and session['persona_id'] == persona.id:
+                session['tribunal_nombre'] = f"{persona.nombre} {persona.apellido}"
                 # Update the role in session if it changed
                 if 'tribunal_rol' not in session or old_rol != miembro.rol:
                     session['tribunal_rol'] = miembro.rol
@@ -213,23 +236,26 @@ def editar(miembro_id):
             db.session.rollback()
             flash(f'Error al actualizar miembro del tribunal: {str(e)}', 'danger')
     
-    return render_template('tribunal/editar.html', miembro=miembro, concurso=concurso)
+    return render_template('tribunal/editar.html', miembro=miembro, persona=persona, concurso=concurso)
 
 @tribunal.route('/<int:miembro_id>/eliminar', methods=['POST'])
 @login_required
 def eliminar(miembro_id):
-    """Delete a tribunal member."""
+    """Delete a tribunal member assignment (but not the Persona record)."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
     concurso_id = miembro.concurso_id
+    persona = miembro.persona
+    nombre_completo = f"{persona.nombre} {persona.apellido}"
     
     try:
         # Delete Drive folder if exists
         if miembro.drive_folder_id:
             drive_api.delete_folder(miembro.drive_folder_id)
         
+        # Delete only the assignment, not the persona
         db.session.delete(miembro)
         db.session.commit()
-        flash('Miembro del tribunal eliminado exitosamente.', 'success')
+        flash(f'{nombre_completo} ha sido eliminado exitosamente del tribunal. Su registro personal se mantiene en la base de datos.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar miembro del tribunal: {str(e)}', 'danger')
@@ -271,6 +297,7 @@ def subir_documento(miembro_id):
     """Upload a document for a tribunal member."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
     concurso = Concurso.query.get_or_404(miembro.concurso_id)
+    persona = miembro.persona
     
     try:
         # Get form data
@@ -286,7 +313,7 @@ def subir_documento(miembro_id):
             return redirect(url_for('tribunal.index', concurso_id=concurso.id))
         
         # Create filename with proper suffix
-        filename = secure_filename(f"{tipo}_{miembro.apellido}_{miembro.nombre}_{concurso.id}.pdf")
+        filename = secure_filename(f"{tipo}_{persona.apellido}_{persona.nombre}_{concurso.id}.pdf")
         
         # Read file data
         file_data = file.read()
@@ -321,7 +348,7 @@ def subir_documento(miembro_id):
 def notificar_sustanciacion(concurso_id):
     """Notify all tribunal members of a concurso about the process and send activation links."""
     concurso = Concurso.query.get_or_404(concurso_id)
-    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).all()
+    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
     
     # Get sustanciacion info if it exists
     sustanciacion = concurso.sustanciacion
@@ -337,16 +364,17 @@ def notificar_sustanciacion(concurso_id):
             
             # Send email to each member
             for miembro in miembros:
+                persona = miembro.persona
+                
                 # Skip if no email
-                if not miembro.correo:
-                    flash(f'El miembro {miembro.nombre} {miembro.apellido} no tiene correo registrado.', 'warning')
+                if not persona.correo:
+                    flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
                     continue
                 
                 # Ensure username is DNI
-                miembro.username = miembro.dni
-                
-                # Generate reset token for password setup
-                reset_token = miembro.generate_reset_token()
+                persona.username = persona.dni
+                  # Generate reset token for password setup
+                reset_token = persona.generate_reset_token()
                 reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
                 
                 # Custom message for this member
@@ -354,7 +382,7 @@ def notificar_sustanciacion(concurso_id):
                 member_message += f"""
                 <p><strong>Sus credenciales de acceso al sistema:</strong></p>
                 <ul>
-                    <li><strong>Usuario:</strong> {miembro.username}</li>
+                    <li><strong>Usuario:</strong> {persona.username}</li>
                     <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
                         <a href="{reset_url}">Configurar Contraseña</a>
                     </li>
@@ -381,17 +409,16 @@ def notificar_sustanciacion(concurso_id):
                         member_message += f'<p><strong>Observaciones:</strong> {sustanciacion.constitucion_observaciones}</p>'
                 
                 subject = f"Notificación de Constitución de Tribunal - Concurso {concurso.id}"
-                
-                # Send email
+                  # Send email
                 try:
                     drive_api.send_email(
-                        to_email=miembro.correo,
+                        to_email=persona.correo,
                         subject=subject,
                         html_body=member_message,
                         sender_name='Sistema de Concursos Docentes',
                         placeholders={
-                            'nombre': miembro.nombre,
-                            'apellido': miembro.apellido,
+                            'nombre': persona.nombre,
+                            'apellido': persona.apellido,
                             'rol': miembro.rol,
                             'concurso_id': str(concurso.id),
                             'departamento': concurso.departamento_rel.nombre,
@@ -404,9 +431,8 @@ def notificar_sustanciacion(concurso_id):
                     # Update notification status
                     miembro.notificado = True
                     miembro.fecha_notificacion = datetime.utcnow()
-                    
                 except Exception as e:
-                    flash(f'Error al enviar correo a {miembro.correo}: {str(e)}', 'danger')
+                    flash(f'Error al enviar correo a {persona.correo}: {str(e)}', 'danger')
             
             # Add entry to history
             historial = HistorialEstado(
@@ -441,29 +467,28 @@ def notificar_tribunal(concurso_id, documento_id):
         if documento.tipo != 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR':
             flash('Este documento no es un Acta de Constitución de Tribunal Regular.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-        
-        # Get only non-suplente members
+          # Get only non-suplente members
         miembros = TribunalMiembro.query.filter(
             TribunalMiembro.concurso_id == concurso_id,
             TribunalMiembro.rol != 'Suplente'
-        ).all()
+        ).join(Persona).all()
         
         for miembro in miembros:
-            if not miembro.correo:
-                flash(f'El miembro {miembro.nombre} {miembro.apellido} no tiene correo registrado.', 'warning')
+            persona = miembro.persona
+            if not persona.correo:
+                flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
                 continue
                 
             # Ensure username is DNI
-            miembro.username = miembro.dni
-            
-            # Generate reset token for password setup
-            reset_token = miembro.generate_reset_token()
+            persona.username = persona.dni
+              # Generate reset token for password setup
+            reset_token = persona.generate_reset_token()
             reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
             
             # Prepare email content
             subject = f"Credenciales de Acceso - Tribunal Concurso #{concurso.id}"
             message = f"""
-            <p>Estimado/a {miembro.nombre} {miembro.apellido}:</p>
+            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
             
             <p>Por medio de la presente, le informo que ha sido designado/a como miembro del tribunal para el 
             Concurso #{concurso.id} del Departamento de {concurso.departamento_rel.nombre}, Área {concurso.area}, 
@@ -471,7 +496,7 @@ def notificar_tribunal(concurso_id, documento_id):
             
             <p><strong>Sus credenciales de acceso:</strong></p>
             <ul>
-                <li><strong>Usuario:</strong> {miembro.username}</li>
+                <li><strong>Usuario:</strong> {persona.username}</li>
                 <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
                     <a href="{reset_url}">Configurar Contraseña</a>
                 </li>
@@ -486,8 +511,7 @@ def notificar_tribunal(concurso_id, documento_id):
             <ul>
                 <li>Departamento: {concurso.departamento_rel.nombre}</li>
                 <li>Área: {concurso.area}</li>
-                <li>Orientación: {concurso.orientacion}</li>
-                <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
+                <li>Orientación: {concurso.orientacion}</li>                <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
                 <li>Dedicación: {concurso.dedicacion}</li>
                 <li>Su rol: {miembro.rol}</li>
             </ul>
@@ -495,7 +519,7 @@ def notificar_tribunal(concurso_id, documento_id):
             
             # Send email
             drive_api.send_email(
-                to_email=miembro.correo,
+                to_email=persona.correo,
                 subject=subject,
                 html_body=message,
                 sender_name='Sistema de Concursos Docentes'
@@ -520,32 +544,32 @@ def notificar_miembro(miembro_id):
     """Notify a single tribunal member with their credentials and sustanciación info."""
     try:
         miembro = TribunalMiembro.query.get_or_404(miembro_id)
+        persona = miembro.persona
         concurso = Concurso.query.get_or_404(miembro.concurso_id)
         sustanciacion = concurso.sustanciacion
 
-        if not miembro.correo:
-            flash(f'El miembro {miembro.nombre} {miembro.apellido} no tiene correo registrado.', 'warning')
+        if not persona.correo:
+            flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
             return redirect(url_for('tribunal.index', concurso_id=concurso.id))
         
         # Ensure username is DNI
-        miembro.username = miembro.dni
+        persona.username = persona.dni
         
         # Generate reset token for password setup if not already notified
         if not miembro.notificado:
-            reset_token = miembro.generate_reset_token()
+            reset_token = persona.generate_reset_token()
             reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
         else:
             reset_url = url_for('tribunal.acceso', _external=True)
         
         # Prepare email content
         message = f"""
-        <p>Estimado/a {miembro.nombre} {miembro.apellido}:</p>
+        <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
         
         <p>Por medio de la presente, le envío información actualizada sobre el concurso donde ha sido designado/a 
         como {miembro.rol} del tribunal:</p>
 
-        <p><strong>Información del Concurso #</strong>{concurso.id}:</p>
-        <ul>
+        <p><strong>Información del Concurso #</strong>{concurso.id}:</p>        <ul>
             <li>Departamento: {concurso.departamento_rel.nombre}</li>
             <li>Área: {concurso.area}</li>
             <li>Orientación: {concurso.orientacion}</li>
@@ -559,7 +583,7 @@ def notificar_miembro(miembro_id):
             message += f"""
             <p><strong>Sus credenciales de acceso al sistema:</strong></p>
             <ul>
-                <li><strong>Usuario:</strong> {miembro.username}</li>
+                <li><strong>Usuario:</strong> {persona.username}</li>
                 <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
                     <a href="{reset_url}">Configurar Contraseña</a>
                 </li>
@@ -616,13 +640,12 @@ def notificar_miembro(miembro_id):
                 message += f"""
                 <p><strong>Temas para la exposición:</strong></p>
                 <pre>{sustanciacion.temas_exposicion}</pre>
-                """
-
-        subject = f"Notificación Sustanciación Concurso #{concurso.id}"
+                """        
+                subject = f"Notificación Sustanciación Concurso #{concurso.id}"
         
         # Send email
         drive_api.send_email(
-            to_email=miembro.correo,
+            to_email=persona.correo,
             subject=subject,
             html_body=message,
             sender_name='Sistema de Concursos Docentes'
@@ -640,12 +663,12 @@ def notificar_miembro(miembro_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="MIEMBRO_TRIBUNAL_NOTIFICADO_SUSTANCIACION",
-            observaciones=f"Miembro del tribunal {miembro.nombre} {miembro.apellido} notificado de la sustanciación por {current_user.username}"
+            observaciones=f"Miembro del tribunal {persona.nombre} {persona.apellido} notificado de la sustanciación por {current_user.username}"
         )
         db.session.add(historial)
         
         db.session.commit()
-        flash(f'Notificación de sustanciación enviada exitosamente a {miembro.nombre} {miembro.apellido}.', 'success')
+        flash(f'Notificación de sustanciación enviada exitosamente a {persona.nombre} {persona.apellido}.', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -661,20 +684,28 @@ def acceso():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Find the tribunal member by username
-        miembro = TribunalMiembro.query.filter_by(username=username).first()
+        # Find the persona by username
+        persona = Persona.query.filter_by(username=username).first()
         
-        if miembro and miembro.check_password(password):
-            # Store tribunal member id in session
+        if persona and persona.check_password(password):
+            # Find an active tribunal assignment for this persona
+            miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).order_by(TribunalMiembro.id.desc()).first()
+            
+            if not miembro:
+                flash('Su usuario no está asignado a ningún tribunal actualmente', 'danger')
+                return render_template('tribunal/acceso.html')
+            
+            # Store persona id and tribunal member id in session
+            session['persona_id'] = persona.id
             session['tribunal_miembro_id'] = miembro.id
-            session['tribunal_nombre'] = f"{miembro.nombre} {miembro.apellido}"
-            session['tribunal_rol'] = miembro.rol  # Store the role in session
+            session['tribunal_nombre'] = f"{persona.nombre} {persona.apellido}"
+            session['tribunal_rol'] = miembro.rol
             
             # Update last access time
             miembro.ultimo_acceso = datetime.utcnow()
             db.session.commit()
             
-            flash(f'Bienvenido/a, {miembro.nombre} {miembro.apellido}', 'success')
+            flash(f'Bienvenido/a, {persona.nombre} {persona.apellido}', 'success')
             return redirect(url_for('tribunal.portal'))
         
         flash('Usuario o contraseña incorrectos', 'danger')
@@ -684,10 +715,10 @@ def acceso():
 @tribunal.route('/reset/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     """Handle password reset/setup using a token."""
-    # Find tribunal member with this token
-    miembro = TribunalMiembro.query.filter_by(reset_token=token).first()
+    # Find persona with this token
+    persona = Persona.query.filter_by(reset_token=token).first()
     
-    if not miembro or not miembro.check_reset_token(token):
+    if not persona or not persona.check_reset_token(token):
         flash('El enlace de configuración de contraseña es inválido o ha expirado.', 'danger')
         return redirect(url_for('tribunal.acceso'))
     
@@ -705,7 +736,7 @@ def reset_password(token):
         
         try:
             # Set the new password
-            miembro.set_password(password)
+            persona.set_password(password)
             db.session.commit()
             
             flash('Contraseña configurada exitosamente. Ya puede iniciar sesión.', 'success')
@@ -724,25 +755,32 @@ def activar_cuenta():
         dni = request.form.get('dni')
         correo = request.form.get('correo')
         
-        miembro = TribunalMiembro.query.filter_by(dni=dni, correo=correo).first()
+        # Find the persona
+        persona = Persona.query.filter_by(dni=dni, correo=correo).first()
         
+        if not persona:
+            flash('No se encontró una persona con esos datos en el sistema.', 'danger')
+            return render_template('tribunal/activar_cuenta.html')
+            
+        # Check if this persona is assigned to any tribunal
+        miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).first()
         if not miembro:
-            flash('No se encontró un miembro del tribunal con esos datos.', 'danger')
+            flash('Esta persona no está asignada a ningún tribunal.', 'danger')
             return render_template('tribunal/activar_cuenta.html')
             
         try:
             # Generate reset token for password setup
-            reset_token = miembro.generate_reset_token()
+            reset_token = persona.generate_reset_token()
             reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
             
             subject = f"Activación de Cuenta - Portal de Tribunal"
             message = f"""
-            <p>Estimado/a {miembro.nombre} {miembro.apellido}:</p>
+            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
             
             <p>Para activar su cuenta y configurar su contraseña, haga clic en el siguiente enlace:</p>
             <p><a href="{reset_url}">Activar Cuenta y Configurar Contraseña</a></p>
             
-            <p>Su nombre de usuario es: <strong>{miembro.dni}</strong></p>
+            <p>Su nombre de usuario es: <strong>{persona.dni}</strong></p>
             
             <p>Este enlace es válido solo por un tiempo limitado.</p>
             
@@ -751,7 +789,7 @@ def activar_cuenta():
             """
             
             drive_api.send_email(
-                to_email=miembro.correo,
+                to_email=persona.correo,
                 subject=subject,
                 html_body=message,
                 sender_name='Sistema de Concursos Docentes'
@@ -773,16 +811,22 @@ def recuperar_password():
         dni = request.form.get('dni')
         correo = request.form.get('correo')
         
-        # Find tribunal member by DNI and email
-        miembro = TribunalMiembro.query.filter_by(dni=dni, correo=correo).first()
+        # Find persona by DNI and email
+        persona = Persona.query.filter_by(dni=dni, correo=correo).first()
         
+        if not persona:
+            flash('No se encontró una persona con esos datos en el sistema.', 'danger')
+            return render_template('tribunal/recuperar_password.html')
+            
+        # Check if this persona is assigned to any tribunal
+        miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).first()
         if not miembro:
-            flash('No se encontró un miembro del tribunal con esos datos.', 'danger')
+            flash('Esta persona no está asignada a ningún tribunal.', 'danger')
             return render_template('tribunal/recuperar_password.html')
         
         try:
             # Generate reset token for password setup
-            reset_token = miembro.generate_reset_token()
+            reset_token = persona.generate_reset_token()
             reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
             
             # Save the token to the database
@@ -791,7 +835,7 @@ def recuperar_password():
             # Prepare email content
             subject = f"Recuperación de Contraseña - Portal de Tribunal"
             message = f"""
-            <p>Estimado/a {miembro.nombre} {miembro.apellido}:</p>
+            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
             
             <p>Recibimos una solicitud para restablecer su contraseña para el Portal de Tribunal.</p>
             
@@ -805,16 +849,14 @@ def recuperar_password():
             <p>Saludos cordiales,<br>
             Sistema de Concursos Docentes</p>
             """
-            
-            # Send email
+              # Send email
             drive_api.send_email(
-                to_email=miembro.correo,
+                to_email=persona.correo,
                 subject=subject,
                 html_body=message,
                 sender_name='Sistema de Concursos Docentes'
             )
             
-            flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico.', 'success')
             flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico.', 'success')
             return redirect(url_for('tribunal.acceso'))
             
@@ -828,6 +870,7 @@ def recuperar_password():
 def salir_tribunal():
     """Logout for tribunal members."""
     # Make sure to clear all tribunal-related session data
+    session.pop('persona_id', None)
     session.pop('tribunal_miembro_id', None)
     session.pop('tribunal_nombre', None)
     session.pop('tribunal_rol', None)  # Also clear the role from session
@@ -837,42 +880,69 @@ def salir_tribunal():
 @tribunal.route('/portal')
 def portal():
     """Main portal for tribunal members."""
-    # Check if tribunal member is logged in
-    if 'tribunal_miembro_id' not in session:
+    # Check if persona is logged in
+    if 'persona_id' not in session:
         flash('Debe iniciar sesión para acceder al portal', 'warning')
         return redirect(url_for('tribunal.acceso'))
     
-    # Get tribunal member
-    miembro_id = session['tribunal_miembro_id']
-    miembro = TribunalMiembro.query.get_or_404(miembro_id)
+    # Get persona
+    persona_id = session['persona_id']
+    persona = Persona.query.get_or_404(persona_id)
     
-    # Get all concursos this member is part of
-    concursos = miembro.get_concursos()
+    # Get active tribunal memberships
+    miembro = TribunalMiembro.query.filter_by(persona_id=persona_id).order_by(TribunalMiembro.id.desc()).first()
+    if not miembro:
+        flash('No está asignado a ningún tribunal actualmente', 'warning')
+        session.pop('persona_id', None)
+        return redirect(url_for('tribunal.acceso'))
+      # Get all concursos this persona is part of and their roles
+    concursos = persona.get_concursos()
+    
+    # Get the roles for each concurso to simplify template rendering
+    concurso_roles = {}
+    for concurso in concursos:
+        tribunal_miembro = TribunalMiembro.query.filter_by(
+            persona_id=persona_id, 
+            concurso_id=concurso.id
+        ).first()
+        if tribunal_miembro:
+            concurso_roles[concurso.id] = tribunal_miembro.rol
     
     return render_template('tribunal/portal.html', 
-                          miembro=miembro, 
-                          concursos=concursos)
+                          miembro=miembro,
+                          persona=persona, 
+                          concursos=concursos,
+                          concurso_roles=concurso_roles)
 
 @tribunal.route('/portal/concurso/<int:concurso_id>')
 def portal_concurso(concurso_id):
     """View for a tribunal member to see details of a specific concurso."""
-    # Check if tribunal member is logged in
-    if 'tribunal_miembro_id' not in session:
+    # Check if persona is logged in
+    if 'persona_id' not in session or 'tribunal_miembro_id' not in session:
         flash('Debe iniciar sesión para acceder al portal', 'warning')
         return redirect(url_for('tribunal.acceso'))
     
-    # Get tribunal member
+    # Get persona and their assigned tribunal
+    persona_id = session['persona_id']
+    persona = Persona.query.get_or_404(persona_id)
     miembro_id = session['tribunal_miembro_id']
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
     
-    # Get concurso and verify this member is part of it
+    # Get concurso and verify this persona is assigned to it
     concurso = Concurso.query.get_or_404(concurso_id)
-    if not TribunalMiembro.query.filter_by(id=miembro_id, concurso_id=concurso_id).first():
+    assignment = TribunalMiembro.query.filter_by(persona_id=persona_id, concurso_id=concurso_id).first()
+    
+    if not assignment:
         flash('No tiene permisos para ver este concurso', 'danger')
         return redirect(url_for('tribunal.portal'))
     
+    # Get template configs for document action control
+    from app.models.models import DocumentTemplateConfig
+    template_configs = DocumentTemplateConfig.query.all()
+    template_configs_dict = {config.document_type_key: config for config in template_configs}
+    
     # Get other tribunal members for this concurso
-    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).all()
+    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
     
     # Get postulantes
     postulantes = concurso.postulantes.all()
@@ -883,26 +953,36 @@ def portal_concurso(concurso_id):
     
     return render_template('tribunal/portal_concurso.html',
                           miembro=miembro,
+                          persona=persona,
                           concurso=concurso,
                           miembros=miembros,
+                          template_configs_dict=template_configs_dict,
                           postulantes=postulantes)
 
 @tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir-firmado', methods=['POST'])
 @tribunal_login_required
 def subir_documento_presidente(concurso_id, documento_id):
     """Handle signed document upload from tribunal members with upload permission"""
-    
     try:
         concurso = Concurso.query.get_or_404(concurso_id)
         documento = DocumentoConcurso.query.get_or_404(documento_id)
+        persona_id = session['persona_id']
         miembro = TribunalMiembro.query.filter_by(
-            id=session['tribunal_miembro_id'],
+            persona_id=persona_id,
             concurso_id=concurso_id
         ).first_or_404()
-        
-        # Verify the document belongs to this concurso
+          # Verify the document belongs to this concurso
         if documento.concurso_id != concurso_id:
             flash('El documento no pertenece a este concurso.', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+        
+        # Get template configuration
+        from app.models.models import DocumentTemplateConfig
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        
+        # Check if tribunal can upload signed documents for this document type
+        if not template_config or not template_config.tribunal_can_upload_signed:
+            flash('No tiene permisos para subir documentos firmados de este tipo.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         # Only allow members with upload permission to upload signed documents
@@ -943,12 +1023,11 @@ def subir_documento_presidente(concurso_id, documento_id):
         documento.file_id = file_id  # Store the file_id for the uploaded version
         documento.url = web_view_link
         documento.firma_count = 0  # Reset firma count since this is a new document
-        
-        # Add entry to history
+          # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_PENDIENTE_FIRMA",
-            observaciones=f"Documento {documento.tipo} subido por {miembro.nombre} {miembro.apellido}, pendiente de firma"
+            observaciones=f"Documento {documento.tipo} subido por {miembro.persona.nombre} {miembro.persona.apellido}, pendiente de firma"
         )
         db.session.add(historial)
         db.session.commit()
@@ -969,8 +1048,9 @@ def firmar_documento(concurso_id, documento_id):
         # Get concurso, documento and current tribunal member
         concurso = Concurso.query.get_or_404(concurso_id)
         documento = DocumentoConcurso.query.get_or_404(documento_id)
+        persona_id = session['persona_id']
         miembro = TribunalMiembro.query.filter_by(
-            id=session['tribunal_miembro_id'],
+            persona_id=persona_id,
             concurso_id=concurso_id
         ).first_or_404()
         
@@ -979,14 +1059,22 @@ def firmar_documento(concurso_id, documento_id):
             flash('El documento no pertenece a este concurso.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
-        # Check if member already signed
-        if documento.ya_firmado_por(miembro.id):
+        # Check if member already signed        if documento.ya_firmado_por(miembro.id):
             flash('Ya ha firmado este documento.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
+        # Get template configuration
+        from app.models.models import DocumentTemplateConfig
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
         
-        # Check if document contains "resolucion" in its type (case insensitive)
-        if "resolucion" in documento.tipo.lower():
-            flash('No puede firmar documentos de tipo Resolución.', 'danger')
+        # Check if tribunal can sign this document type
+        if not template_config or not template_config.tribunal_can_sign:
+            flash('No tiene permisos para firmar este tipo de documento.', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
+        # Check if document is in the right state and has a file_id
+        if documento.estado != 'PENDIENTE DE FIRMA' or not documento.file_id:
+            flash('El documento no está en estado correcto para ser firmado.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         try:
@@ -998,13 +1086,12 @@ def firmar_documento(concurso_id, documento_id):
             # Get the binary content from base64
             import base64
             pdf_content = base64.b64decode(file_content_response['fileData'])
-            
-            # Add the signature using the PDF utility
+              # Add the signature using the PDF utility
             pdf_with_stamp = add_signature_stamp(
                 pdf_content,
-                miembro.apellido,
-                miembro.nombre,
-                miembro.dni,
+                miembro.persona.apellido,
+                miembro.persona.nombre,
+                miembro.persona.dni,
                 documento.firma_count
             )
             
@@ -1082,12 +1169,12 @@ def subir_acta_firmada(concurso_id, documento_id):
 @tribunal_login_required
 def ver_documento(concurso_id, documento_id):
     """Display document content in a viewer."""
-    try:
-        # Get concurso, documento and current tribunal member
+    try:        # Get concurso, documento and current tribunal member
         concurso = Concurso.query.get_or_404(concurso_id)
         documento = DocumentoConcurso.query.get_or_404(documento_id)
+        persona_id = session['persona_id']
         miembro = TribunalMiembro.query.filter_by(
-            id=session['tribunal_miembro_id'],
+            persona_id=persona_id,
             concurso_id=concurso_id
         ).first_or_404()
         
@@ -1126,8 +1213,9 @@ def ver_documento(concurso_id, documento_id):
 def cargar_sorteos(concurso_id):
     """Load sorteo temas for a concurso. Only accessible by members with can_add_tema permission."""
     concurso = Concurso.query.get_or_404(concurso_id)
+    persona_id = session['persona_id']
     miembro = TribunalMiembro.query.filter_by(
-        id=session['tribunal_miembro_id'],
+        persona_id=persona_id,
         concurso_id=concurso_id
     ).first_or_404()
     
@@ -1141,9 +1229,10 @@ def cargar_sorteos(concurso_id):
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
         temas = request.form.get('temas_exposicion')
-        if not temas:
+        if not temas:            
             flash('Debe ingresar al menos un tema.', 'warning')
-            return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro)
+            persona = Persona.query.get_or_404(persona_id)
+            return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro, persona=persona)
         
         try:
             # Create or update sustanciacion record
@@ -1154,24 +1243,24 @@ def cargar_sorteos(concurso_id):
             
             # Update temas
             sustanciacion.temas_exposicion = temas
-            
-            # Add entry to history
+              # Add entry to history
+            persona = miembro.persona
             historial = HistorialEstado(
                 concurso=concurso,
                 estado="TEMAS_SORTEO_CARGADOS",
-                observaciones=f"Temas de sorteo cargados por el miembro del tribunal {miembro.nombre} {miembro.apellido}"
+                observaciones=f"Temas de sorteo cargados por el miembro del tribunal {persona.nombre} {persona.apellido}"
             )
             db.session.add(historial)
             db.session.commit()
             
             flash('Temas de sorteo guardados exitosamente.', 'success')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al guardar los temas: {str(e)}', 'danger')
     
-    return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro)
+    persona = Persona.query.get_or_404(persona_id)
+    return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro, persona=persona)
 
 @tribunal.route('/<int:concurso_id>/reset-temas', methods=['POST'])
 @login_required
@@ -1202,3 +1291,27 @@ def reset_temas(concurso_id):
         flash(f'Error al eliminar los temas: {str(e)}', 'danger')
     
     return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+
+@tribunal.route('/api/buscar-persona', methods=['GET'])
+@login_required
+def buscar_persona():
+    """API endpoint to search for a persona by DNI"""
+    dni = request.args.get('dni')
+    
+    if not dni:
+        return jsonify({'error': 'DNI no proporcionado', 'encontrado': False}), 400
+    
+    # Find the persona by DNI
+    persona = Persona.query.filter_by(dni=dni).first()
+    
+    if not persona:
+        return jsonify({'mensaje': 'Persona no encontrada', 'encontrado': False}), 404
+      # Return persona data
+    return jsonify({
+        'encontrado': True,
+        'nombre': persona.nombre,
+        'apellido': persona.apellido,
+        'correo': persona.correo,
+        'telefono': persona.telefono,
+        'dni': persona.dni
+    })

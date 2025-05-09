@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
 
 db = SQLAlchemy()
 
@@ -19,6 +20,10 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+        
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
 
 class Departamento(db.Model):
     __tablename__ = 'departamentos'
@@ -48,6 +53,49 @@ class Categoria(db.Model):
     codigo = db.Column(db.String(10), nullable=False)
     nombre = db.Column(db.String(100), nullable=False)
     rol = db.Column(db.String(50), nullable=False)  # 'Profesor' or 'Auxiliar'
+    
+class Persona(db.Model, UserMixin):
+    __tablename__ = 'personas'
+    id = db.Column(db.Integer, primary_key=True)
+    dni = db.Column(db.String(20), nullable=False, unique=True, index=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    apellido = db.Column(db.String(100), nullable=False)
+    correo = db.Column(db.String(100))
+    telefono = db.Column(db.String(20), nullable=True)
+    username = db.Column(db.String(50), nullable=True, unique=True)
+    password_hash = db.Column(db.String(128), nullable=True)
+    reset_token = db.Column(db.String(100), nullable=True)
+    ultimo_acceso = db.Column(db.DateTime, nullable=True)
+    cv_drive_file_id = db.Column(db.String(100), nullable=True)
+    cv_drive_web_link = db.Column(db.String(255), nullable=True)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relationships
+    asignaciones = db.relationship('TribunalMiembro', back_populates='persona', lazy='dynamic')
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+        self.reset_token = None  # Clear reset token after password is set
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password) if self.password_hash else False
+    def generate_reset_token(self):
+        """Generate a unique token for password setup."""
+        from secrets import token_urlsafe
+        self.reset_token = token_urlsafe(32)
+        return self.reset_token
+    
+    def check_reset_token(self, token):
+        """Check if a reset token is valid."""
+        if not self.reset_token or self.reset_token != token:
+            return False
+        # Could add expiration check here if needed
+        return True
+    def get_concursos(self):
+        """Get all concursos this person is assigned to."""
+        # This joins with TribunalMiembro and returns the Concurso objects
+        # The relationship in Concurso (asignaciones_tribunal) will have the proper role info
+        return Concurso.query.join(TribunalMiembro).filter(TribunalMiembro.persona_id == self.id).all()
 
 class Concurso(db.Model):
     __tablename__ = 'concursos'
@@ -78,37 +126,39 @@ class Concurso(db.Model):
     postulantes_folder_id = db.Column(db.String(100), nullable=True)  # Postulantes subfolder ID
     documentos_firmados_folder_id = db.Column(db.String(100), nullable=True)  # Documentos firmados subfolder ID
     tribunal_folder_id = db.Column(db.String(100), nullable=True)  # Tribunal subfolder ID
+    nota_solicitud_sac_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Solicitud SAC
+    nota_centro_estudiantes_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Centro Estudiantes
+    nota_consulta_depto_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Consulta a Depto. Académico
 
     nro_res_llamado_interino = db.Column(db.String(50), nullable=True)
     nro_res_llamado_regular = db.Column(db.String(50), nullable=True)
     nro_res_tribunal_regular = db.Column(db.String(50), nullable=True)
 
     # New fields for committee and council information
-    fecha_comision_academica = db.Column(db.Date, nullable=True)
-    despacho_comision_academica = db.Column(db.String(255), nullable=True)
+    fecha_comision_academica = db.Column(db.Date, nullable=True)    
+    despacho_comision_academica = db.Column(db.String(255), nullable=True)    
     sesion_consejo_directivo = db.Column(db.String(100), nullable=True)
-    fecha_consejo_directivo = db.Column(db.Date, nullable=True)
+    fecha_consejo_directivo = db.Column(db.Date, nullable=True)    
     despacho_consejo_directivo = db.Column(db.String(255), nullable=True)
-    
-    # Relationships
-    tribunal = db.relationship('TribunalMiembro', backref='concurso', lazy='dynamic')
+    tkd = db.Column(db.String(100), nullable=True)
+    tkd_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for TKD document
+    nota_solicitud_sac_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Solicitud SAC
+      # Relationships
+    asignaciones_tribunal = db.relationship('TribunalMiembro', backref='concurso', lazy='dynamic')
     postulantes = db.relationship('Postulante', backref='concurso', lazy='dynamic')
     documentos = db.relationship('DocumentoConcurso', backref='concurso', lazy='dynamic')
     historial_estados = db.relationship('HistorialEstado', backref='concurso', lazy='dynamic')
-    sustanciacion = db.relationship('Sustanciacion', backref='concurso', uselist=False)
-    impugnaciones = db.relationship('Impugnacion', backref='concurso', lazy='dynamic')
+    sustanciacion = db.relationship('Sustanciacion', backref='concurso', uselist=False)    
+    impugnaciones = db.relationship('Impugnacion', backref='concurso', lazy='dynamic')    
     recusaciones = db.relationship('Recusacion', backref='concurso', lazy='dynamic')
 
 class TribunalMiembro(db.Model):    
     __tablename__ = 'tribunal_miembros'
     id = db.Column(db.Integer, primary_key=True)
     concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id', name='fk_tribunal_miembro_concurso'))
-    rol = db.Column(db.String(50), nullable=False)  # Presidente, Vocal, Suplente, Veedor
+    persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), nullable=False)
+    rol = db.Column(db.String(50), nullable=False)  # Presidente, Titular, Suplente, Veedor
     claustro = db.Column(db.String(20), nullable=True, default='Docente')  # Docente, Estudiante
-    nombre = db.Column(db.String(100), nullable=False)
-    apellido = db.Column(db.String(100), nullable=False)
-    dni = db.Column(db.String(20), nullable=False)
-    correo = db.Column(db.String(100))
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
     
     # Permission fields
@@ -116,17 +166,14 @@ class TribunalMiembro(db.Model):
     can_upload_file = db.Column(db.Boolean, default=False)  # Permission to upload files
     can_sign_file = db.Column(db.Boolean, default=False)  # Permission to sign documents
     
-    # Authentication and notification fields
-    username = db.Column(db.String(50), nullable=True)
-    password_hash = db.Column(db.String(128), nullable=True)
-    reset_token = db.Column(db.String(100), nullable=True)  # For password setup
+    # Notification fields (specific to this assignment)
     notificado = db.Column(db.Boolean, default=False)
-    notificado_sustanciacion = db.Column(db.Boolean, default=False)  # New field
+    notificado_sustanciacion = db.Column(db.Boolean, default=False)
     fecha_notificacion = db.Column(db.DateTime, nullable=True)
-    fecha_notificacion_sustanciacion = db.Column(db.DateTime, nullable=True)  # New field
-    ultimo_acceso = db.Column(db.DateTime, nullable=True)
+    fecha_notificacion_sustanciacion = db.Column(db.DateTime, nullable=True)
     
     # Relationships
+    persona = db.relationship('Persona', back_populates='asignaciones')
     recusaciones = db.relationship('Recusacion', backref='miembro', lazy='dynamic')
     documentos = db.relationship('DocumentoTribunal', backref='miembro', lazy='dynamic')
     firmas = db.relationship('FirmaDocumento', 
@@ -135,31 +182,8 @@ class TribunalMiembro(db.Model):
                            lazy=True)
     
     __table_args__ = (
-        db.UniqueConstraint('username', name='uq_tribunal_miembro_username'),
+        db.UniqueConstraint('persona_id', 'concurso_id', name='uq_persona_concurso'),
     )
-    
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-        self.reset_token = None  # Clear reset token after password is set
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password) if self.password_hash else False
-    
-    def generate_reset_token(self):
-        """Generate a unique token for password setup."""
-        from secrets import token_urlsafe
-        self.reset_token = token_urlsafe(32)
-        return self.reset_token
-    
-    def check_reset_token(self, token):
-        """Check if a reset token is valid."""
-        if not self.reset_token or self.reset_token != token:
-            return False
-        # Could add expiration check here if needed
-        return True
-    
-    def get_concursos(self):
-        return Concurso.query.join(TribunalMiembro).filter(TribunalMiembro.id == self.id).all()
 
 class DocumentoTribunal(db.Model):
     __tablename__ = 'documentos_tribunal'
@@ -179,6 +203,8 @@ class Postulante(db.Model):
     correo = db.Column(db.String(100))
     telefono = db.Column(db.String(20))
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
+    domicilio = db.Column(db.String(255), nullable=True)
+    estado = db.Column(db.String(50), nullable=False, default='activo')
     
     # Relationships
     documentos = db.relationship('DocumentoPostulante', backref='postulante', lazy='dynamic')
@@ -214,38 +240,76 @@ class DocumentoConcurso(db.Model):
         """Check if a tribunal member has already signed this document."""
         return any(firma.miembro_id == miembro_id for firma in self.firmas)
 
-    def is_visible_to_tribunal(self):
+    def is_visible_to_tribunal(self, miembro_tribunal=None):
         """
-        Determine if this document should be visible to tribunal members.
+        Determine if this document should be visible to tribunal members based on configuration.
         
+        Args:
+            miembro_tribunal (TribunalMiembro, optional): The tribunal member to check visibility for.
+                                                          If None, uses basic visibility rules.
+                                                          
         Returns:
-            bool: True if the document should be visible to tribunal members
+            bool: True if the document should be visible to the tribunal member
         """
-        # Document types that are always visible to tribunal members regardless of state
-        always_visible = [
-            'ACTA_CONSTITUCION_TRIBUNAL_REGULAR',
-            'ACTA_DICTAMEN',
-            'ACTA_SORTEO'
-        ]
+        # Import here to avoid circular imports
+        from app.models.models import DocumentTemplateConfig
         
-        if self.tipo in always_visible:
-            return True
+        # Get the template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=self.tipo).first()
+        
+        # If no template configuration is found, fall back to basic visibility rules
+        if not template_config or not template_config.tribunal_visibility_rules:
+            # Document types that are always visible to tribunal members regardless of state
+            always_visible = [
+                'ACTA_CONSTITUCION_TRIBUNAL_REGULAR',
+                'ACTA_DICTAMEN',
+                'ACTA_SORTEO'
+            ]
             
-        # Check if the document type contains "acta constitucion tribunal" (case insensitive)
-        if 'acta constitucion tribunal' in self.tipo.lower().replace('_', ' '):
-            return True
+            if self.tipo in always_visible:
+                return True
+                
+            # Check if the document type contains "acta constitucion tribunal" (case insensitive)
+            if 'acta constitucion tribunal' in self.tipo.lower().replace('_', ' '):
+                return True
+    
+            # Documents with FIRMADO state are always visible
+            if self.estado == 'FIRMADO':
+                return True
+                
+            # Documents in PENDIENTE DE FIRMA state are visible
+            if self.estado == 'PENDIENTE DE FIRMA':
+                return True
+                
+            # All other documents (typically BORRADOR) are not visible to tribunal
+            return False
+        
+        # Use the configuration-based visibility rules
+        try:
+            rules = json.loads(template_config.tribunal_visibility_rules)
+            
+            # If no rules for the current state, document is not visible
+            if self.estado not in rules:
+                return False
+                
+            # If no miembro_tribunal provided, we can't check role/claustro-specific rules
+            if not miembro_tribunal:
+                # Return True if there are rules for this state, meaning someone should see it
+                return bool(rules.get(self.estado))
+            
+            # Check if the member's role and claustro match the rules
+            state_rules = rules.get(self.estado, {})
+            allowed_roles = state_rules.get('roles', [])
+            allowed_claustros = state_rules.get('claustros', [])
+            
+            # Document is visible if both role and claustro match the rules
+            return (miembro_tribunal.rol in allowed_roles and 
+                    miembro_tribunal.claustro in allowed_claustros)
+                    
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            # In case of any error parsing the rules, fall back to the document being invisible
+            return False
 
-        # Documents with FIRMADO state are always visible
-        if self.estado == 'FIRMADO':
-            return True
-            
-        # Documents in PENDIENTE DE FIRMA state are visible
-        if self.estado == 'PENDIENTE DE FIRMA':
-            return True
-            
-        # All other documents (typically BORRADOR) are not visible to tribunal
-        return False
-        
     def get_friendly_name(self):
         """
         Convert the document type code to a friendly display name.
@@ -352,6 +416,124 @@ class Recusacion(db.Model):
     estado = db.Column(db.String(50))  # PRESENTADA, RESUELTA, etc.
     resolucion = db.Column(db.Text)
     fecha_resolucion = db.Column(db.DateTime)
+
+class NotificationCampaign(db.Model):
+    __tablename__ = 'notification_campaigns'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre_campana = db.Column(db.String(255), nullable=False)
+    asunto_email = db.Column(db.String(500), nullable=False)
+    cuerpo_email_html = db.Column(db.Text, nullable=False)
+    destinatarios_config = db.Column(db.Text, nullable=False)  # JSON stored as text
+    documentos_adjuntos_config = db.Column(db.JSON, nullable=True)  # List of dictionaries with "tipo" and "version" keys
+                                                                     # Example: [{"tipo": "RESOLUCION_LLAMADO", "version": "borrador"}, 
+                                                                     #           {"tipo": "ACTA_CIERRE", "version": "firmado"}]
+    adjuntos_personalizados = db.Column(db.JSON, nullable=True)  # List of Google Drive IDs for custom attachments
+                                                                  # Example: ["1abc123def456", "9xyz987uvw654"]
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    creado_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # Relationships
+    creado_por = db.relationship('User')
+    logs = db.relationship('NotificationLog', back_populates='campaign', cascade="all, delete-orphan")
+    
+    # Helper methods to work with JSON field
+    @property
+    def destinatarios_json(self):
+        """Return the destinatarios_config as a Python dictionary.
+        
+        Returns a dictionary with the following structure:
+        {
+            "tribunal_destinatarios": [
+                {"rol": "Presidente", "claustro": "Docente"},
+                {"rol": "Titular", "claustro": "Estudiante"},
+                ...
+            ],
+            "otros_roles_destinatarios": ["postulantes", "jefe_departamento", ...],
+            "emails_estaticos": ["email1@example.com", "email2@example.com", ...]
+        }
+        """
+        if not self.destinatarios_config:
+            return {'tribunal_destinatarios': [], 'otros_roles_destinatarios': [], 'emails_estaticos': []}
+        return json.loads(self.destinatarios_config)
+    
+    @destinatarios_json.setter
+    def destinatarios_json(self, value):
+        """Set the destinatarios_config from a Python dictionary."""
+        self.destinatarios_config = json.dumps(value)
+
+class NotificationLog(db.Model):
+    __tablename__ = 'notification_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('notification_campaigns.id', ondelete='CASCADE'), nullable=False, index=True)
+    concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id', ondelete='CASCADE'), nullable=False, index=True)
+    destinatario_email = db.Column(db.String(255), nullable=False)
+    asunto_enviado = db.Column(db.String(500), nullable=False)
+    cuerpo_enviado_html = db.Column(db.Text, nullable=False)
+    fecha_envio = db.Column(db.DateTime, default=datetime.utcnow)
+    estado_envio = db.Column(db.String(50), nullable=False)  # ENVIADO, FALLIDO
+    error_envio = db.Column(db.Text, nullable=True)
+    
+    # Relationships    
+    campaign = db.relationship('NotificationCampaign', back_populates='logs')
+    concurso = db.relationship('Concurso')
+    
+class DocumentTemplateConfig(db.Model):
+    __tablename__ = 'document_template_configs'
+    id = db.Column(db.Integer, primary_key=True)
+    google_doc_id = db.Column(db.String(255), nullable=False)
+    document_type_key = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    display_name = db.Column(db.String(255), nullable=False)
+    uses_considerandos_builder = db.Column(db.Boolean, default=False, nullable=False)
+    requires_tribunal_info = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    # New fields for enhanced document template configuration
+    concurso_visibility = db.Column(db.String(50), nullable=False, default='BOTH')  # REGULAR, INTERINO, BOTH
+    is_unique_per_concurso = db.Column(db.Boolean, default=True, nullable=False)
+    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text
+    # New fields for permission control
+    admin_can_send_for_signature = db.Column(db.Boolean, default=True, nullable=False)
+    tribunal_can_sign = db.Column(db.Boolean, default=False, nullable=False)
+    tribunal_can_upload_signed = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def get_tribunal_visibility_rules(self):
+        """
+        Parse and return the tribunal visibility rules as a Python dictionary.
+        
+        Returns:
+            dict: A dictionary with document states as keys and rules for roles and claustros as values,
+                  or an empty dict if no rules are defined.
+        """
+        if not self.tribunal_visibility_rules:
+            return {}
+        try:
+            return json.loads(self.tribunal_visibility_rules)
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_tribunal_visibility_rules(self, rules_dict):
+        """
+        Set the tribunal visibility rules from a Python dictionary.
+        
+        Args:
+            rules_dict (dict): A dictionary with document states as keys and rules for roles and claustros as values.
+        """
+        self.tribunal_visibility_rules = json.dumps(rules_dict)
+    def is_visible_for_concurso_tipo(self, tipo_concurso):
+        """
+        Check if this template is available for the specified concurso type.
+        
+        Args:
+            tipo_concurso (str): The concurso type (Regular, Interino) - case insensitive
+            
+        Returns:
+            bool: True if the template is available for this concurso type
+        """
+        # Make the comparison case-insensitive
+        return (self.concurso_visibility.upper() == 'BOTH' or 
+                self.concurso_visibility.upper() == tipo_concurso.upper())
 
 # Function to initialize the database with departments, areas, and orientations from JSON
 def init_db_from_json(app, json_data):

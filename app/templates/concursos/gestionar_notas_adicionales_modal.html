@@ -1,0 +1,70 @@
+<!-- Modal para gestionar notas adicionales -->
+<div class="modal fade" id="gestionarNotasAdicionalesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gestionar Notas Adicionales</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.gestionar_notas_adicionales', concurso_id=concurso.id) }}" method="POST" enctype="multipart/form-data">
+                    <!-- Nota Solicitud SAC -->
+                    <div class="mb-4 p-3 border rounded">
+                        <h6 class="mb-3">Nota Solicitud SAC</h6>
+                        <div class="mb-3">
+                            <label for="nota_solicitud_sac_file" class="form-label">Archivo PDF de la Nota Solicitud SAC</label>
+                            <input type="file" class="form-control" id="nota_solicitud_sac_file" name="nota_solicitud_sac_file" accept="application/pdf">
+                            {% if concurso.nota_solicitud_sac_file_id %}
+                            <div class="form-text text-info">
+                                Ya existe un archivo cargado. Subir uno nuevo reemplazará el archivo anterior.
+                                <a href="https://drive.google.com/file/d/{{ concurso.nota_solicitud_sac_file_id }}/view" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-file-earmark-pdf"></i> Ver archivo actual
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Nota Centro Estudiantes -->
+                    <div class="mb-4 p-3 border rounded">
+                        <h6 class="mb-3">Nota Centro Estudiantes</h6>
+                        <div class="mb-3">
+                            <label for="nota_centro_estudiantes_file" class="form-label">Archivo PDF de la Nota Centro Estudiantes</label>
+                            <input type="file" class="form-control" id="nota_centro_estudiantes_file" name="nota_centro_estudiantes_file" accept="application/pdf">
+                            {% if concurso.nota_centro_estudiantes_file_id %}
+                            <div class="form-text text-info">
+                                Ya existe un archivo cargado. Subir uno nuevo reemplazará el archivo anterior.
+                                <a href="https://drive.google.com/file/d/{{ concurso.nota_centro_estudiantes_file_id }}/view" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-file-earmark-pdf"></i> Ver archivo actual
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Nota Consulta a Depto. Académico -->
+                    <div class="mb-4 p-3 border rounded">
+                        <h6 class="mb-3">Nota Consulta a Depto. Académico</h6>
+                        <div class="mb-3">
+                            <label for="nota_consulta_depto_file" class="form-label">Archivo PDF de la Nota Consulta a Depto. Académico</label>
+                            <input type="file" class="form-control" id="nota_consulta_depto_file" name="nota_consulta_depto_file" accept="application/pdf">
+                            {% if concurso.nota_consulta_depto_file_id %}
+                            <div class="form-text text-info">
+                                Ya existe un archivo cargado. Subir uno nuevo reemplazará el archivo anterior.
+                                <a href="https://drive.google.com/file/d/{{ concurso.nota_consulta_depto_file_id }}/view" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-file-earmark-pdf"></i> Ver archivo actual
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Subir Notas Seleccionadas</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

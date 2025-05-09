@@ -32,12 +32,22 @@
                     <label for="telefono" class="form-label">Teléfono</label>
                     <input type="tel" class="form-control" id="telefono" name="telefono" value="{{ postulante.telefono }}">
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="correo" class="form-label">Correo Electrónico</label>
                     <input type="email" class="form-control" id="correo" name="correo" value="{{ postulante.correo }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="domicilio" class="form-label">Domicilio</label>
+                    <input type="text" class="form-control" id="domicilio" name="domicilio" value="{{ postulante.domicilio or '' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <input type="text" class="form-control" id="estado" name="estado" value="{{ postulante.estado or 'activo' }}" required>
+                    <!-- Consider using a <select> if you have predefined states -->
                 </div>
             </div>
 

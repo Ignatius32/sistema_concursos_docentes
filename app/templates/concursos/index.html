@@ -18,9 +18,9 @@
                 <th>Área</th>
                 <th>Categoría</th>
                 <th>Dedicación</th>
-                <th>Tipo</th>
-                <th>Estado</th>
+                <th>Tipo</th>                <th>Estado</th>
                 <th>Cierre Inscripción</th>
+                <th>Tribunal</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -32,9 +32,28 @@
                 <td>{{ concurso.area }}</td>
                 <td>{{ concurso.categoria }}</td>
                 <td>{{ concurso.dedicacion }}</td>
-                <td>{{ concurso.tipo }}</td>
-                <td><span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">{{ concurso.estado_actual }}</span></td>
-                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
+                <td>{{ concurso.tipo }}</td>                <td><span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">{{ concurso.estado_actual }}</span></td>
+                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>                <td>
+                    {% set tribunal_count = concurso.asignaciones_tribunal.count() %}
+                    {% if tribunal_count > 0 %}
+                        <span class="badge bg-success">{{ tribunal_count }}</span>
+                        {% set presidente = concurso.asignaciones_tribunal.filter_by(rol='Presidente').first() %}
+                        {% if presidente %}
+                            <small title="Presidente: {{ presidente.persona.nombre }} {{ presidente.persona.apellido }}">
+                                <i class="bi bi-person-check-fill text-success"></i>
+                            </small>
+                        {% else %}
+                            <small title="Sin presidente asignado">
+                                <i class="bi bi-person-x text-warning"></i>
+                            </small>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-danger">0</span>
+                        <small title="Sin tribunal asignado">
+                            <i class="bi bi-exclamation-triangle text-warning"></i>
+                        </small>
+                    {% endif %}
+                </td>
                 <td>
                     <div class="btn-group">
                         <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-sm btn-info">Ver</a>

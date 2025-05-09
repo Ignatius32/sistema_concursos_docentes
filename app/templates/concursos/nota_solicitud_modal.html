@@ -1,0 +1,30 @@
+<!-- Modal para cargar Nota Solicitud SAC -->
+<div class="modal fade" id="cargarNotaSolicitudModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% if concurso.nota_solicitud_sac_file_id %}Actualizar{% else %}Cargar{% endif %} Nota Solicitud SAC</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.cargar_nota_solicitud', concurso_id=concurso.id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="nota_solicitud_file" class="form-label">Archivo PDF de la Nota Solicitud</label>
+                        <input type="file" class="form-control" id="nota_solicitud_file" name="nota_solicitud_file" accept="application/pdf" required>
+                        {% if concurso.nota_solicitud_sac_file_id %}
+                        <div class="form-text text-info">
+                            Ya existe un archivo cargado. Subir uno nuevo reemplazará el archivo anterior.
+                            <a href="https://drive.google.com/file/d/{{ concurso.nota_solicitud_sac_file_id }}/view" target="_blank">Ver archivo actual</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">{% if concurso.nota_solicitud_sac_file_id %}Actualizar{% else %}Cargar{% endif %} Nota</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

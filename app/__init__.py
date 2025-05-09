@@ -70,6 +70,9 @@ def create_app():
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
     
+    # Google Drive Configuration
+    app.config['GOOGLE_DRIVE_CVS_FOLDER_ID'] = os.environ.get('GOOGLE_DRIVE_CVS_FOLDER_ID')
+    
     # Set up database URI with absolute path in instance folder
     if os.environ.get('DATABASE_URI'):
         db_uri = os.environ.get('DATABASE_URI')
@@ -90,19 +93,26 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     migrate.init_app(app, db)
-    
-    # Register blueprints
+      # Register blueprints
     from app.routes.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
-    
     from app.routes.concursos import concursos as concursos_blueprint
     app.register_blueprint(concursos_blueprint)
+    from app.routes.admin_templates import admin_templates_bp
+    app.register_blueprint(admin_templates_bp)
     
     from app.routes.postulantes import postulantes as postulantes_blueprint
     app.register_blueprint(postulantes_blueprint)
     
     from app.routes.tribunal import tribunal as tribunal_blueprint
     app.register_blueprint(tribunal_blueprint)
+      # Register admin personas blueprint
+    from app.routes.admin_personas import admin_personas_bp
+    app.register_blueprint(admin_personas_bp)
+    
+    # Register notifications blueprint
+    from app.routes.notifications import notifications_bp
+    app.register_blueprint(notifications_bp)
 
     @login_manager.user_loader
     def load_user(user_id):

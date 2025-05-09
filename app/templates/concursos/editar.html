@@ -6,9 +6,8 @@
 <div class="card">
     <div class="card-header">
         <h2 class="mb-0">Editar Concurso #{{ concurso.id }}</h2>
-    </div>
-    <div class="card-body">
-        <form method="POST">
+    </div>    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="tipo" class="form-label">Tipo de Concurso</label>
@@ -94,17 +93,9 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
+            <div class="row">                <div class="col-md-6 mb-3">
                     <label for="asignaturas" class="form-label">Asignaturas</label>
-                    <input type="text" class="form-control" id="asignaturas" name="asignaturas" 
-                           value="{{ concurso.asignaturas }}" placeholder="Opcional">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="expediente" class="form-label">Expediente</label>
-                    <input type="text" class="form-control" id="expediente" name="expediente" 
-                           value="{{ concurso.expediente }}" placeholder="Opcional">
+                    <input type="text" class="form-control" id="asignaturas" name="asignaturas" value="{{ concurso.asignaturas }}" placeholder="Opcional">
                 </div>
             </div>
 

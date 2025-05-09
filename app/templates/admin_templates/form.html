@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if action == 'nuevo' %}
+Nueva Plantilla
+{% else %}
+Editar Plantilla
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>
+                {% if action == 'nuevo' %}
+                Nueva Plantilla
+                {% else %}
+                Editar Plantilla
+                {% endif %}
+            </h2>
+        </div>
+        <div class="card-body">
+            {% include '_flash_messages.html' %}
+            
+            <form method="POST" class="needs-validation" novalidate>
+                {{ form.csrf_token }}
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.display_name.label(class="form-label") }}
+                            {{ form.display_name(class="form-control", placeholder="Nombre para mostrar") }}
+                            {% if form.display_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.display_name.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Nombre descriptivo de la plantilla</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.google_doc_id.label(class="form-label") }}
+                            {{ form.google_doc_id(class="form-control", placeholder="ID del documento de Google") }}
+                            {% if form.google_doc_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.google_doc_id.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">ID del documento de Google Docs que sirve como plantilla</small>
+                        </div>
+                    </div>
+                </div>
+                  <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            {{ form.document_type_key.label(class="form-label") }}
+                            {{ form.document_type_key(class="form-control", placeholder="Clave para el sistema") }}
+                            {% if form.document_type_key.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.document_type_key.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Clave única para identificar el tipo de documento en el sistema (ej: RESOLUCION_LLAMADO_REGULAR)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.uses_considerandos_builder(class="form-check-input") }}
+                            {{ form.uses_considerandos_builder.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si la plantilla usa el constructor de considerandos</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.requires_tribunal_info(class="form-check-input") }}
+                            {{ form.requires_tribunal_info.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si la plantilla requiere información del tribunal</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                            <div class="form-text">Desmarcar para desactivar temporalmente esta plantilla</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- New fields for enhanced template configuration -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.concurso_visibility.label(class="form-label") }}
+                            {{ form.concurso_visibility(class="form-select") }}
+                            {% if form.concurso_visibility.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.concurso_visibility.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Especifica para qué tipos de concurso está disponible esta plantilla</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check mt-4">
+                            {{ form.is_unique_per_concurso(class="form-check-input") }}
+                            {{ form.is_unique_per_concurso.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si solo se puede generar un documento de este tipo por concurso</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Permission control fields -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h4 class="mt-3 mb-2">Permisos de Documento</h4>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.admin_can_send_for_signature(class="form-check-input") }}
+                            {{ form.admin_can_send_for_signature.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si el administrador puede enviar este documento para firma</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.tribunal_can_sign(class="form-check-input") }}
+                            {{ form.tribunal_can_sign.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si los miembros del tribunal pueden firmar este documento</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            {{ form.tribunal_can_upload_signed(class="form-check-input") }}
+                            {{ form.tribunal_can_upload_signed.label(class="form-check-label") }}
+                            <div class="form-text">Marcar si los miembros del tribunal pueden subir este documento ya firmado</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            {{ form.tribunal_visibility_rules.label(class="form-label") }}
+                            {{ form.tribunal_visibility_rules(class="form-control code-editor") }}
+                            {% if form.tribunal_visibility_rules.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.tribunal_visibility_rules.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">JSON con reglas de visibilidad según estado, rol y claustro. <br>
+                            Ejemplo: { "BORRADOR": {"roles": ["Presidente"], "claustros": ["Docente"]}, "FIRMADO": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "Estudiante"]} }</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_templates.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

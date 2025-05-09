@@ -29,13 +29,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for miembro in miembros %}
-                    <tr>
+                    {% for miembro in miembros %}                    <tr>
                         <td>{{ miembro.rol }}</td>
-                        <td>{{ miembro.nombre }}</td>
-                        <td>{{ miembro.apellido }}</td>
-                        <td>{{ miembro.dni }}</td>
-                        <td>{{ miembro.correo }}</td>
+                        <td>{{ miembro.persona.nombre }}</td>
+                        <td>{{ miembro.persona.apellido }}</td>
+                        <td>{{ miembro.persona.dni }}</td>
+                        <td>{{ miembro.persona.correo }}</td>
                         <td>
                             {% if miembro.notificado_sustanciacion %}
                             <span class="badge bg-success">Sustanciación Notificada {{ miembro.fecha_notificacion_sustanciacion.strftime('%d/%m/%Y') if miembro.fecha_notificacion_sustanciacion }}</span>
@@ -102,9 +101,8 @@
                                         <div class="modal-header">
                                             <h5 class="modal-title">Confirmar Notificación de Sustanciación</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>¿Está seguro que desea enviar una notificación de sustanciación a {{ miembro.nombre }} {{ miembro.apellido }}?</p>
+                                        </div>                                        <div class="modal-body">
+                                            <p>¿Está seguro que desea enviar una notificación de sustanciación a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?</p>
                                             <p>Se enviará un correo con:</p>
                                             <ul>
                                                 <li>Información del concurso</li>
@@ -136,7 +134,7 @@
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title">Subir Documentos - {{ miembro.nombre }} {{ miembro.apellido }}</h5>
+                                            <h5 class="modal-title">Subir Documentos - {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">

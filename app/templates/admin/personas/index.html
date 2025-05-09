@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_pagination_helper.html" import render_pagination %}
+
+{% block title %}Gestionar Personas - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">Gestionar Personas</h2>
+        <a href="{{ url_for('admin_personas.nueva_persona') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Nueva Persona
+        </a>    </div>
+    <div class="card-body">
+        <div class="d-flex justify-content-end mb-3">
+            <form class="d-flex align-items-center">
+                <label for="per_page" class="me-2">Mostrar:</label>
+                <select id="per_page" name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="1" {% if request.args.get('per_page', '15') == '1' %}selected{% endif %}>1</option>
+                    <option value="10" {% if request.args.get('per_page', '15') == '10' %}selected{% endif %}>10</option>
+                    <option value="15" {% if request.args.get('per_page', '15') == '15' %}selected{% endif %}>15</option>
+                    <option value="25" {% if request.args.get('per_page', '15') == '25' %}selected{% endif %}>25</option>
+                    <option value="50" {% if request.args.get('per_page', '15') == '50' %}selected{% endif %}>50</option>
+                </select>
+            </form>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>DNI</th>                        <th>Apellido</th>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        <th>Admin</th>
+                        <th>CV</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for persona in personas_pagination.items %}
+                    <tr>
+                        <td>{{ persona.dni }}</td>                        <td>{{ persona.apellido }}</td>
+                        <td>{{ persona.nombre }}</td>
+                        <td>{{ persona.correo }}</td>
+                        <td>{{ persona.telefono if persona.telefono else '-' }}</td>
+                        <td>{% if persona.is_admin %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                        <td>
+                            {% if persona.cv_drive_web_link %}
+                            <a href="{{ persona.cv_drive_web_link }}" target="_blank" class="btn btn-sm btn-info">
+                                <i class="fas fa-file-pdf"></i> Ver CV
+                            </a>
+                            {% else %}
+                            <span class="badge bg-secondary">Sin CV</span>
+                            {% endif %}
+                        </td>
+                        <td>                            <a href="{{ url_for('admin_personas.edit_persona', persona_id=persona.id) }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <form action="{{ url_for('admin_personas.eliminar_persona', persona_id=persona.id) }}" method="POST" class="d-inline ms-1">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro que desea eliminar esta persona? Esta acción no se puede deshacer y también eliminará su CV si existe.');">
+                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay personas registradas.</td>
+                    </tr>
+                    {% endfor %}                </tbody>
+            </table>
+        </div>
+        {{ render_pagination(personas_pagination, 'admin_personas.list_personas', {'per_page': request.args.get('per_page', '15')}) }}
+    </div>
+</div>
+{% endblock %}

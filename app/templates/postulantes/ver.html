@@ -24,10 +24,17 @@
                     <tr>
                         <th>Correo:</th>
                         <td>{{ postulante.correo }}</td>
-                    </tr>
-                    <tr>
+                    </tr>                    <tr>
                         <th>Teléfono:</th>
                         <td>{{ postulante.telefono or 'No especificado' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Domicilio:</th>
+                        <td>{{ postulante.domicilio or 'No especificado' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Estado:</th>
+                        <td><span class="badge bg-{{ 'success' if postulante.estado == 'activo' else 'secondary' }}">{{ postulante.estado | capitalize }}</span></td>
                     </tr>
                 </table>
             </div>

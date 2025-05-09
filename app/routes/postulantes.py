@@ -54,28 +54,29 @@ def agregar(concurso_id):
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if request.method == 'POST':
-        try:
-            # Extract form data
+        try:            # Extract form data
             dni = request.form.get('dni')
             nombre = request.form.get('nombre')
             apellido = request.form.get('apellido')
             correo = request.form.get('correo')
             telefono = request.form.get('telefono')
+            domicilio = request.form.get('domicilio')
             
             # Check if postulante already exists in this concurso
             existing = Postulante.query.filter_by(concurso_id=concurso_id, dni=dni).first()
             if existing:
                 flash('Ya existe un postulante con ese DNI en este concurso.', 'warning')
                 return redirect(url_for('postulantes.agregar', concurso_id=concurso_id))
-            
-            # Create new postulante
+              # Create new postulante
             postulante = Postulante(
                 concurso_id=concurso_id,
                 dni=dni,
                 nombre=nombre,
                 apellido=apellido,
                 correo=correo,
-                telefono=telefono
+                telefono=telefono,
+                domicilio=domicilio
+                # estado will be 'activo' by default
             )
             
             db.session.add(postulante)
@@ -161,14 +162,14 @@ def editar(postulante_id):
             # Store old data for comparison
             old_apellido = postulante.apellido
             old_nombre = postulante.nombre
-            old_dni = postulante.dni
-
-            # Update postulante data from form
+            old_dni = postulante.dni            # Update postulante data from form
             postulante.dni = request.form.get('dni')
             postulante.nombre = request.form.get('nombre')
             postulante.apellido = request.form.get('apellido')
             postulante.correo = request.form.get('correo')
             postulante.telefono = request.form.get('telefono')
+            postulante.domicilio = request.form.get('domicilio')
+            postulante.estado = request.form.get('estado', 'activo') # Default to 'activo' if not provided
             
             # Update Google Drive folder name if relevant fields changed and folder exists
             if postulante.drive_folder_id and (

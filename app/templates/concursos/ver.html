@@ -3,37 +3,104 @@
 {% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
-        <div class="btn-group">
-            <a href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}" class="btn btn-warning">Editar</a>
-            
-            {% if available_documents %}
-            <div class="btn-group">
-                <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    Generar Documentos
+<div class="card">    <div class="card-header d-flex justify-content-between align-items-center">        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>        <div class="d-flex align-items-center">            <div class="btn-group me-2">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Respaldo Presupuestario
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cargarTkdModal">
+                            <i class="bi bi-upload"></i> Cargar TKD Respaldo
+                        </a></li>
+                        {% if concurso.tkd or concurso.tkd_file_id %}
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#borrarTkdModal">
+                            <i class="bi bi-trash"></i> Borrar TKD Respaldo
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                {% if available_documents %}
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Generar Actas/Resoluciones
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% for doc in available_documents %}
+                        <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-primary">Tribunal</a>
+                <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">Postulantes</a>
+            </div>            
+            <!-- Three-dot vertical menu for Edit/Delete -->
+            <div class="dropdown">
+                <button class="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    {% for doc in available_documents %}
-                    <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
-                    {% endfor %}
+                    <li>
+                        <a class="dropdown-item text-warning" href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#eliminarModal">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </a>
+                    </li>
                 </ul>
-            </div>
+            </div>        </div>
+    </div>    <div class="card-body">
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs mb-4" id="concursoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">
+                    <i class="bi bi-info-circle"></i> Información del Concurso
+                </button>
+            </li>            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab" aria-controls="documentos" aria-selected="false">
+                    <i class="bi bi-file-earmark-text"></i> Documentos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notificaciones-tab" data-bs-toggle="tab" data-bs-target="#notificaciones" type="button" role="tab" aria-controls="notificaciones" aria-selected="false">
+                    <i class="bi bi-bell"></i> Notificaciones
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tribunal-tab" data-bs-toggle="tab" data-bs-target="#tribunal" type="button" role="tab" aria-controls="tribunal" aria-selected="false">
+                    <i class="bi bi-people"></i> Tribunal
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="postulantes-tab" data-bs-toggle="tab" data-bs-target="#postulantes" type="button" role="tab" aria-controls="postulantes" aria-selected="false">
+                    <i class="bi bi-person-badge"></i> Postulantes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button" role="tab" aria-controls="historial" aria-selected="false">
+                    <i class="bi bi-clock-history"></i> Historial
+                </button>
+            </li>
+            {% if concurso.sustanciacion %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sustanciacion-tab" data-bs-toggle="tab" data-bs-target="#sustanciacion" type="button" role="tab" aria-controls="sustanciacion" aria-selected="false">
+                    <i class="bi bi-calendar-event"></i> Sustanciación
+                </button>
+            </li>
             {% endif %}
-            
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal">
-                Eliminar
-            </button>
-            <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Tribunal</a>
-            <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">Postulantes</a>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h4>Información General</h4>
-                <table class="table">
+        </ul>        <!-- Tab content -->
+        <div class="tab-content">
+            <!-- Tab 1: Información y Detalles -->
+            <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4>Información General</h4>
+                        <table class="table">
                     <tr>
                         <th>Tipo:</th>
                         <td>{{ concurso.tipo }}</td>
@@ -100,12 +167,26 @@
                         <th>Asignaturas:</th>
                         <td>{{ concurso.asignaturas }}</td>
                     </tr>
-                    {% endif %}
+                    {% endif %}                    
                     {% if concurso.expediente %}
                     <tr>
                         <th>Expediente:</th>
                         <td>{{ concurso.expediente }}</td>
                     </tr>
+                    {% endif %}
+                    {% if concurso.tkd %}
+                    <tr>
+                        <th>TKD:</th>
+                        <td>
+                            {{ concurso.tkd }}
+                            {% if concurso.tkd_file_id %}
+                            <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" 
+                               target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="bi bi-file-earmark-pdf"></i> Ver archivo
+                            </a>
+                            {% endif %}
+                        </td>                    
+                    </tr>                    
                     {% endif %}
                     <tr>
                         <th>Cierre Inscripción:</th>
@@ -134,8 +215,7 @@
                         <th>ID Designación MOCOVI:</th>
                         <td>{{ concurso.id_designacion_mocovi }}</td>
                     </tr>
-                    {% endif %}
-                    {% if concurso.drive_folder_id %}
+                    {% endif %}                      {% if concurso.drive_folder_id %}
                     <tr>
                         <th>Carpeta Google Drive:</th>
                         <td>
@@ -143,169 +223,14 @@
                                target="_blank" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-folder"></i> Abrir carpeta
                             </a>
-                        </td>
-                    </tr>
+                        </td>                    </tr>
                     {% endif %}
                 </table>
             </div>
         </div>
-
-        {% if concurso.sustanciacion %}
-        <div class="row mt-4">
-            <div class="col-12">
-                <h4>Sustanciación de Concurso</h4>
-                <div class="table-responsive">
-                    <table class="table">
-                        <!-- Constitución del Jurado section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Constitución del Jurado</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Constitución del Tribunal:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.constitucion_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.constitucion_observaciones %}
-                        <tr>
-                            <th>Observaciones:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                        <!-- Sorteo section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Sorteo de Tema</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Sorteo de Tema:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar del Sorteo:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.sorteo_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual del Sorteo:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.sorteo_observaciones %}
-                        <tr>
-                            <th>Observaciones del Sorteo:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                        
-                        {% if concurso.sustanciacion.temas_exposicion %}
-                                <tr>
-                                    <th>Temas de Exposición:</th>
-                                    <td>
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="temas-list flex-grow-1">
-                                                {% if concurso.sustanciacion.tema_sorteado %}
-                                                    {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                                                        {% if tema.strip() %}
-                                                        <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ tema.strip() }}</span>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <em class="text-muted">Los temas están definidos pero serán visibles después del sorteo</em>
-                                                {% endif %}
-                                            </div>
-                                            <div class="dropdown ms-2">
-                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    {% if concurso.sustanciacion.tema_sorteado %}
-                                                    <li>
-                                                        <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
-                                                            <i class="bi bi-arrow-counterclockwise"></i> Eliminar tema sorteado
-                                                        </button>
-                                                    </li>
-                                                    {% endif %}
-                                                    <li>
-                                                        <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
-                                                            <i class="bi bi-trash"></i> Eliminar todos los temas
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            {% if concurso.sustanciacion.tema_sorteado %}
-                                                <div class="alert alert-success">
-                                                    <strong>Tema sorteado:</strong> {{ concurso.sustanciacion.tema_sorteado }}
-                                                </div>
-                                            {% else %}
-                                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
-                                                    <i class="bi bi-shuffle"></i> Sortear Tema
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endif %}
-
-                        <!-- Exposicion section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Exposición</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar de la Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.exposicion_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual de la Exposición:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.exposicion_observaciones %}
-                        <tr>
-                            <th>Observaciones de la Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
-                </div>
             </div>
-        </div>
-        {% endif %}
-
-        <div class="row mt-4">
-            <div class="col-12">
+              <!-- Tab 2: Documentos Generados -->
+            <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
                 <h4>Documentos Generados</h4>
                 <div class="table-responsive">
                     <table class="table table-sm">
@@ -351,10 +276,9 @@
                                             <button type="submit" class="btn btn-sm btn-info">
                                                 <i class="bi bi-send"></i> Notificar Tribunal
                                             </button>
-                                        </form>
-                                        {% endif %}
+                                        </form>                                        {% endif %}
 
-                                        {% if documento.estado == 'BORRADOR' or documento.estado == 'ENVIADO PARA FIRMAR' and 'RESOLUCION' in documento.tipo %}
+                                        {% if (documento.estado == 'BORRADOR' or documento.estado == 'ENVIADO PARA FIRMAR' and 'RESOLUCION' in documento.tipo.upper()) and template_configs_dict.get(documento.tipo, {}).admin_can_send_for_signature %}
                                         <button type="button" class="btn btn-sm btn-outline-success" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#enviarFirmaModal{{ documento.id }}">
@@ -435,8 +359,7 @@
                                                         <p>Seleccione el documento firmado para subir. El archivo será guardado en la carpeta de documentos firmados.</p>
                                                         <div class="mb-3">
                                                             <label for="documento_firmado{{ documento.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
-                                                            <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required
-                                                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                                            <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required>
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer">
@@ -527,41 +450,50 @@
                             <tr>
                                 <td colspan="4" class="text-center">No hay documentos generados</td>
                             </tr>
-                            {% endfor %}
-                        </tbody>
+                            {% endfor %}                        </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-12">
-                <h4>Estado y Tribunal</h4>
+            
+            <!-- Tab 3: Panel de Notificaciones -->
+            <div class="tab-pane fade" id="notificaciones" role="tabpanel" aria-labelledby="notificaciones-tab">
+                <h4>Panel de Notificaciones</h4>
+                {% include 'notifications/_notification_panel.html' %}
+            </div>
+            
+            <!-- Tab 4: Tribunal -->
+            <div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
+                <h4>Tribunal</h4>
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Rol</th>
                                 <th>Nombre</th>
-                                <th>Apellido</th>
                                 <th>DNI</th>
                                 <th>Correo</th>
+                                <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
-                        </thead>
+                        </thead>                        
                         <tbody>
-                            {% for miembro in concurso.tribunal %}
+                            {% for miembro in concurso.asignaciones_tribunal.all() %}
                             <tr>
-                                <td>{{ miembro.rol }}</td>
-                                <td>{{ miembro.nombre }}</td>
-                                <td>{{ miembro.apellido }}</td>
-                                <td>{{ miembro.dni }}</td>
-                                <td>{{ miembro.correo }}</td>
+                                <td><span class="badge bg-{{ 'primary' if miembro.rol == 'Presidente' else ('info' if miembro.rol == 'Titular' else 'secondary') }}">{{ miembro.rol }}</span></td>
+                                <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
+                                <td>{{ miembro.persona.dni }}</td>
+                                <td>{{ miembro.persona.correo }}</td>
+                                <td>
+                                    {% if miembro.notificado_sustanciacion %}
+                                    <span class="badge bg-success">Sustanciación Notificada</span>
+                                    {% elif miembro.notificado %}
+                                    <span class="badge bg-info">Credenciales Notificadas</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">No notificado</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <div class="btn-group">
-                                        <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -579,10 +511,9 @@
                     </a>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-12">
+            
+            <!-- Tab 4: Postulantes -->
+            <div class="tab-pane fade" id="postulantes" role="tabpanel" aria-labelledby="postulantes-tab">
                 <h4>Postulantes</h4>
                 <div class="table-responsive">
                     <table class="table">
@@ -626,10 +557,9 @@
                     </a>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-12">
+            
+            <!-- Tab 5: Historial de Estados -->
+            <div class="tab-pane fade" id="historial" role="tabpanel" aria-labelledby="historial-tab">
                 <h4>Historial de Estados</h4>
                 <div class="table-responsive">
                     <table class="table table-sm">
@@ -652,6 +582,159 @@
                     </table>
                 </div>
             </div>
+            
+            <!-- Tab 6: Sustanciación (only if exists) -->
+            {% if concurso.sustanciacion %}
+            <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">
+                <h4>Sustanciación de Concurso</h4>
+                <div class="table-responsive">
+                    <table class="table">
+                        <!-- Constitución del Jurado section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Constitución del Jurado</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Constitución del Tribunal:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.constitucion_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.constitucion_observaciones %}
+                        <tr>
+                            <th>Observaciones:</th>
+                            <td>{{ concurso.sustanciacion.constitucion_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                        <!-- Sorteo section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Sorteo de Tema</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Sorteo de Tema:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar del Sorteo:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual del Sorteo:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.sorteo_observaciones %}
+                        <tr>
+                            <th>Observaciones del Sorteo:</th>
+                            <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if concurso.sustanciacion.temas_exposicion %}
+                        <tr>
+                            <th>Temas de Exposición:</th>
+                            <td>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="temas-list flex-grow-1">
+                                        {% if concurso.sustanciacion.tema_sorteado %}
+                                            {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                                                {% if tema.strip() %}
+                                                <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ tema.strip() }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <em class="text-muted">Los temas están definidos pero serán visibles después del sorteo</em>
+                                        {% endif %}
+                                    </div>
+                                    <div class="dropdown ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            {% if concurso.sustanciacion.tema_sorteado %}
+                                            <li>
+                                                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> Eliminar tema sorteado
+                                                </button>
+                                            </li>
+                                            {% endif %}
+                                            <li>
+                                                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
+                                                    <i class="bi bi-trash"></i> Eliminar todos los temas
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    {% if concurso.sustanciacion.tema_sorteado %}
+                                        <div class="alert alert-success">
+                                            <strong>Tema sorteado:</strong> {{ concurso.sustanciacion.tema_sorteado }}
+                                        </div>
+                                    {% else %}
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
+                                            <i class="bi bi-shuffle"></i> Sortear Tema
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+
+                        <!-- Exposicion section -->
+                        <tr>
+                            <th colspan="2" class="bg-light">
+                                <h5 class="mb-0">Exposición</h5>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Fecha de Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de la Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_lugar or '-' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th>Enlace a Reunión Virtual de la Exposición:</th>
+                            <td>
+                                <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if concurso.sustanciacion.exposicion_observaciones %}
+                        <tr>
+                            <th>Observaciones de la Exposición:</th>
+                            <td>{{ concurso.sustanciacion.exposicion_observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -765,6 +848,75 @@
     </div>
 </div>
 
+<!-- Modal para cargar TKD -->
+<div class="modal fade" id="cargarTkdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cargar TKD Respaldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.cargar_tkd', concurso_id=concurso.id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="tkd_number" class="form-label">Número de TKD</label>
+                        <input type="text" class="form-control" id="tkd_number" name="tkd_number" value="{{ concurso.tkd or '' }}" required>
+                        <div class="form-text">Este número será utilizado como referencia en los documentos generados.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tkd_file" class="form-label">Archivo PDF del TKD</label>
+                        <input type="file" class="form-control" id="tkd_file" name="tkd_file" accept="application/pdf" {% if not concurso.tkd_file_id %}required{% endif %}>
+                        {% if concurso.tkd_file_id %}
+                        <div class="form-text text-info">
+                            Ya existe un archivo TKD cargado. Subir uno nuevo reemplazará el archivo anterior.
+                            <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" target="_blank">Ver archivo actual</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar TKD</button>                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para borrar TKD -->
+<div class="modal fade" id="borrarTkdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Borrar TKD Respaldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar el TKD respaldo?</p>
+                {% if concurso.tkd and concurso.tkd_file_id %}
+                <p>Esta acción eliminará:</p>
+                <ul>
+                    <li>El número de TKD: <strong>{{ concurso.tkd }}</strong></li>
+                    <li>El archivo PDF de respaldo</li>
+                </ul>
+                {% elif concurso.tkd %}
+                <p>Esta acción eliminará el número de TKD: <strong>{{ concurso.tkd }}</strong></p>
+                {% elif concurso.tkd_file_id %}
+                <p>Esta acción eliminará el archivo PDF de respaldo</p>
+                {% endif %}
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('concursos.borrar_tkd', concurso_id=concurso.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Eliminar TKD</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block styles %}
@@ -782,6 +934,43 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle TKD file requirement based on existing file
+    const cargarTkdModal = document.getElementById('cargarTkdModal');
+    if (cargarTkdModal) {
+        const tkdFileInput = document.getElementById('tkd_file');
+        const tkdForm = cargarTkdModal.querySelector('form');
+        
+        tkdForm.addEventListener('submit', function(e) {
+            const tkdNumber = document.getElementById('tkd_number').value.trim();
+            if (!tkdNumber) {
+                e.preventDefault();
+                alert('Debe ingresar un número de TKD');
+                return false;
+            }
+            
+            // If there's no file input and there's no existing file, prevent submission
+            const hasTkdFileId = "{{ concurso.tkd_file_id }}" !== "";
+            if (!tkdFileInput.files.length && !hasTkdFileId) {
+                e.preventDefault();
+                alert('Debe subir un archivo PDF para el TKD');
+                return false;
+            }
+        });
+    }
+    
+    // Handle TKD delete confirmation
+    const borrarTkdModal = document.getElementById('borrarTkdModal');
+    if (borrarTkdModal) {
+        const borrarTkdForm = borrarTkdModal.querySelector('form');
+        
+        borrarTkdForm.addEventListener('submit', function(e) {
+            if (!confirm('¿Está seguro que desea eliminar el respaldo TKD? Esta acción no se puede deshacer.')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+
     // Check if the sorteo modal exists on this page
     const sorteoModal = document.getElementById('sortearTemaModal');
     if (!sorteoModal) return;
@@ -869,9 +1058,55 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Re-enable the button
         btnIniciarSorteo.disabled = false;
-        
-        // Update button text
+          // Update button text
         btnIniciarSorteo.textContent = 'Sortear Nuevamente';
+    }
+});
+</script>
+
+{# gestionar_notas_adicionales_modal.html is temporarily disabled #}
+
+<!-- Modal para Panel de Notificaciones -->
+<div class="modal fade" id="notificacionesModal" tabindex="-1" aria-labelledby="notificacionesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notificacionesModalLabel">Panel de Notificaciones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% include 'notifications/_notification_panel.html' %}
+            </div>            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if URL hash is #notificacionesModal
+    if (window.location.hash === '#notificacionesModal') {
+        // Open the modal
+        var notificacionesModal = new bootstrap.Modal(document.getElementById('notificacionesModal'));
+        notificacionesModal.show();
+    }
+    
+    // Check if URL hash is #notificacionesTab
+    if (window.location.hash === '#notificacionesTab') {
+        // Switch to the Notificaciones tab
+        document.getElementById('notificaciones-tab').click();
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if URL hash is #notificacionesModal
+    if (window.location.hash === '#notificacionesModal') {
+        // Open the modal
+        var notificacionesModal = new bootstrap.Modal(document.getElementById('notificacionesModal'));
+        notificacionesModal.show();
     }
 });
 </script>

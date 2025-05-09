@@ -99,12 +99,10 @@ def nuevo():
                 categoria_nombre=categoria_nombre,  # Set the nombre from roles_categorias.json
                 dedicacion=dedicacion,
                 localizacion=localizacion,
-                asignaturas=asignaturas,
-                expediente=expediente,
+                asignaturas=asignaturas,                expediente=expediente,
                 origen_vacante=request.form.get('origen_vacante'),
                 docente_vacante=request.form.get('docente_vacante'),
-                categoria_vacante=request.form.get('categoria_vacante'),
-                dedicacion_vacante=request.form.get('dedicacion_vacante'), 
+                categoria_vacante=request.form.get('categoria_vacante'),                dedicacion_vacante=request.form.get('dedicacion_vacante'), 
                 id_designacion_mocovi=request.form.get('id_designacion_mocovi'),
                 cierre_inscripcion=cierre_inscripcion,
                 vencimiento=vencimiento,
@@ -497,10 +495,10 @@ def editar(concurso_id):
             concurso.categoria = request.form.get('categoria')
             concurso.categoria_nombre = request.form.get('categoria_nombre')
             concurso.dedicacion = request.form.get('dedicacion')
-            concurso.localizacion = request.form.get('localizacion')
-            concurso.asignaturas = request.form.get('asignaturas')
+            concurso.localizacion = request.form.get('localizacion')              
+            concurso.asignaturas = request.form.get('asignaturas')            
             concurso.expediente = request.form.get('expediente')
-            
+              
             # Update vacancy data
             concurso.origen_vacante = request.form.get('origen_vacante')
             concurso.docente_vacante = request.form.get('docente_vacante')
@@ -1165,5 +1163,206 @@ def reset_tema_sorteado(concurso_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar el tema sorteado: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/cargar-tkd', methods=['POST'])
+@login_required
+def cargar_tkd(concurso_id):
+    """Upload or update TKD number and file for a concurso."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    try:        # Get TKD number from form
+        tkd_number = request.form.get('tkd_number', '').strip()
+        if not tkd_number:
+            flash('Debe ingresar un número de TKD', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Get TKD file from form
+        tkd_file = request.files.get('tkd_file')
+        
+        # If no file and no existing file, require file 
+        # (although frontend validation should prevent this case)
+        if (not tkd_file or not tkd_file.filename) and not concurso.tkd_file_id:
+            flash('Debe subir un archivo PDF para el TKD', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Update TKD number
+        old_tkd = concurso.tkd
+        concurso.tkd = tkd_number
+        
+        # Create history record for TKD number update
+        if old_tkd != tkd_number:
+            historial = HistorialEstado(
+                concurso=concurso,
+                estado="TKD ACTUALIZADO",
+                observaciones=f"Número de TKD actualizado de '{old_tkd or 'vacío'}' a '{tkd_number}'"
+            )
+            db.session.add(historial)
+        
+        # Handle file upload if provided
+        if tkd_file and tkd_file.filename:
+            # Check if documentos_firmados_folder_id exists
+            if not concurso.documentos_firmados_folder_id:
+                flash('El concurso no tiene una carpeta de documentos firmados configurada', 'danger')
+                return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+              # Generate filename with date and timestamp to avoid duplicates
+            from datetime import datetime
+            now = datetime.now()
+            date_str = now.strftime("%Y%m%d")
+            timestamp = int(now.timestamp())
+            filename = f"TKD_{tkd_number}_{concurso_id}_{date_str}_{timestamp}.pdf"
+            
+            # Delete old file if exists
+            if concurso.tkd_file_id:
+                try:
+                    drive_api.delete_file(concurso.tkd_file_id)
+                except Exception as e:
+                    # Log error but continue with upload
+                    print(f"Error deleting old TKD file: {str(e)}")
+            
+            # Upload new file
+            file_data = tkd_file.read()
+            file_id, file_url = drive_api.upload_document(
+                concurso.documentos_firmados_folder_id, 
+                filename, 
+                file_data
+            )
+            
+            # Update concurso with new file ID
+            old_file_id = concurso.tkd_file_id
+            concurso.tkd_file_id = file_id
+            
+            # Create history record for file upload
+            action = "cargado" if not old_file_id else "actualizado"
+            historial = HistorialEstado(
+                concurso=concurso,
+                estado="ARCHIVO TKD CARGADO",
+                observaciones=f"Archivo TKD {action} para el número {tkd_number}"
+            )
+            db.session.add(historial)
+        
+        # Commit all changes
+        db.session.commit()
+        flash(f'TKD actualizado correctamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar el TKD: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/borrar-tkd', methods=['POST'])
+@login_required
+def borrar_tkd(concurso_id):
+    """Delete TKD number and file for a concurso."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    try:
+        # Track what was deleted for history
+        deleted_items = []
+        
+        # Delete TKD file if it exists
+        if concurso.tkd_file_id:
+            try:
+                # Use existing delete_file function from GoogleDriveAPI
+                drive_api.delete_file(concurso.tkd_file_id)
+                deleted_items.append("archivo PDF")
+            except Exception as e:
+                # Log error but continue with the rest of the deletion
+                print(f"Error deleting TKD file: {str(e)}")
+            
+            # Clear file ID regardless of whether deletion succeeded
+            concurso.tkd_file_id = None
+        
+        # Store the old TKD value for history
+        old_tkd = concurso.tkd
+        
+        # Delete TKD number if it exists
+        if concurso.tkd:
+            concurso.tkd = None
+            deleted_items.append("número TKD")
+        
+        # If anything was deleted, create a history record
+        if deleted_items:
+            historial = HistorialEstado(
+                concurso=concurso,
+                estado="TKD ELIMINADO",
+                observaciones=f"Se eliminó el respaldo TKD: {', '.join(deleted_items)} (valor anterior: '{old_tkd or 'vacío'}')"
+            )
+            db.session.add(historial)
+        
+    # Commit changes
+        db.session.commit()
+        flash(f'TKD respaldo eliminado correctamente', 'success')
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el TKD respaldo: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/cargar-nota-solicitud', methods=['POST'])
+@login_required
+def cargar_nota_solicitud(concurso_id):
+    """Upload or update Nota Solicitud SAC file for a concurso."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    try:
+        # Get the file from the form
+        nota_solicitud_file = request.files.get('nota_solicitud_file')
+        
+        # If no file is provided, return error
+        if not nota_solicitud_file or not nota_solicitud_file.filename:
+            flash('Debe subir un archivo PDF para la Nota Solicitud SAC', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Check if documentos_firmados_folder_id exists
+        if not concurso.documentos_firmados_folder_id:
+            flash('El concurso no tiene una carpeta de documentos firmados configurada', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+          # Generate filename with date and timestamp to avoid duplicates
+        from datetime import datetime
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")
+        timestamp = int(now.timestamp())
+        filename = f"Nota Solicitud SAC_{concurso_id}_{date_str}_{timestamp}.pdf"
+        
+        # Delete old file if exists
+        if concurso.nota_solicitud_sac_file_id:
+            try:
+                drive_api.delete_file(concurso.nota_solicitud_sac_file_id)
+            except Exception as e:
+                # Log error but continue with upload
+                print(f"Error deleting old Nota Solicitud SAC file: {str(e)}")
+        
+        # Upload new file
+        file_data = nota_solicitud_file.read()
+        file_id, file_url = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id, 
+            filename, 
+            file_data
+        )
+        
+        # Update concurso with new file ID
+        old_file_id = concurso.nota_solicitud_sac_file_id
+        concurso.nota_solicitud_sac_file_id = file_id
+        
+        # Create history record for file upload
+        action = "cargada" if not old_file_id else "actualizada"
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="ARCHIVO NOTA SOLICITUD SAC CARGADO",
+            observaciones=f"Archivo Nota Solicitud SAC {action}"
+        )
+        db.session.add(historial)
+        
+        # Commit all changes
+        db.session.commit()
+        flash(f'Nota Solicitud SAC {action} correctamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar la Nota Solicitud SAC: {str(e)}', 'danger')
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))

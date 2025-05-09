@@ -27,8 +27,7 @@
                 "dni": "12345678",
                 "correo": "juan.gomez@empresa.com"
             },
-            {
-                "rol": "Vocal",
+            {                "rol": "Titular",
                 "nombre": "María",
                 "apellido": "López",
                 "dni": "87654321",

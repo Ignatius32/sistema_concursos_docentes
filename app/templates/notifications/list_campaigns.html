@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Campañas de Notificación{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Campañas de Notificación Globales</h2>
+        <a href="{{ url_for('notifications.crear_notificacion_campaign_form') }}" class="btn btn-primary">
+            <i class="fas fa-plus-circle"></i> Nueva Campaña
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-body">
+            {% if campaigns %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre Campaña</th>
+                                <th>Asunto</th>
+                                <th>Destinatarios</th>
+                                <th>Creado Por</th>
+                                <th>Fecha Creación</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in campaigns %}
+                                <tr>
+                                    <td>{{ campaign.nombre_campana }}</td>
+                                    <td>{{ campaign.asunto_email }}</td>
+                                    <td>
+                                        {% set roles = campaign.destinatarios_json.get('roles', []) %}
+                                        {% set static_emails_count = campaign.destinatarios_json.get('emails_estaticos', [])|length %}
+                                        
+                                        {% if roles %}
+                                            <span class="badge bg-primary">{{ roles|join(', ') }}</span>
+                                        {% endif %}
+                                        
+                                        {% if static_emails_count > 0 %}
+                                            <span class="badge bg-secondary">{{ static_emails_count }} email(s) adicional(es)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ campaign.creado_por.username if campaign.creado_por else 'Sistema' }}</td>
+                                    <td>{{ campaign.creado_en.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group">
+                                            <!-- Edit Button -->
+                                            <a href="{{ url_for('notifications.editar_notificacion_campaign_form', campaign_id=campaign.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            
+                                            <!-- Delete Button with Form -->
+                                            <form action="{{ url_for('notifications.eliminar_notificacion_campaign', campaign_id=campaign.id) }}" 
+                                                  method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta campaña?');" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No hay campañas de notificación configuradas.
+                    <a href="{{ url_for('notifications.crear_notificacion_campaign_form') }}" class="alert-link">
+                        Crear una nueva campaña
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <h4>Información</h4>
+        <div class="card">
+            <div class="card-body">
+                <p>Las campañas de notificación son plantillas globales que pueden ser utilizadas en cualquier concurso.</p>
+                <p>Para enviar una notificación:</p>
+                <ol>
+                    <li>Ingrese a la página de un concurso específico</li>
+                    <li>Haga clic en "Panel de Notificaciones"</li>
+                    <li>Seleccione la campaña que desea enviar y haga clic en "Enviar"</li>
+                </ol>
+                <p>Los datos específicos del concurso (como nombre, expediente, etc.) serán automáticamente 
+                reemplazados al momento de enviar la notificación.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

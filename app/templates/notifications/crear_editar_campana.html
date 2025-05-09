@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if campaign %}Editar Campaña de Notificación{% else %}Nueva Campaña de Notificación{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back button -->
+    <div class="mb-3">
+        <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la Lista de Campañas
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                {% if campaign %}Editar Campaña de Notificación: {{ campaign.nombre_campana }}{% else %}Nueva Campaña de Notificación{% endif %}
+            </h4>
+        </div>
+        <div class="card-body">
+            <!-- Global campaign note -->
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle"></i>
+                Esta campaña de notificación es una <strong>plantilla global</strong> que podrá ser utilizada en cualquier concurso.
+                Los datos específicos del concurso serán completados al momento de enviar la notificación.
+            </div>
+            
+            <!-- Campaign form -->
+            <form method="POST" action="{{ form_action }}">
+                <div class="mb-3">
+                    <label for="nombre_campana" class="form-label">Nombre de la Campaña *</label>
+                    <input type="text" class="form-control" id="nombre_campana" name="nombre_campana" 
+                           value="{{ campaign.nombre_campana if campaign else '' }}" required>
+                    <div class="form-text">Ejemplo: "Notificación Acta de Constitución al Tribunal"</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="asunto_email" class="form-label">Asunto del Email *</label>
+                    <input type="text" class="form-control" id="asunto_email" name="asunto_email" 
+                           value="{{ campaign.asunto_email if campaign else '' }}" required>
+                    <div class="form-text">Puede contener marcadores como: <<nombre_concurso>>, <<expediente>></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="cuerpo_email_html" class="form-label">Cuerpo del Email (HTML) *</label>
+                    <textarea class="form-control" id="cuerpo_email_html" name="cuerpo_email_html" rows="10" required>{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
+                    <div class="form-text">
+                        Puede escribir en formato HTML básico y utilizar los marcadores especificados abajo.
+                    </div>
+                </div>
+                  <div class="card mb-3">
+                    <div class="card-header">Destinatarios</div>
+                    <div class="card-body">
+                        <!-- Tribunal Members Selection -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Miembros del Tribunal:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col" style="width: 30%">Rol</th>
+                                            <th scope="col" style="width: 35%">Claustro Docente</th>
+                                            <th scope="col" style="width: 35%">Claustro Estudiante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% set roles = ["Presidente", "Titular", "Suplente", "Veedor"] %}
+                                        {% set claustros = ["Docente", "Estudiante"] %}
+                                        
+                                        {% for rol in roles %}
+                                        <tr>
+                                            <td>{{ rol }}</td>
+                                            {% for claustro in claustros %}
+                                            <td class="text-center">
+                                                <div class="form-check d-flex justify-content-center">
+                                                    <input type="checkbox" class="form-check-input" 
+                                                           id="tribunal_{{ rol|lower }}_{{ claustro|lower }}" 
+                                                           name="tribunal_rol_claustro" 
+                                                           value="{{ rol }}_{{ claustro }}"
+                                                           {% if campaign and campaign.destinatarios_json.get('tribunal_destinatarios', []) and {'rol': rol, 'claustro': claustro} in campaign.destinatarios_json.get('tribunal_destinatarios', []) %}checked{% endif %}>
+                                                </div>
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Other Roles Selection -->
+                        <div class="mb-3">
+                            <h6 class="mb-2">Otros Destinatarios:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="role_postulantes" name="otros_roles_destinatarios" value="postulantes"
+                                               {% if campaign and 'postulantes' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_postulantes">Postulantes</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="role_jefe_departamento" name="otros_roles_destinatarios" value="jefe_departamento"
+                                               {% if campaign and 'jefe_departamento' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_jefe_departamento">Jefe de Departamento</label>
+                                    </div>
+                                </div>
+                            </div>                        </div>
+                        
+                        <!-- Static Emails -->
+                        <div class="mb-3">
+                            <label for="emails_estaticos" class="form-label">Emails Estáticos Adicionales:</label>
+                            <textarea class="form-control" id="emails_estaticos" name="emails_estaticos" rows="4" 
+                                      placeholder="Un email por línea">{{ emails_estaticos if emails_estaticos else '' }}</textarea>
+                            <div class="form-text">Ingrese direcciones de correo adicionales, una por línea.</div>
+                        </div>
+                    </div>
+                </div>                  <!-- Document Attachments Selection -->
+                <div class="card mb-3">
+                    <div class="card-header">Documentos a Adjuntar</div>                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle"></i>
+                            Seleccione los tipos de documentos que desea adjuntar a los emails y la versión de cada uno (borrador o firmado). 
+                            Cuando se ejecute la campaña, el sistema buscará estos documentos en el concurso y los adjuntará automáticamente.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="mb-3">Tipos de Documentos:</h6>
+                            <div class="row">
+                                {% for tipo_codigo, tipo_nombre in documento_tipos.items() %}
+                                <div class="col-md-12 mb-3">
+                                    <div class="card border-light">
+                                        <div class="card-header bg-light">{{ tipo_nombre }}</div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" 
+                                                       id="documento_tipo_{{ tipo_codigo }}_borrador" 
+                                                       name="documento_concurso_tipos_adjuntos" 
+                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "borrador"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'borrador'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_borrador">{{ tipo_nombre }} (Borrador)</label>
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input type="checkbox" class="form-check-input" 
+                                                       id="documento_tipo_{{ tipo_codigo }}_firmado" 
+                                                       name="documento_concurso_tipos_adjuntos" 
+                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "firmado"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'firmado'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_firmado">{{ tipo_nombre }} (Firmado)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Attachments Section -->
+                        <div class="mb-3 mt-4">
+                            <h6 class="mb-3">Adjuntos Personalizados:</h6>
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i>
+                                Puede agregar IDs de documentos de Google Drive adicionales como adjuntos.
+                                Ingrese cada ID de Google Drive en una línea separada.
+                            </div>
+                            <textarea class="form-control" id="adjuntos_personalizados" name="adjuntos_personalizados" rows="4" 
+                                      placeholder="Ingrese IDs de Google Drive, uno por línea (ej: 1abc123def456, etc.)">{{ adjuntos_personalizados if adjuntos_personalizados else '' }}</textarea>
+                            <div class="form-text">
+                                El ID de Google Drive es la parte de la URL después de "/d/" y antes de "/view" o el siguiente "/". 
+                                Ejemplo: En "https://drive.google.com/file/d/1abc123def456/view", el ID es "1abc123def456".
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-secondary">
+                    <h6>Marcadores Disponibles:</h6>
+                    <p class="mb-2">Puede utilizar estos marcadores en el asunto y cuerpo del email:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;nombre_destinatario&gt;&gt;</code> - Nombre del destinatario</li>
+                                <li><code>&lt;&lt;nombre_concurso&gt;&gt;</code> - Descripción completa del concurso</li>
+                                <li><code>&lt;&lt;expediente&gt;&gt;</code> - Número de expediente</li>
+                                <li><code>&lt;&lt;departamento&gt;&gt;</code> - Nombre del departamento</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;area&gt;&gt;</code> - Área del concurso</li>
+                                <li><code>&lt;&lt;orientacion&gt;&gt;</code> - Orientación del concurso</li>
+                                <li><code>&lt;&lt;categoria&gt;&gt;</code> - Categoría (ej. Profesor Adjunto)</li>
+                                <li><code>&lt;&lt;dedicacion&gt;&gt;</code> - Dedicación (ej. Simple)</li>
+                                <li><code>&lt;&lt;fecha_actual&gt;&gt;</code> - Fecha actual (formato DD/MM/YYYY)</li>
+                            </ul>
+                        </div>
+                    </div>                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        {% if campaign %}Actualizar Campaña{% else %}Guardar Campaña{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add a wysiwyg editor for the email body if needed
+        // This is just a placeholder, you can implement a rich text editor like TinyMCE or CKEditor
+    });
+</script>
+{% endblock %}

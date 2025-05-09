@@ -7,15 +7,19 @@
         "nombre": "Profesor Titular",
         "documentacionRequerida": {
           "base": [
-            "CV prueba cambio base",
-            "PLAN_TRABAJO",
             "DNI",
-            "TITULO_GRADO"
+            "CV",
+            "DOCUMENTACION_RESPALDATORIA_CV",
+            "TITULO_UNIVERSITARIO",
+            "ANTECEDENTES_IDONEIDAD",
+            "PROPUESTA_PROGRAMA",
+            "ACTIVIDADES_PREVISTAS",
+            "PLAN_FORMACION_RRHH"
           ],
           "porDedicacion": {
-            "Simple": ["FORMULARIO_A"],
-            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
-            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+            "Simple": ["PLAN_IVE_OPCIONAL"],
+            "Parcial": ["PLAN_IVE"],
+            "Exclusiva": ["PLAN_IVE"]
           }
         }
       },
@@ -24,15 +28,19 @@
         "nombre": "Profesor Asociado",
         "documentacionRequerida": {
           "base": [
-            "CV",
-            "PLAN_TRABAJO",
             "DNI",
-            "TITULO_GRADO"
+            "CV",
+            "DOCUMENTACION_RESPALDATORIA_CV",
+            "TITULO_UNIVERSITARIO",
+            "ANTECEDENTES_IDONEIDAD",
+            "PROPUESTA_PROGRAMA",
+            "ACTIVIDADES_PREVISTAS",
+            "PLAN_FORMACION_RRHH"
           ],
           "porDedicacion": {
-            "Simple": ["FORMULARIO_A"],
-            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
-            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+            "Simple": ["PLAN_IVE_OPCIONAL"],
+            "Parcial": ["PLAN_IVE"],
+            "Exclusiva": ["PLAN_IVE"]
           }
         }
       },
@@ -41,15 +49,18 @@
         "nombre": "Profesor Adjunto",
         "documentacionRequerida": {
           "base": [
-            "CV",
-            "PLAN_TRABAJO",
             "DNI",
-            "TITULO_GRADO"
+            "CV",
+            "DOCUMENTACION_RESPALDATORIA_CV",
+            "TITULO_UNIVERSITARIO",
+            "ANTECEDENTES_IDONEIDAD",
+            "PROPUESTA_PROGRAMA",
+            "ACTIVIDADES_PREVISTAS"
           ],
           "porDedicacion": {
-            "Simple": ["FORMULARIO_A"],
-            "Parcial": ["FORMULARIO_B", "PLANIFICACION"],
-            "Exclusiva": ["FORMULARIO_C", "PLANIFICACION", "PROYECTO_INVESTIGACION"]
+            "Simple": ["PLAN_IVE_OPCIONAL"],
+            "Parcial": ["PLAN_IVE"],
+            "Exclusiva": ["PLAN_IVE"]
           }
         }
       }
@@ -63,14 +74,17 @@
         "nombre": "Jefe de Trabajos Prácticos",
         "documentacionRequerida": {
           "base": [
-            "CV",
             "DNI",
-            "TITULO_GRADO"
+            "CV",
+            "DOCUMENTACION_RESPALDATORIA_CV",
+            "TITULO_UNIVERSITARIO",
+            "ANTECEDENTES_IDONEIDAD",
+            "PLAN_O_PROGRAMA_ACTIVIDADES"
           ],
           "porDedicacion": {
-            "Simple": ["FORMULARIO_D"],
-            "Parcial": ["FORMULARIO_E"],
-            "Exclusiva": ["FORMULARIO_F", "PROYECTO_INVESTIGACION"]
+            "Simple": ["PLAN_IVE_OPCIONAL"],
+            "Parcial": ["PLAN_IVE"],
+            "Exclusiva": ["PLAN_IVE"]
           }
         }
       },
@@ -79,26 +93,18 @@
         "nombre": "Ayudante de Primera",
         "documentacionRequerida": {
           "base": [
-            "CV",
             "DNI",
-            "TITULO_GRADO"
+            "CV",
+            "DOCUMENTACION_RESPALDATORIA_CV",
+            "TITULO_UNIVERSITARIO",
+            "ANTECEDENTES_IDONEIDAD",
+            "PROPUESTA_EJERCICIO_O_TP"
           ],
           "porDedicacion": {
-            "Simple": ["FORMULARIO_D"],
-            "Parcial": ["FORMULARIO_E"],
-            "Exclusiva": ["FORMULARIO_F", "PROYECTO_INVESTIGACION"]
+            "Simple": ["PLAN_IVE_OPCIONAL"],
+            "Parcial": ["PLAN_IVE"],
+            "Exclusiva": ["PLAN_IVE"]
           }
-        }
-      },
-      {
-        "codigo": "AYS",
-        "nombre": "Ayudante de Segunda",
-        "documentacionRequerida": {
-          "base": [
-            "CV",
-            "DNI",
-            "CERTIFICADO_ALUMNO_REGULAR"
-          ]
         }
       }
     ]
