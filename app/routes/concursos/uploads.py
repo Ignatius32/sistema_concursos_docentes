@@ -25,10 +25,10 @@ def cargar_tkd(concurso_id):
         if (not tkd_file or not tkd_file.filename) and not concurso.tkd_file_id:
             flash('Debe subir un archivo PDF para el TKD', 'warning')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-        
-        # Update TKD number
+          # Update TKD number
         old_tkd = concurso.tkd
         concurso.tkd = tkd_number
+        concurso.id_designacion_mocovi = tkd_number  # Update MOCOVI ID as well to ensure placeholder works
         
         # Create history record for TKD number update
         if old_tkd != tkd_number:
@@ -116,10 +116,10 @@ def borrar_tkd(concurso_id):
         
         # Store the old TKD value for history
         old_tkd = concurso.tkd
-        
-        # Delete TKD number if it exists
+          # Delete TKD number if it exists
         if concurso.tkd:
             concurso.tkd = None
+            concurso.id_designacion_mocovi = None  # Also clear MOCOVI ID for consistency
             deleted_items.append("número TKD")
         
         # If anything was deleted, create a history record

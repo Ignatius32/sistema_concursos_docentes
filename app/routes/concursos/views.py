@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion, TribunalMiembro, Persona
-from app.helpers.text_formatting import format_descripcion_cargo
+from app.services.placeholder_resolver import get_core_placeholders
 from app.helpers.api_services import get_considerandos_data
 from . import concursos, drive_api
 

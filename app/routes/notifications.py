@@ -9,7 +9,7 @@ import json
 
 from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso
 from app.integrations.google_drive import GoogleDriveAPI
-from app.helpers.api_services import get_departamento_heads_data
+from app.services.placeholder_resolver import get_core_placeholders, replace_text_with_placeholders
 from app.utils.constants import DOCUMENTO_TIPOS
 
 # Initialize blueprint
@@ -347,36 +347,41 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 if file_id and file_id.strip() and file_id.strip() not in attachment_file_ids:
                     attachment_file_ids.append(file_id.strip())
                     current_app.logger.info(f"Added custom attachment with ID: {file_id}")
-        
-        # Begin sending emails
+          # Begin sending emails
         sent_count = 0
         failed_count = 0
         
         for email_address in resolved_emails:
             try:
-                # Create placeholders for this recipient
-                placeholders = {
-                    'nombre_concurso': f"{concurso.categoria_nombre} ({concurso.dedicacion})",
-                    'expediente': concurso.expediente or "",
-                    'departamento': concurso.departamento_rel.nombre if concurso.departamento_rel else "",
-                    'area': concurso.area or "",
-                    'orientacion': concurso.orientacion or "",
-                    'categoria': concurso.categoria_nombre or "",
-                    'dedicacion': concurso.dedicacion or "",
-                    'fecha_actual': datetime.utcnow().strftime('%d/%m/%Y'),
-                    'nombre_destinatario': destination_names.get(email_address, "")
-                }
+                # Look up if we have a recipient persona ID
+                recipient_persona_id = None
+                recipient_name = destination_names.get(email_address, "")
                 
-                # Prepare final email content with placeholders replaced
-                final_asunto = campaign.asunto_email
-                final_cuerpo = campaign.cuerpo_email_html
+                # Try to find a persona associated with this email for personalized placeholders
+                if recipient_name:
+                    # This is a simplified lookup - in a real implementation, you may want to 
+                    # use the email address to find the corresponding persona ID more accurately
+                    persona = Persona.query.filter(
+                        (Persona.correo == email_address) | 
+                        ((Persona.nombre + ' ' + Persona.apellido) == recipient_name) |
+                        ((Persona.apellido + ', ' + Persona.nombre) == recipient_name)
+                    ).first()
+                    
+                    if persona:
+                        recipient_persona_id = persona.id
                 
-                # Replace placeholders in subject and body
-                for key, value in placeholders.items():
-                    placeholder = f"<<{key}>>"
-                    final_asunto = final_asunto.replace(placeholder, str(value))
-                    final_cuerpo = final_cuerpo.replace(placeholder, str(value))
-                  # Send email with attachments
+                # Get placeholders for this concurso and recipient from the central resolver
+                placeholders = get_core_placeholders(concurso_id, persona_id=recipient_persona_id)
+                
+                # Ensure the recipient name is in the placeholders
+                if not placeholders.get('nombre_destinatario') and recipient_name:
+                    placeholders['nombre_destinatario'] = recipient_name
+                
+                # Use the centralized text replacement function
+                final_asunto = replace_text_with_placeholders(campaign.asunto_email, placeholders)
+                final_cuerpo = replace_text_with_placeholders(campaign.cuerpo_email_html, placeholders)
+                
+                # Send email with attachments
                 result = drive_api.send_email(
                     to_email=email_address,
                     subject=final_asunto,

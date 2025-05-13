@@ -3,39 +3,7 @@
 {% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="card">    <div class="card-header d-flex justify-content-between align-items-center">        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>        <div class="d-flex align-items-center">            <div class="btn-group me-2">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Respaldo Presupuestario
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cargarTkdModal">
-                            <i class="bi bi-upload"></i> Cargar TKD Respaldo
-                        </a></li>
-                        {% if concurso.tkd or concurso.tkd_file_id %}
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#borrarTkdModal">
-                            <i class="bi bi-trash"></i> Borrar TKD Respaldo
-                        </a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-                
-                {% if available_documents %}
-                <div class="btn-group">
-                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Generar Actas/Resoluciones
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        {% for doc in available_documents %}
-                        <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-                
-                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-primary">Tribunal</a>
-                <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">Postulantes</a>
-            </div>            
+<div class="card">    <div class="card-header d-flex justify-content-between align-items-center">        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>        <div class="d-flex align-items-center">
             <!-- Three-dot vertical menu for Edit/Delete -->
             <div class="dropdown">
                 <button class="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -95,11 +63,27 @@
             {% endif %}
         </ul>        <!-- Tab content -->
         <div class="tab-content">
-            <!-- Tab 1: Información y Detalles -->
-            <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+            <!-- Tab 1: Información y Detalles -->            <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
                 <div class="row">
                     <div class="col-md-6">
-                        <h4>Información General</h4>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Información General</h4>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Respaldo Presupuestario
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cargarTkdModal">
+                                        <i class="bi bi-upload"></i> Cargar TKD Respaldo
+                                    </a></li>
+                                    {% if concurso.tkd or concurso.tkd_file_id %}
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#borrarTkdModal">
+                                        <i class="bi bi-trash"></i> Borrar TKD Respaldo
+                                    </a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
                         <table class="table">
                     <tr>
                         <th>Tipo:</th>
@@ -229,9 +213,22 @@
             </div>
         </div>
             </div>
-              <!-- Tab 2: Documentos Generados -->
-            <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
-                <h4>Documentos Generados</h4>
+              <!-- Tab 2: Documentos Generados -->            <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Documentos Generados</h4>
+                    {% if available_documents %}
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            Generar Documento
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% for doc in available_documents %}
+                            <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
@@ -501,12 +498,14 @@
                             <tr>
                                 <td colspan="6" class="text-center">No hay miembros en el tribunal</td>
                             </tr>
-                            {% endfor %}
-                        </tbody>
+                            {% endfor %}                        </tbody>
                     </table>
                 </div>
                 <div class="text-end mt-2">
-                    <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-primary">
+                    <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+                        <i class="bi bi-plus-circle"></i> Agregar Miembro
+                    </a>
+                    <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
                         Ver Tribunal Completo
                     </a>
                 </div>
@@ -548,11 +547,13 @@
                                 <td colspan="6" class="text-center">No hay postulantes inscriptos</td>
                             </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                        </tbody>                </table>
                 </div>
                 <div class="text-end mt-2">
-                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-primary">
+                    <a href="{{ url_for('postulantes.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+                        <i class="bi bi-plus-circle"></i> Agregar Postulante
+                    </a>
+                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
                         Ver Postulantes Completo
                     </a>
                 </div>

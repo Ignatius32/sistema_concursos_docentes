@@ -2,7 +2,7 @@ from flask import redirect, url_for, flash, request, render_template
 from flask_login import login_required, current_user
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, DocumentoConcurso, HistorialEstado, DocumentTemplateConfig
-from app.helpers.text_formatting import format_descripcion_cargo
+from app.services.placeholder_resolver import get_core_placeholders
 from app.helpers.api_services import get_considerandos_data, get_departamento_heads_data
 from app.document_generation.document_generator import generar_documento_desde_template
 import json
@@ -100,14 +100,11 @@ def considerandos_builder(concurso_id):
     if not template_google_id and request.args.get('template_name'):
         template_google_id = request.args.get('template_name')
     
-    # Generate cargo description
-    descripcion_cargo = format_descripcion_cargo(
-        concurso.cant_cargos,
-        concurso.tipo,
-        concurso.categoria,
-        concurso.categoria_nombre or concurso.categoria,
-        concurso.dedicacion
-    )
+    # Get all placeholders from the centralized resolver
+    placeholders = get_core_placeholders(concurso_id)
+    
+    # Get the cargo description from the placeholders
+    descripcion_cargo = placeholders['descripcion_cargo']
     
     if not document_type_key or not template_google_id:
         flash('Tipo de documento o plantilla no especificados', 'danger')
@@ -339,22 +336,23 @@ def enviar_firma(concurso_id, documento_id):
         if not destinatario:
             flash('El correo del destinatario es requerido.', 'error')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-            
-        # We're already using the drive_api imported from __init__.py, no need to create a new instance
         
+        # Get placeholders from the centralized resolver
+        placeholders = get_core_placeholders(concurso_id)
+            
         # Prepare email content
         doc_name = documento.tipo.replace('_', ' ').title()
-        subject = f'Solicitud de firma: {doc_name} - Exp. {concurso.expediente or "S/N"}'
+        subject = f'Solicitud de firma: {doc_name} - Exp. {placeholders["expediente"] or "S/N"}'
         html_body = f"""
         <p>Se solicita la firma del siguiente documento:</p>
         <p><strong>{doc_name}</strong></p>
         <p><strong>Detalles del concurso:</strong></p>
         <ul>
-            <li>Departamento: {concurso.departamento_rel.nombre}</li>
-            <li>Área: {concurso.area}</li>
-            <li>Orientación: {concurso.orientacion}</li>
-            <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
-            <li>Dedicación: {concurso.dedicacion}</li>
+            <li>Departamento: {placeholders["departamento_nombre"]}</li>
+            <li>Área: {placeholders["area"]}</li>
+            <li>Orientación: {placeholders["orientacion"]}</li>
+            <li>Categoría: {placeholders["categoria_nombre"]} ({placeholders["categoria_codigo"]})</li>
+            <li>Dedicación: {placeholders["dedicacion"]}</li>
         </ul>
         """
         
@@ -378,14 +376,7 @@ def enviar_firma(concurso_id, documento_id):
             html_body=html_body,
             sender_name='Sistema de Concursos Docentes',
             attachment_ids=[attachment_id],  # Make sure this is a list with a valid ID
-            placeholders={
-                'expediente': concurso.expediente or 'S/N',
-                'departamento': concurso.departamento_rel.nombre,
-                'area': concurso.area,
-                'orientacion': concurso.orientacion,
-                'categoria': concurso.categoria_nombre,
-                'dedicacion': concurso.dedicacion
-            }
+            placeholders=placeholders  # Use all centralized placeholders
         )
         
         # Update document state

@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if campaign %}Editar Campaña de Notificación{% else %}Nueva Campaña de Notificación{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back button -->
+    <div class="mb-3">
+        <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la Lista de Campañas
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                {% if campaign %}Editar Campaña de Notificación: {{ campaign.nombre_campana }}{% else %}Nueva Campaña de Notificación{% endif %}
+            </h4>
+        </div>
+        <div class="card-body">
+            <!-- Global campaign note -->
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle"></i>
+                Esta campaña de notificación es una <strong>plantilla global</strong> que podrá ser utilizada en cualquier concurso.
+                Los datos específicos del concurso serán completados al momento de enviar la notificación.
+            </div>
+            
+            <!-- Campaign form -->
+            <form method="POST" action="{{ form_action }}">
+                <div class="mb-3">
+                    <label for="nombre_campana" class="form-label">Nombre de la Campaña *</label>
+                    <input type="text" class="form-control" id="nombre_campana" name="nombre_campana" 
+                           value="{{ campaign.nombre_campana if campaign else '' }}" required>
+                    <div class="form-text">Ejemplo: "Notificación Acta de Constitución al Tribunal"</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="asunto_email" class="form-label">Asunto del Email *</label>
+                    <input type="text" class="form-control" id="asunto_email" name="asunto_email" 
+                           value="{{ campaign.asunto_email if campaign else '' }}" required>
+                    <div class="form-text">Puede contener marcadores como: <<nombre_concurso>>, <<expediente>></div>
+                </div>
+                  
+                <div class="mb-3">
+                    <label for="cuerpo_email_html" class="form-label">Cuerpo del Email (HTML) *</label>
+                    <textarea class="form-control" id="cuerpo_email_html" name="cuerpo_email_html" rows="10" required>{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
+                    <div class="form-text mb-2">
+                        Utilice el editor para dar formato al texto. Para insertar marcadores, haga clic en "Insertar Marcador".
+                    </div>
+                      
+                    <!-- Placeholders Dropdown -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-tags me-2"></i>Marcadores Disponibles</span>
+                            <div class="input-group input-group-sm" style="max-width: 250px;">
+                                <input type="text" class="form-control" id="placeholder-search" placeholder="Buscar marcador...">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                        </div>
+                        <div class="card-body placeholder-container" style="max-height: 250px; overflow-y: auto;">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <!-- Concurso e Información General -->
+                                    <div class="placeholder-category mb-2" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Concurso e Información General</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;id_concurso&gt;&gt;" style="cursor: pointer">&lt;&lt;id_concurso&gt;&gt;</code> - ID del concurso</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;expediente&gt;&gt;" style="cursor: pointer">&lt;&lt;expediente&gt;&gt;</code> - Número de expediente</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tipo_concurso&gt;&gt;" style="cursor: pointer">&lt;&lt;tipo_concurso&gt;&gt;</code> - Tipo de concurso</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;area&gt;&gt;" style="cursor: pointer">&lt;&lt;area&gt;&gt;</code> - Área del concurso</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;orientacion&gt;&gt;" style="cursor: pointer">&lt;&lt;orientacion&gt;&gt;</code> - Orientación del concurso</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;categoria_codigo&gt;&gt;" style="cursor: pointer">&lt;&lt;categoria_codigo&gt;&gt;</code> - Código de categoría</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;categoria_nombre&gt;&gt;" style="cursor: pointer">&lt;&lt;categoria_nombre&gt;&gt;</code> - Nombre de categoría</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;dedicacion&gt;&gt;" style="cursor: pointer">&lt;&lt;dedicacion&gt;&gt;</code> - Dedicación</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;cant_cargos_numero&gt;&gt;" style="cursor: pointer">&lt;&lt;cant_cargos_numero&gt;&gt;</code> - Cantidad de cargos (número)</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;cant_cargos_texto&gt;&gt;" style="cursor: pointer">&lt;&lt;cant_cargos_texto&gt;&gt;</code> - Cantidad de cargos (texto)</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;descripcion_cargo&gt;&gt;" style="cursor: pointer">&lt;&lt;descripcion_cargo&gt;&gt;</code> - Descripción completa del cargo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;departamento_nombre&gt;&gt;" style="cursor: pointer">&lt;&lt;departamento_nombre&gt;&gt;</code> - Nombre del departamento</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;origen_vacante&gt;&gt;" style="cursor: pointer">&lt;&lt;origen_vacante&gt;&gt;</code> - Origen de la vacante</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;docente_que_genera_vacante&gt;&gt;" style="cursor: pointer">&lt;&lt;docente_que_genera_vacante&gt;&gt;</code> - Docente que genera la vacante</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;licencia&gt;&gt;" style="cursor: pointer">&lt;&lt;licencia&gt;&gt;</code> - Información de licencia</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tkd&gt;&gt;" style="cursor: pointer">&lt;&lt;tkd&gt;&gt;</code> - TKD o ID designación MOCOVI</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;nombre_concurso_notificacion&gt;&gt;" style="cursor: pointer">&lt;&lt;nombre_concurso_notificacion&gt;&gt;</code> - Nombre del concurso para notificación</li>
+                                    </ul>
+        
+                                    <!-- Resoluciones -->
+                                    <div class="placeholder-category mb-2 mt-3" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Resoluciones</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;nro_res_llamado_interino&gt;&gt;" style="cursor: pointer">&lt;&lt;nro_res_llamado_interino&gt;&gt;</code> - Nro. resolución llamado interino</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;nro_res_llamado_regular&gt;&gt;" style="cursor: pointer">&lt;&lt;nro_res_llamado_regular&gt;&gt;</code> - Nro. resolución llamado regular</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;nro_res_tribunal_regular&gt;&gt;" style="cursor: pointer">&lt;&lt;nro_res_tribunal_regular&gt;&gt;</code> - Nro. resolución tribunal regular</li>
+                                    </ul>
+                                    
+                                    <!-- Departamento -->
+                                    <div class="placeholder-category mb-2 mt-3" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Departamento</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;resp_departamento&gt;&gt;" style="cursor: pointer">&lt;&lt;resp_departamento&gt;&gt;</code> - Responsable del departamento</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;prefijo_resp_departamento&gt;&gt;" style="cursor: pointer">&lt;&lt;prefijo_resp_departamento&gt;&gt;</code> - Prefijo del responsable</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <!-- Fechas y Comisiones -->
+                                    <div class="placeholder-category mb-2" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Fechas y Comisiones</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;fecha_actual&gt;&gt;" style="cursor: pointer">&lt;&lt;fecha_actual&gt;&gt;</code> - Fecha actual (DD/MM/YYYY)</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;yyyy&gt;&gt;" style="cursor: pointer">&lt;&lt;yyyy&gt;&gt;</code> - Año actual</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;cierre_inscripcion_fecha&gt;&gt;" style="cursor: pointer">&lt;&lt;cierre_inscripcion_fecha&gt;&gt;</code> - Fecha de cierre de inscripción</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;fecha_comision_academica&gt;&gt;" style="cursor: pointer">&lt;&lt;fecha_comision_academica&gt;&gt;</code> - Fecha de comisión académica</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;fecha_consejo_directivo&gt;&gt;" style="cursor: pointer">&lt;&lt;fecha_consejo_directivo&gt;&gt;</code> - Fecha de consejo directivo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;despacho_comision_academica&gt;&gt;" style="cursor: pointer">&lt;&lt;despacho_comision_academica&gt;&gt;</code> - Despacho comisión académica</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;sesion_consejo_directivo&gt;&gt;" style="cursor: pointer">&lt;&lt;sesion_consejo_directivo&gt;&gt;</code> - Sesión consejo directivo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;despacho_consejo_directivo&gt;&gt;" style="cursor: pointer">&lt;&lt;despacho_consejo_directivo&gt;&gt;</code> - Despacho consejo directivo</li>
+                                    </ul>
+        
+                                    <!-- Tribunal -->
+                                    <div class="placeholder-category mb-2 mt-3" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Tribunal</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_presidente&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_presidente&gt;&gt;</code> - Presidente del tribunal</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_titulares_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_titulares_lista&gt;&gt;</code> - Lista de miembros titulares</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_suplentes_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_suplentes_lista&gt;&gt;</code> - Lista de miembros suplentes</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_vocales_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_vocales_lista&gt;&gt;</code> - Lista de vocales</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_titular_docente_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_titular_docente_lista&gt;&gt;</code> - Lista de titulares docentes</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_titular_estudiante_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_titular_estudiante_lista&gt;&gt;</code> - Lista de titulares estudiantes</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_suplente_docente_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_suplente_docente_lista&gt;&gt;</code> - Lista de suplentes docentes</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;tribunal_suplente_estudiante_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;tribunal_suplente_estudiante_lista&gt;&gt;</code> - Lista de suplentes estudiantes</li>
+                                    </ul>
+                                    
+                                    <!-- Destinatario -->
+                                    <div class="placeholder-category mb-2 mt-3" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Destinatario</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;nombre_destinatario&gt;&gt;" style="cursor: pointer">&lt;&lt;nombre_destinatario&gt;&gt;</code> - Nombre del destinatario</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <!-- Postulantes -->
+                                    <div class="placeholder-category mb-2" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Postulantes</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;postulantes_lista_completa&gt;&gt;" style="cursor: pointer">&lt;&lt;postulantes_lista_completa&gt;&gt;</code> - Lista completa de postulantes</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;postulantes_activos_lista&gt;&gt;" style="cursor: pointer">&lt;&lt;postulantes_activos_lista&gt;&gt;</code> - Lista de postulantes activos</li>
+                                    </ul>
+        
+                                    <!-- Sustanciación -->
+                                    <div class="placeholder-category mb-2 mt-3" style="cursor: pointer">
+                                        <h6 class="text-muted mb-2"><i class="fas fa-chevron-down me-2"></i>Sustanciación</h6>
+                                    </div>
+                                    <ul class="list-unstyled placeholder-list">
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;constitucion_fecha&gt;&gt;" style="cursor: pointer">&lt;&lt;constitucion_fecha&gt;&gt;</code> - Fecha de constitución</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;constitucion_lugar&gt;&gt;" style="cursor: pointer">&lt;&lt;constitucion_lugar&gt;&gt;</code> - Lugar de constitución</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;constitucion_virtual_link&gt;&gt;" style="cursor: pointer">&lt;&lt;constitucion_virtual_link&gt;&gt;</code> - Link virtual de constitución</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;sorteo_fecha&gt;&gt;" style="cursor: pointer">&lt;&lt;sorteo_fecha&gt;&gt;</code> - Fecha de sorteo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;sorteo_lugar&gt;&gt;" style="cursor: pointer">&lt;&lt;sorteo_lugar&gt;&gt;</code> - Lugar de sorteo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;sorteo_virtual_link&gt;&gt;" style="cursor: pointer">&lt;&lt;sorteo_virtual_link&gt;&gt;</code> - Link virtual de sorteo</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;exposicion_fecha&gt;&gt;" style="cursor: pointer">&lt;&lt;exposicion_fecha&gt;&gt;</code> - Fecha de exposición</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;exposicion_lugar&gt;&gt;" style="cursor: pointer">&lt;&lt;exposicion_lugar&gt;&gt;</code> - Lugar de exposición</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;exposicion_virtual_link&gt;&gt;" style="cursor: pointer">&lt;&lt;exposicion_virtual_link&gt;&gt;</code> - Link virtual de exposición</li>
+                                        <li><code class="placeholder-item" data-placeholder="&lt;&lt;temas_exposicion&gt;&gt;" style="cursor: pointer">&lt;&lt;temas_exposicion&gt;&gt;</code> - Temas de exposición</li>
+                                    </ul>
+                                    
+                                    <!-- Template examples section -->
+                                    <div class="mt-3">
+                                        <div class="placeholder-category mb-2" style="cursor: pointer">
+                                            <h6 class="text-muted mb-2"><i class="fas fa-chevron-right me-2"></i>Ejemplos de plantillas</h6>
+                                        </div>
+                                        <div style="display: none;">
+                                            <div class="card mb-2">
+                                                <div class="card-header bg-light">Notificación Simple</div>
+                                                <div class="card-body">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary template-example" data-template="<p>Estimado/a <<nombre_destinatario>>,</p><p>Le informamos que el concurso <<nombre_concurso_notificacion>>, expediente <<expediente>>, ha sido actualizado.</p><p>Puede consultar más información accediendo al sistema.</p><p>Saludos cordiales,<br>Departamento de Concursos Docentes</p>">Insertar plantilla</button>
+                                                </div>
+                                            </div>
+                                            <div class="card mb-2">
+                                                <div class="card-header bg-light">Notificación al Tribunal</div>
+                                                <div class="card-body">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary template-example" data-template="<p>Estimado/a <<nombre_destinatario>>,</p><p>En su calidad de miembro del tribunal del concurso <<nombre_concurso_notificacion>>, expediente <<expediente>>, le informamos que la fecha de constitución del tribunal ha sido establecida para el día <<constitucion_fecha>> en <<constitucion_lugar>>.</p><p>Los miembros titulares del tribunal son:</p><p><<tribunal_titulares_lista>></p><p>Agradecemos su participación y compromiso con este proceso.</p><p>Saludos cordiales,<br>Departamento de Concursos Docentes</p>">Insertar plantilla</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-sm btn-primary toggle-placeholder-container">
+                                <i class="fas fa-angle-down me-1"></i> Mostrar/Ocultar Marcadores
+                            </button>
+                            <small class="text-muted">Haga clic en cualquier marcador para insertarlo en el cuerpo del email</small>
+                        </div>
+                    </div>
+                </div>
+                  
+                <div class="card mb-3">
+                    <div class="card-header">Destinatarios</div>
+                    <div class="card-body">
+                        <!-- Tribunal Members Selection -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Miembros del Tribunal:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col" style="width: 30%">Rol</th>
+                                            <th scope="col" style="width: 35%">Claustro Docente</th>
+                                            <th scope="col" style="width: 35%">Claustro Estudiante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% set roles = ["Presidente", "Titular", "Suplente", "Veedor"] %}
+                                        {% set claustros = ["Docente", "Estudiante"] %}
+                                        
+                                        {% for rol in roles %}
+                                        <tr>
+                                            <td>{{ rol }}</td>
+                                            {% for claustro in claustros %}
+                                            <td class="text-center">
+                                                <div class="form-check d-flex justify-content-center">
+                                                    <input type="checkbox" class="form-check-input" 
+                                                           id="tribunal_{{ rol|lower }}_{{ claustro|lower }}" 
+                                                           name="tribunal_rol_claustro" 
+                                                           value="{{ rol }}_{{ claustro }}"
+                                                           {% if campaign and campaign.destinatarios_json.get('tribunal_destinatarios', []) and {'rol': rol, 'claustro': claustro} in campaign.destinatarios_json.get('tribunal_destinatarios', []) %}checked{% endif %}>
+                                                </div>
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Other Roles Selection -->
+                        <div class="mb-3">
+                            <h6 class="mb-2">Otros Destinatarios:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="role_postulantes" name="otros_roles_destinatarios" value="postulantes"
+                                               {% if campaign and 'postulantes' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_postulantes">Postulantes</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="role_jefe_departamento" name="otros_roles_destinatarios" value="jefe_departamento"
+                                               {% if campaign and 'jefe_departamento' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_jefe_departamento">Jefe de Departamento</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Static Emails -->
+                        <div class="mb-3">
+                            <label for="emails_estaticos" class="form-label">Emails Estáticos Adicionales:</label>
+                            <textarea class="form-control" id="emails_estaticos" name="emails_estaticos" rows="4" 
+                                      placeholder="Un email por línea">{{ emails_estaticos if emails_estaticos else '' }}</textarea>
+                            <div class="form-text">Ingrese direcciones de correo adicionales, una por línea.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document Attachments Selection -->
+                <div class="card mb-3">
+                    <div class="card-header">Documentos a Adjuntar</div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle"></i>
+                            Seleccione los tipos de documentos que desea adjuntar a los emails y la versión de cada uno (borrador o firmado). 
+                            Cuando se ejecute la campaña, el sistema buscará estos documentos en el concurso y los adjuntará automáticamente.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="mb-3">Tipos de Documentos:</h6>
+                            <div class="row">
+                                {% for tipo_codigo, tipo_nombre in documento_tipos.items() %}
+                                <div class="col-md-12 mb-3">
+                                    <div class="card border-light">
+                                        <div class="card-header bg-light">{{ tipo_nombre }}</div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" 
+                                                       id="documento_tipo_{{ tipo_codigo }}_borrador" 
+                                                       name="documento_concurso_tipos_adjuntos" 
+                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "borrador"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'borrador'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_borrador">{{ tipo_nombre }} (Borrador)</label>
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input type="checkbox" class="form-check-input" 
+                                                       id="documento_tipo_{{ tipo_codigo }}_firmado" 
+                                                       name="documento_concurso_tipos_adjuntos" 
+                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "firmado"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'firmado'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_firmado">{{ tipo_nombre }} (Firmado)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Attachments Section -->
+                        <div class="mb-3 mt-4">
+                            <h6 class="mb-3">Adjuntos Personalizados:</h6>
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i>
+                                Puede agregar IDs de documentos de Google Drive adicionales como adjuntos.
+                                Ingrese cada ID de Google Drive en una línea separada.
+                            </div>
+                            <textarea class="form-control" id="adjuntos_personalizados" name="adjuntos_personalizados" rows="4" 
+                                      placeholder="Ingrese IDs de Google Drive, uno por línea (ej: 1abc123def456, etc.)">{{ adjuntos_personalizados if adjuntos_personalizados else '' }}</textarea>
+                            <div class="form-text">
+                                El ID de Google Drive es la parte de la URL después de "/d/" y antes de "/view" o el siguiente "/". 
+                                Ejemplo: En "https://drive.google.com/file/d/1abc123def456/view", el ID es "1abc123def456".
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        {% if campaign %}Actualizar Campaña{% else %}Guardar Campaña{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.tiny.cloud/1/f568hawh7ocdjtoyyhq8qu628rtphaszpipwipjg1yj9iwl2/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize TinyMCE rich text editor with correct placeholder handling
+        tinymce.init({
+            selector: '#cuerpo_email_html',
+            plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+            height: 400,
+            // Use raw encoding to preserve special characters including angle brackets
+            entity_encoding: 'raw',
+            encoding: 'xml',
+            // Protect text between << and >> from being parsed as HTML
+            protect: [
+                /\<\<[\s\S]*?\>\>/g  // Protect text between << and >> from being processed
+            ],
+            // Allow spans with custom attributes and styling
+            extended_valid_elements: 'span[*]',
+            content_style: '.placeholder { background-color: #e9f5ff; border-radius: 3px; padding: 1px 3px; font-family: monospace; display: inline-block; }',
+            setup: function(editor) {
+                // Save content back to textarea when editor loses focus
+                editor.on('blur', function() {
+                    editor.save();
+                });
+                
+                // Process content on initialization to style existing placeholders
+                editor.on('init', function() {
+                    let content = editor.getContent();
+                    // Find <<placeholder>> patterns and replace with styled spans
+                    content = content.replace(/&lt;&lt;([^&]+)&gt;&gt;/g, function(match, placeholder) {
+                        return `<span class="placeholder" contenteditable="false">&lt;&lt;${placeholder}&gt;&gt;</span>`;
+                    });
+                    content = content.replace(/<<([^>]+)>>/g, function(match, placeholder) {
+                        return `<span class="placeholder" contenteditable="false">${match}</span>`;
+                    });
+                    editor.setContent(content);
+                });
+                
+                // Handle placeholder insertion
+                editor.on('BeforeSetContent', function(e) {
+                    // Check if the content contains placeholder patterns
+                    if (e.content.indexOf('<<') !== -1 && e.content.indexOf('>>') !== -1) {
+                        e.content = e.content.replace(/<<([^>]+)>>/g, function(match, placeholder) {
+                            return `<span class="placeholder" contenteditable="false">${match}</span>`;
+                        });
+                    }
+                });
+                
+                // Add a pre-submit processing step to convert placeholder spans back to text
+                document.querySelector('form').addEventListener('submit', function() {
+                    if (tinymce.activeEditor) {
+                        // Get editor content
+                        let content = tinymce.activeEditor.getContent();
+                        
+                        // Replace placeholder spans with plain text placeholders
+                        content = content.replace(/<span class="placeholder"[^>]*>(&lt;&lt;.*?&gt;&gt;|<<.*?>>)<\/span>/g, function(match, p1) {
+                            // If the placeholder is HTML encoded, decode it
+                            if (p1.startsWith('&lt;')) {
+                                return p1.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                            }
+                            return p1;
+                        });
+                        
+                        // Update the textarea value
+                        document.getElementById('cuerpo_email_html').value = content;
+                        
+                        // Save the editor content to ensure consistency
+                        tinymce.activeEditor.setContent(content);
+                        tinymce.activeEditor.save();
+                    }
+                });
+            }
+        });
+        
+        // Make placeholders clickable
+        document.querySelectorAll('.placeholder-item').forEach(function(placeholder) {
+            placeholder.addEventListener('click', function() {
+                const placeholderText = this.getAttribute('data-placeholder');
+                
+                // If TinyMCE is active, insert at cursor position in editor
+                if (tinymce.activeEditor) {
+                    // Create a span with styling that preserves the placeholder format
+                    const placeholderSpan = `<span class="placeholder" style="background-color: #e9f5ff; border-radius: 3px; padding: 1px 3px; font-family: monospace; display: inline-block;" contenteditable="false" data-mce-placeholder="true">${placeholderText}</span>`;
+                    tinymce.activeEditor.execCommand('mceInsertContent', false, placeholderSpan);
+                    tinymce.activeEditor.focus();
+                } else {
+                    // Fallback for plain textarea if editor fails to load
+                    const textarea = document.getElementById('cuerpo_email_html');
+                    const startPos = textarea.selectionStart;
+                    const endPos = textarea.selectionEnd;
+                    const before = textarea.value.substring(0, startPos);
+                    const after = textarea.value.substring(endPos);
+                    
+                    textarea.value = before + placeholderText + after;
+                    textarea.focus();
+                    textarea.selectionStart = startPos + placeholderText.length;
+                    textarea.selectionEnd = startPos + placeholderText.length;
+                }
+            });
+        });
+        
+        // Make placeholder section titles collapsible
+        document.querySelectorAll('.placeholder-category').forEach(function(category) {
+            category.addEventListener('click', function() {
+                const listElement = this.nextElementSibling;
+                if (listElement.style.display === 'none') {
+                    listElement.style.display = 'block';
+                    this.querySelector('i').classList.remove('fa-chevron-right');
+                    this.querySelector('i').classList.add('fa-chevron-down');
+                } else {
+                    listElement.style.display = 'none';
+                    this.querySelector('i').classList.remove('fa-chevron-down');
+                    this.querySelector('i').classList.add('fa-chevron-right');
+                }
+            });
+        });
+
+        // Toggle placeholder container visibility with the button
+        document.querySelector('.toggle-placeholder-container').addEventListener('click', function() {
+            const container = document.querySelector('.placeholder-container');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                this.querySelector('i').classList.remove('fa-angle-down');
+                this.querySelector('i').classList.add('fa-angle-up');
+            } else {
+                container.style.display = 'none';
+                this.querySelector('i').classList.remove('fa-angle-up');
+                this.querySelector('i').classList.add('fa-angle-down');
+            }
+        });
+
+        // Filter placeholders by search input
+        document.getElementById('placeholder-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            document.querySelectorAll('.placeholder-item').forEach(function(item) {
+                const placeholderText = item.getAttribute('data-placeholder').toLowerCase();
+                const itemLabel = item.textContent.toLowerCase();
+                const parent = item.closest('li');
+                
+                if (placeholderText.includes(searchTerm) || itemLabel.includes(searchTerm)) {
+                    parent.style.display = '';
+                    // Make sure parent list is visible if it contains matches
+                    let parentList = parent.closest('ul');
+                    if (parentList) {
+                        parentList.style.display = 'block';
+                        let categoryHeader = parentList.previousElementSibling;
+                        if (categoryHeader && categoryHeader.classList.contains('placeholder-category')) {
+                            let icon = categoryHeader.querySelector('i');
+                            if (icon) {
+                                icon.classList.remove('fa-chevron-right');
+                                icon.classList.add('fa-chevron-down');
+                            }
+                        }
+                    }
+                } else {
+                    parent.style.display = 'none';
+                }
+            });
+        });
+        
+        // Add template examples functionality
+        document.querySelectorAll('.template-example').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const templateHtml = this.getAttribute('data-template');
+                
+                if (tinymce.activeEditor) {
+                    // Insert as raw text first to ensure angle brackets are preserved
+                    tinymce.activeEditor.setContent(tinymce.DOM.encode(templateHtml));
+                    // Then decode it to have proper HTML but preserve placeholders
+                    const content = tinymce.activeEditor.getContent();
+                    tinymce.activeEditor.setContent(content.replace(/&lt;&lt;/g, '<<').replace(/&gt;&gt;/g, '>>'));
+                    tinymce.activeEditor.save();
+                    tinymce.activeEditor.focus();
+                } else {
+                    const textarea = document.getElementById('cuerpo_email_html');
+                    textarea.value = templateHtml;
+                    textarea.focus();
+                }
+            });
+        });
+        
+        // Make the template examples section togglable
+        document.querySelector('.placeholder-category:last-child').addEventListener('click', function() {
+            const contentDiv = this.nextElementSibling;
+            if (contentDiv.style.display === 'none') {
+                contentDiv.style.display = 'block';
+                this.querySelector('i').classList.remove('fa-chevron-right');
+                this.querySelector('i').classList.add('fa-chevron-down');
+            } else {
+                contentDiv.style.display = 'none';
+                this.querySelector('i').classList.remove('fa-chevron-down');
+                this.querySelector('i').classList.add('fa-chevron-right');
+            }
+        });
+    });
+</script>
+{% endblock %}

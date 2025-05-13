@@ -5,7 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Listado de Concursos</h2>
-    <a href="{{ url_for('concursos.nuevo') }}" class="btn btn-primary">Nuevo Concurso</a>
+    <a href="{{ url_for('concursos.nuevo') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nuevo Concurso
+    </a>
 </div>
 
 {% if concursos %}
@@ -18,10 +20,11 @@
                 <th>Área</th>
                 <th>Categoría</th>
                 <th>Dedicación</th>
-                <th>Tipo</th>                <th>Estado</th>
+                <th>Tipo</th>
+                <th>Estado</th>
                 <th>Cierre Inscripción</th>
                 <th>Tribunal</th>
-                <th>Acciones</th>
+                <th class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -32,8 +35,10 @@
                 <td>{{ concurso.area }}</td>
                 <td>{{ concurso.categoria }}</td>
                 <td>{{ concurso.dedicacion }}</td>
-                <td>{{ concurso.tipo }}</td>                <td><span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">{{ concurso.estado_actual }}</span></td>
-                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>                <td>
+                <td>{{ concurso.tipo }}</td>
+                <td><span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">{{ concurso.estado_actual }}</span></td>
+                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
+                <td>
                     {% set tribunal_count = concurso.asignaciones_tribunal.count() %}
                     {% if tribunal_count > 0 %}
                         <span class="badge bg-success">{{ tribunal_count }}</span>
@@ -54,45 +59,10 @@
                         </small>
                     {% endif %}
                 </td>
-                <td>
-                    <div class="btn-group">
-                        <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-sm btn-info">Ver</a>
-                        <a href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}" class="btn btn-sm btn-warning">Editar</a>
-                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ concurso.id }}">
-                            Eliminar
-                        </button>
-                        <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-secondary">Tribunal</a>
-                        <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-sm btn-primary">Postulantes</a>
-                    </div>
-
-                    <!-- Modal de confirmación de eliminación -->
-                    <div class="modal fade" id="eliminarModal{{ concurso.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Confirmar Eliminación</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>¿Está seguro que desea eliminar el concurso #{{ concurso.id }}?</p>
-                                    <p class="text-danger"><strong>¡Atención!</strong> Esta acción eliminará también:</p>
-                                    <ul class="text-danger">
-                                        <li>Todos los miembros del tribunal</li>
-                                        <li>Todos los postulantes y sus documentos</li>
-                                        <li>Todos los documentos del concurso</li>
-                                        <li>Todo el historial y sustanciación</li>
-                                    </ul>
-                                    <p class="text-danger">Esta acción no se puede deshacer.</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                    <form action="{{ url_for('concursos.eliminar', concurso_id=concurso.id) }}" method="POST" style="display: inline;">
-                                        <button type="submit" class="btn btn-danger">Eliminar</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <td class="text-center">
+                    <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Ver Concurso
+                    </a>
                 </td>
             </tr>
             {% endfor %}
@@ -101,7 +71,9 @@
 </div>
 {% else %}
 <div class="alert alert-info">
-    No hay concursos registrados. <a href="{{ url_for('concursos.nuevo') }}">Crear nuevo concurso</a>
+    <i class="bi bi-info-circle me-2"></i>
+    No hay concursos registrados. 
+    <a href="{{ url_for('concursos.nuevo') }}" class="alert-link">Crear nuevo concurso</a>
 </div>
 {% endif %}
 {% endblock %}

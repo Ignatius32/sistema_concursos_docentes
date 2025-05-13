@@ -175,29 +175,98 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="alert alert-secondary">
+                  <div class="alert alert-secondary">
                     <h6>Marcadores Disponibles:</h6>
                     <p class="mb-2">Puede utilizar estos marcadores en el asunto y cuerpo del email:</p>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Concurso e Información General</h6>
                             <ul class="list-unstyled">
-                                <li><code>&lt;&lt;nombre_destinatario&gt;&gt;</code> - Nombre del destinatario</li>
-                                <li><code>&lt;&lt;nombre_concurso&gt;&gt;</code> - Descripción completa del concurso</li>
+                                <li><code>&lt;&lt;id_concurso&gt;&gt;</code> - ID del concurso</li>
                                 <li><code>&lt;&lt;expediente&gt;&gt;</code> - Número de expediente</li>
-                                <li><code>&lt;&lt;departamento&gt;&gt;</code> - Nombre del departamento</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;tipo_concurso&gt;&gt;</code> - Tipo de concurso</li>
                                 <li><code>&lt;&lt;area&gt;&gt;</code> - Área del concurso</li>
                                 <li><code>&lt;&lt;orientacion&gt;&gt;</code> - Orientación del concurso</li>
-                                <li><code>&lt;&lt;categoria&gt;&gt;</code> - Categoría (ej. Profesor Adjunto)</li>
-                                <li><code>&lt;&lt;dedicacion&gt;&gt;</code> - Dedicación (ej. Simple)</li>
-                                <li><code>&lt;&lt;fecha_actual&gt;&gt;</code> - Fecha actual (formato DD/MM/YYYY)</li>
+                                <li><code>&lt;&lt;categoria_codigo&gt;&gt;</code> - Código de categoría</li>
+                                <li><code>&lt;&lt;categoria_nombre&gt;&gt;</code> - Nombre de categoría</li>
+                                <li><code>&lt;&lt;dedicacion&gt;&gt;</code> - Dedicación</li>
+                                <li><code>&lt;&lt;cant_cargos_numero&gt;&gt;</code> - Cantidad de cargos (número)</li>
+                                <li><code>&lt;&lt;cant_cargos_texto&gt;&gt;</code> - Cantidad de cargos (texto)</li>
+                                <li><code>&lt;&lt;descripcion_cargo&gt;&gt;</code> - Descripción completa del cargo</li>
+                                <li><code>&lt;&lt;departamento_nombre&gt;&gt;</code> - Nombre del departamento</li>
+                                <li><code>&lt;&lt;origen_vacante&gt;&gt;</code> - Origen de la vacante</li>
+                                <li><code>&lt;&lt;docente_que_genera_vacante&gt;&gt;</code> - Docente que genera la vacante</li>
+                                <li><code>&lt;&lt;licencia&gt;&gt;</code> - Información de licencia</li>
+                                <li><code>&lt;&lt;tkd&gt;&gt;</code> - TKD del concurso</li>
+                            </ul>
+
+                            <h6 class="text-muted mt-3">Resoluciones</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;nro_res_llamado_interino&gt;&gt;</code> - Nro. resolución llamado interino</li>
+                                <li><code>&lt;&lt;nro_res_llamado_regular&gt;&gt;</code> - Nro. resolución llamado regular</li>
+                                <li><code>&lt;&lt;nro_res_tribunal_regular&gt;&gt;</code> - Nro. resolución tribunal regular</li>
                             </ul>
                         </div>
-                    </div>                </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Fechas y Comisiones</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;fecha_actual&gt;&gt;</code> - Fecha actual (DD/MM/YYYY)</li>
+                                <li><code>&lt;&lt;yyyy&gt;&gt;</code> - Año actual</li>
+                                <li><code>&lt;&lt;fecha_comision_academica&gt;&gt;</code> - Fecha de comisión académica</li>
+                                <li><code>&lt;&lt;fecha_consejo_directivo&gt;&gt;</code> - Fecha de consejo directivo</li>
+                                <li><code>&lt;&lt;cierre_inscripcion_fecha&gt;&gt;</code> - Fecha de cierre de inscripción</li>
+                                <li><code>&lt;&lt;despacho_comision_academica&gt;&gt;</code> - Despacho comisión académica</li>
+                                <li><code>&lt;&lt;sesion_consejo_directivo&gt;&gt;</code> - Sesión consejo directivo</li>
+                                <li><code>&lt;&lt;despacho_consejo_directivo&gt;&gt;</code> - Despacho consejo directivo</li>
+                            </ul>
+
+                            <h6 class="text-muted mt-3">Departamento</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;resp_departamento&gt;&gt;</code> - Responsable del departamento</li>
+                                <li><code>&lt;&lt;prefijo_resp_departamento&gt;&gt;</code> - Prefijo del responsable</li>
+                            </ul>
+
+                            <h6 class="text-muted mt-3">Destinatario</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;nombre_destinatario&gt;&gt;</code> - Nombre del destinatario</li>
+                                <li><code>&lt;&lt;nombre_concurso_notificacion&gt;&gt;</code> - Nombre del concurso para notificación</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Tribunal</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;tribunal_presidente&gt;&gt;</code> - Presidente del tribunal</li>
+                                <li><code>&lt;&lt;tribunal_titulares_lista&gt;&gt;</code> - Lista de miembros titulares</li>
+                                <li><code>&lt;&lt;tribunal_suplentes_lista&gt;&gt;</code> - Lista de miembros suplentes</li>
+                                <li><code>&lt;&lt;tribunal_vocales_lista&gt;&gt;</code> - Lista de vocales</li>
+                                <li><code>&lt;&lt;tribunal_titular_docente_lista&gt;&gt;</code> - Lista de titulares docentes</li>
+                                <li><code>&lt;&lt;tribunal_titular_estudiante_lista&gt;&gt;</code> - Lista de titulares estudiantes</li>
+                                <li><code>&lt;&lt;tribunal_suplente_docente_lista&gt;&gt;</code> - Lista de suplentes docentes</li>
+                                <li><code>&lt;&lt;tribunal_suplente_estudiante_lista&gt;&gt;</code> - Lista de suplentes estudiantes</li>
+                            </ul>
+
+                            <h6 class="text-muted mt-3">Postulantes</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;postulantes_lista_completa&gt;&gt;</code> - Lista completa de postulantes</li>
+                                <li><code>&lt;&lt;postulantes_activos_lista&gt;&gt;</code> - Lista de postulantes activos</li>
+                            </ul>
+
+                            <h6 class="text-muted mt-3">Sustanciación</h6>
+                            <ul class="list-unstyled">
+                                <li><code>&lt;&lt;constitucion_fecha&gt;&gt;</code> - Fecha de constitución</li>
+                                <li><code>&lt;&lt;constitucion_lugar&gt;&gt;</code> - Lugar de constitución</li>
+                                <li><code>&lt;&lt;constitucion_virtual_link&gt;&gt;</code> - Link virtual de constitución</li>
+                                <li><code>&lt;&lt;sorteo_fecha&gt;&gt;</code> - Fecha de sorteo</li>
+                                <li><code>&lt;&lt;sorteo_lugar&gt;&gt;</code> - Lugar de sorteo</li>
+                                <li><code>&lt;&lt;sorteo_virtual_link&gt;&gt;</code> - Link virtual de sorteo</li>
+                                <li><code>&lt;&lt;exposicion_fecha&gt;&gt;</code> - Fecha de exposición</li>
+                                <li><code>&lt;&lt;exposicion_lugar&gt;&gt;</code> - Lugar de exposición</li>
+                                <li><code>&lt;&lt;exposicion_virtual_link&gt;&gt;</code> - Link virtual de exposición</li>
+                                <li><code>&lt;&lt;temas_exposicion&gt;&gt;</code> - Temas de exposición</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="d-flex justify-content-between mt-4">
                     <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-outline-secondary">Cancelar</a>

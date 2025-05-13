@@ -24,11 +24,17 @@
             <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h4 class="mb-0">Información de Comisión y Consejo</h4>
-                </div>
-                <div class="card-body">
+                </div>                <div class="card-body">
                     <div class="row">  
                         <div class="col-md-6">
                             <h5>Comisión Académica</h5>
+                            <div class="mb-3">
+                                <label for="tkd" class="form-label">Número de TKD</label>
+                                <input type="text" class="form-control placeholder-input prevent-enter-submit" id="tkd" name="tkd" 
+                                       value="{{ concurso.tkd or concurso.id_designacion_mocovi or '' }}"
+                                       data-placeholder-key="<<TKD>>">
+                                <small class="text-muted">Se usará como <<TKD>> en la plantilla</small>
+                            </div>
                             <div class="mb-3">
                                 <label for="fecha_comision_academica" class="form-label">Fecha de Comisión Académica</label>
                                 <input type="date" class="form-control placeholder-input prevent-enter-submit" id="fecha_comision_academica" name="fecha_comision_academica" 
@@ -258,8 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize sortable
     initSortable();
-    
-    // Map to store placeholder values
+      // Map to store placeholder values
     const placeholderValues = {
         "<<Docente_que_genera_vacante>>": "{{ concurso.docente_vacante or '' }}",
         "<<licencia>>": "{{ concurso.origen_vacante or '' }}",
@@ -273,16 +278,19 @@ document.addEventListener('DOMContentLoaded', function() {
         "<<CantCargos>>": "{{ concurso.cant_cargos or '1' }}",
         "<<tipo>>": "{{ concurso.tipo or '' }}",
         "<<descripcion_cargo>>": "{{ descripcion_cargo }}",
-        "<<TKD>>": "{{ concurso.tkd or '' }}"
-        {% if departamento_heads %}
-            {% for head in departamento_heads %}
-                {% if departamento and head.departamento == departamento.nombre %}
-                    , "<<resp_departamento>>": "{{ head.responsable }}"
-                    , "<<prefijo_resp_departamento>>": "{{ head.prefijo }}"
-                {% endif %}
-            {% endfor %}
-        {% endif %}
+        "<<TKD>>": "{{ concurso.tkd or concurso.id_designacion_mocovi or '' }}"
     };
+    
+    // Add department head information
+    {% if departamento and departamento_heads %}
+        {% for head in departamento_heads %}
+            {% if head.departamento == departamento.nombre %}
+    placeholderValues["<<resp_departamento>>"] = "{{ head.responsable }}";
+    placeholderValues["<<prefijo_resp_departamento>>"] = "{{ head.prefijo }}";
+    console.log("Assigned department head prefix:", "{{ head.prefijo }}");
+            {% endif %}
+        {% endfor %}
+    {% endif %}
     
     // Add event listener for TKD field
     const tkdInput = document.getElementById('tkd');

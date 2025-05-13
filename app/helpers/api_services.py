@@ -51,7 +51,11 @@ def get_departamento_heads_data():
         if response.status_code != 200:
             return None
         
-        return response.json()
+        data = response.json()
+        # The API returns data in a 'value' property that contains the array
+        if isinstance(data, dict) and 'value' in data:
+            return data['value']
+        return data
     except Exception as e:
         print(f"Error fetching departamento heads data: {str(e)}")
         return None
