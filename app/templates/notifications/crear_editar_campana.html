@@ -127,32 +127,35 @@
                             Cuando se ejecute la campaña, el sistema buscará estos documentos en el concurso y los adjuntará automáticamente.
                         </div>
                         
-                        <div class="mb-3">
-                            <h6 class="mb-3">Tipos de Documentos:</h6>
+                        <div class="mb-3">                            <h6 class="mb-3">Tipos de Documentos:</h6>
                             <div class="row">
-                                {% for tipo_codigo, tipo_nombre in documento_tipos.items() %}
+                                {% for template in document_templates %}
                                 <div class="col-md-12 mb-3">
                                     <div class="card border-light">
-                                        <div class="card-header bg-light">{{ tipo_nombre }}</div>
+                                        <div class="card-header bg-light">{{ template.display_name }}</div>
                                         <div class="card-body">
                                             <div class="form-check">
                                                 <input type="checkbox" class="form-check-input" 
-                                                       id="documento_tipo_{{ tipo_codigo }}_borrador" 
+                                                       id="documento_template_{{ template.document_type_key }}_borrador" 
                                                        name="documento_concurso_tipos_adjuntos" 
-                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "borrador"}'
-                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'borrador'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
-                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_borrador">{{ tipo_nombre }} (Borrador)</label>
+                                                       value='{"tipo": "{{ template.document_type_key }}", "version": "borrador"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': template.document_type_key, 'version': 'borrador'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_template_{{ template.document_type_key }}_borrador">{{ template.display_name }} (Borrador)</label>
                                             </div>
                                             <div class="form-check mt-2">
                                                 <input type="checkbox" class="form-check-input" 
-                                                       id="documento_tipo_{{ tipo_codigo }}_firmado" 
+                                                       id="documento_template_{{ template.document_type_key }}_firmado" 
                                                        name="documento_concurso_tipos_adjuntos" 
-                                                       value='{"tipo": "{{ tipo_codigo }}", "version": "firmado"}'
-                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': tipo_codigo, 'version': 'firmado'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
-                                                <label class="form-check-label" for="documento_tipo_{{ tipo_codigo }}_firmado">{{ tipo_nombre }} (Firmado)</label>
+                                                       value='{"tipo": "{{ template.document_type_key }}", "version": "firmado"}'
+                                                       {% if campaign and campaign.documentos_adjuntos_config and {'tipo': template.document_type_key, 'version': 'firmado'} in campaign.documentos_adjuntos_config %}checked{% endif %}>
+                                                <label class="form-check-label" for="documento_template_{{ template.document_type_key }}_firmado">{{ template.display_name }} (Firmado)</label>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                {% else %}
+                                <div class="col-md-12">
+                                    <p>No hay plantillas de documentos activas configuradas.</p>
                                 </div>
                                 {% endfor %}
                             </div>

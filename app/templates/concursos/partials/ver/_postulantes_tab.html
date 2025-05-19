@@ -1,0 +1,47 @@
+<div class="tab-pane fade" id="postulantes" role="tabpanel" aria-labelledby="postulantes-tab">
+    <h4>Postulantes</h4>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>DNI</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for postulante in concurso.postulantes %}
+                <tr>
+                    <td>{{ postulante.nombre }}</td>
+                    <td>{{ postulante.apellido }}</td>
+                    <td>{{ postulante.dni }}</td>
+                    <td>{{ postulante.correo }}</td>
+                    <td>{{ postulante.telefono or '-' }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center">No hay postulantes inscriptos</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-end mt-2">
+        <a href="{{ url_for('postulantes.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+            <i class="bi bi-plus-circle"></i> Agregar Postulante
+        </a>
+        <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
+            Ver Postulantes Completo
+        </a>
+    </div>
+</div>

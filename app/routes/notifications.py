@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 import json
 
-from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso
+from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso, DocumentTemplateConfig
 from app.integrations.google_drive import GoogleDriveAPI
 from app.services.placeholder_resolver import get_core_placeholders, replace_text_with_placeholders
 from app.utils.constants import DOCUMENTO_TIPOS
@@ -34,11 +34,13 @@ def parse_email_lines(email_text):
 def crear_notificacion_campaign_form():
     """Display form to create a new notification campaign."""
     
+    active_document_templates = DocumentTemplateConfig.query.filter_by(is_active=True).order_by(DocumentTemplateConfig.display_name).all()
+    
     return render_template(
         'notifications/crear_editar_campana.html',
         form_action=url_for('notifications.crear_notificacion_campaign'),
         campaign=None,
-        documento_tipos=DOCUMENTO_TIPOS
+        document_templates=active_document_templates
     )
 
 @notifications_bp.route('/notifications/campaigns/nueva', methods=['POST'])
@@ -127,13 +129,15 @@ def editar_notificacion_campaign_form(campaign_id):
     # Format the custom attachment IDs as newline-separated text
     adjuntos_personalizados = '\n'.join(campaign.adjuntos_personalizados or [])
     
+    active_document_templates = DocumentTemplateConfig.query.filter_by(is_active=True).order_by(DocumentTemplateConfig.display_name).all()
+    
     return render_template(
         'notifications/crear_editar_campana.html',
         form_action=url_for('notifications.editar_notificacion_campaign', campaign_id=campaign_id),
         campaign=campaign,
         emails_estaticos=emails_estaticos,
         adjuntos_personalizados=adjuntos_personalizados,
-        documento_tipos=DOCUMENTO_TIPOS
+        document_templates=active_document_templates
     )
 
 @notifications_bp.route('/notifications/campaigns/<int:campaign_id>/editar', methods=['POST'])

@@ -1,0 +1,152 @@
+<div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Información General</h4>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Respaldo Presupuestario
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cargarTkdModal">
+                            <i class="bi bi-upload"></i> Cargar TKD Respaldo
+                        </a></li>
+                        {% if concurso.tkd or concurso.tkd_file_id %}
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#borrarTkdModal">
+                            <i class="bi bi-trash"></i> Borrar TKD Respaldo
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <table class="table">
+                <tr>
+                    <th>Tipo:</th>
+                    <td>{{ concurso.tipo }}</td>
+                </tr>
+                {% if concurso.tipo == 'Interino' and concurso.nro_res_llamado_interino %}
+                <tr>
+                    <th>N° Res. Llamado Interino:</th>
+                    <td>{{ concurso.nro_res_llamado_interino }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.tipo == 'Regular' %}
+                {% if concurso.nro_res_llamado_regular %}
+                <tr>
+                    <th>N° Res. Llamado Regular:</th>
+                    <td>{{ concurso.nro_res_llamado_regular }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.nro_res_tribunal_regular %}
+                <tr>
+                    <th>N° Res. Tribunal Regular:</th>
+                    <td>{{ concurso.nro_res_tribunal_regular }}</td>
+                </tr>
+                {% endif %}
+                {% endif %}
+                <tr>
+                    <th>Cerrado/Abierto:</th>
+                    <td>{{ concurso.cerrado_abierto }}</td>
+                </tr>
+                <tr>
+                    <th>Cantidad de Cargos:</th>
+                    <td>{{ concurso.cant_cargos }}</td>
+                </tr>
+                <tr>
+                    <th>Departamento:</th>
+                    <td>{{ concurso.departamento_rel.nombre }}</td>
+                </tr>
+                <tr>
+                    <th>Área:</th>
+                    <td>{{ concurso.area }}</td>
+                </tr>
+                <tr>
+                    <th>Orientación:</th>
+                    <td>{{ concurso.orientacion }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h4>Detalles del Cargo</h4>
+            <table class="table">
+                <tr>
+                    <th>Categoría:</th>
+                    <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                </tr>
+                <tr>
+                    <th>Dedicación:</th>
+                    <td>{{ concurso.dedicacion }}</td>
+                </tr>
+                <tr>
+                    <th>Localización:</th>
+                    <td>{{ concurso.localizacion }}</td>
+                </tr>
+                {% if concurso.asignaturas %}
+                <tr>
+                    <th>Asignaturas:</th>
+                    <td>{{ concurso.asignaturas }}</td>
+                </tr>
+                {% endif %}                    
+                {% if concurso.expediente %}
+                <tr>
+                    <th>Expediente:</th>
+                    <td>{{ concurso.expediente }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.tkd %}
+                <tr>
+                    <th>TKD:</th>
+                    <td>
+                        {{ concurso.tkd }}
+                        {% if concurso.tkd_file_id %}
+                        <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" 
+                           target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                            <i class="bi bi-file-earmark-pdf"></i> Ver archivo
+                        </a>
+                        {% endif %}
+                    </td>                    
+                </tr>                    
+                {% endif %}
+                <tr>
+                    <th>Cierre Inscripción:</th>
+                    <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
+                </tr>
+                {% if concurso.vencimiento %}
+                <tr>
+                    <th>Vencimiento:</th>
+                    <td>{{ concurso.vencimiento.strftime('%d/%m/%Y') }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.origen_vacante %}
+                <tr>
+                    <th>Origen de Vacante:</th>
+                    <td>{{ concurso.origen_vacante }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.docente_vacante %}
+                <tr>
+                    <th>Docente que genera vacante:</th>
+                    <td>{{ concurso.docente_vacante }}</td>
+                </tr>
+                {% endif %}
+                {% if concurso.id_designacion_mocovi %}
+                <tr>
+                    <th>ID Designación MOCOVI:</th>
+                    <td>{{ concurso.id_designacion_mocovi }}</td>
+                </tr>
+                {% endif %}                  
+                {% if concurso.drive_folder_id %}
+                <tr>
+                    <th>Carpeta Google Drive:</th>
+                    <td>
+                        <a href="https://drive.google.com/drive/folders/{{ concurso.drive_folder_id }}" 
+                           target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-folder"></i> Abrir carpeta
+                        </a>
+                    </td>                    
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>

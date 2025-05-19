@@ -1,0 +1,23 @@
+<div class="tab-pane fade" id="historial" role="tabpanel" aria-labelledby="historial-tab">
+    <h4>Historial de Estados</h4>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for estado in concurso.historial_estados %}
+                <tr>
+                    <td>{{ estado.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>{{ estado.estado }}</td>
+                    <td>{{ estado.observaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

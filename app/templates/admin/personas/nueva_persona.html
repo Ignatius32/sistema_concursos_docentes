@@ -68,6 +68,13 @@
                                     Es Administrador
                                 </label>
                             </div>
+                            <div id="cargo_field_container" class="mb-3" style="display: none;">
+                                <label for="cargo" class="form-label">Cargo</label>
+                                <input type="text" class="form-control" id="cargo" name="cargo">
+                                <div class="form-text">
+                                    Especifique el cargo o rol del administrador (ej: "Director de Departamento", "Secretario Académico").
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -100,4 +107,37 @@
         </form>
     </div>
 </div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isAdminCheckbox = document.getElementById('is_admin');
+        const cargoFieldContainer = document.getElementById('cargo_field_container');
+
+        function toggleCargoField() {
+            // Ensure elements exist to prevent JS errors if the "Credenciales" card isn't fully implemented
+            if (isAdminCheckbox && cargoFieldContainer) {
+                if (isAdminCheckbox.checked) {
+                    cargoFieldContainer.style.display = 'block';
+                } else {
+                    cargoFieldContainer.style.display = 'none';
+                    const cargoInput = document.getElementById('cargo');
+                    if (cargoInput) {
+                        cargoInput.value = ''; // Clear cargo field if not admin
+                    }
+                }
+            }
+        }
+
+        // Initial check
+        if (isAdminCheckbox) { // Check if isAdminCheckbox exists
+            toggleCargoField();
+            // Listen for changes
+            isAdminCheckbox.addEventListener('change', toggleCargoField);
+        }
+    });
+</script>
+{% endblock %}
+
 {% endblock %}

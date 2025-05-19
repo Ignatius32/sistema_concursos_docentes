@@ -38,11 +38,11 @@ class TemplateForm(FlaskForm):
     is_unique_per_concurso = BooleanField('Único por Concurso', default=True)
     tribunal_visibility_rules = TextAreaField('Reglas de Visibilidad para Tribunal', 
                                              validators=[validate_json],
-                                             render_kw={"rows": 10, "placeholder": '{\n  "BORRADOR": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "No Docente"]},\n  "PENDIENTE DE FIRMA": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]},\n  "FIRMADO": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]}\n}'})
-    # New permission fields
+                                             render_kw={"rows": 10, "placeholder": '{\n  "BORRADOR": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "No Docente"]},\n  "PENDIENTE DE FIRMA": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]},\n  "FIRMADO": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]}\n}'})    # New permission fields
     admin_can_send_for_signature = BooleanField('Admin puede enviar para firma', default=True)
     tribunal_can_sign = BooleanField('Tribunal puede firmar', default=False)
     tribunal_can_upload_signed = BooleanField('Tribunal puede subir firmado', default=False)
+    admin_can_sign = BooleanField('Administración puede firmar', default=False)
     submit = SubmitField('Guardar')
 
 # Access control decorator

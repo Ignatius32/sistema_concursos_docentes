@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Documentación de Postulantes - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" class="btn btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Volver al Concurso
+        </a>
+        <h2>Documentación de Postulantes - Concurso #{{ concurso.id }}</h2>
+    </div>
+    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-box-arrow-right"></i> Salir
+    </a>
+</div>
+
+<div class="row">
+    <!-- Concurso information -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Información del Concurso</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
+                        <p><strong>Área:</strong> {{ concurso.area }}</p>
+                        <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
+                        <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
+                        <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required Documents -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Documentación Requerida para este Concurso</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <p>Para este concurso, los postulantes deben presentar la siguiente documentación:</p>
+                        <div class="d-flex flex-wrap">
+                            {% for doc in required_docs %}
+                            <span class="badge bg-light text-dark me-2 mb-2 p-2">{{ doc }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Postulantes Documents -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">Documentación de los Postulantes</h4>
+            </div>
+            <div class="card-body">
+                {% if postulantes_with_docs %}
+                    <div class="accordion" id="postulanteAccordion">
+                        {% for postulante, documentos in postulantes_with_docs.items() %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ postulante.id }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ postulante.id }}" aria-expanded="false" aria-controls="collapse{{ postulante.id }}">
+                                    {{ postulante.apellido }}, {{ postulante.nombre }} ({{ postulante.dni }})
+                                    <span class="badge bg-{{ 'success' if postulante.estado == 'activo' else 'secondary' }} ms-3">{{ postulante.estado | upper }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ postulante.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ postulante.id }}" data-bs-parent="#postulanteAccordion">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <h5>Datos personales</h5>
+                                            <ul class="list-unstyled">
+                                                <li><strong>DNI:</strong> {{ postulante.dni }}</li>
+                                                <li><strong>Correo:</strong> {{ postulante.correo }}</li>
+                                                {% if postulante.telefono %}
+                                                <li><strong>Teléfono:</strong> {{ postulante.telefono }}</li>
+                                                {% endif %}
+                                                {% if postulante.domicilio %}
+                                                <li><strong>Domicilio:</strong> {{ postulante.domicilio }}</li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <h5>Documentos presentados</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-hover">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Tipo</th>
+                                                            <th>Fecha de carga</th>
+                                                            <th class="text-center">Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for documento in documentos %}
+                                                        <tr>
+                                                            <td>{{ documento.tipo }}</td>
+                                                            <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
+                                                            <td class="text-center">
+                                                                <div class="btn-group">
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                                            data-bs-toggle="modal" 
+                                                                            data-bs-target="#pdfViewerModal{{ documento.id }}">
+                                                                        <i class="bi bi-file-earmark-text"></i> Ver Documento
+                                                                    </button>
+                                                                    <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                                        <i class="bi bi-box-arrow-up-right"></i> Abrir en Drive
+                                                                    </a>
+                                                                </div>
+                                                                
+                                                                <!-- PDF Viewer Modal -->
+                                                                <div class="modal fade" id="pdfViewerModal{{ documento.id }}" tabindex="-1">
+                                                                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                                                                        <div class="modal-content">
+                                                                            <div class="modal-header">
+                                                                                <h5 class="modal-title">{{ documento.tipo }} - {{ postulante.apellido }}, {{ postulante.nombre }}</h5>
+                                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                            </div>
+                                                                            <div class="modal-body p-0">
+                                                                                <iframe src="{{ url_for('tribunal.ver_documento_postulante', concurso_id=concurso.id, postulante_id=postulante.id, documento_id=documento.id) }}" 
+                                                                                        style="width: 100%; height: 80vh;" frameborder="0"></iframe>
+                                                                            </div>
+                                                                            <div class="modal-footer">
+                                                                                <a href="{{ documento.url }}" target="_blank" class="btn btn-primary">
+                                                                                    <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
+                                                                                </a>
+                                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                        
+                                                        <!-- Check for missing required documents -->
+                                                        {% set submitted_types = documentos|map(attribute='tipo')|list %}
+                                                        {% for req_doc in required_docs %}
+                                                            {% if req_doc not in submitted_types %}
+                                                            <tr class="table-danger">
+                                                                <td>{{ req_doc }}</td>
+                                                                <td colspan="2" class="text-center">
+                                                                    <span class="badge bg-danger">No presentado</span>
+                                                                </td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <p>Ningún postulante ha cargado documentación para este concurso.</p>
+                    </div>
+                {% endif %}
+                
+                {% if postulantes|length > 0 and not postulantes_with_docs %}
+                    <div class="alert alert-warning">
+                        <p>Hay {{ postulantes|length }} postulante(s) inscriptos en este concurso, pero ninguno ha cargado documentación.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.accordion-button:not(.collapsed) {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+</style>
+{% endblock %}

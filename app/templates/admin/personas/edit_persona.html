@@ -75,10 +75,43 @@
                     </div>
                 </div>
             </div>
-              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="submit" class="btn btn-primary" id="submitButton" onclick="console.log('Button clicked')">
-                    <i class="fas fa-save"></i> Guardar Cambios
-                </button>
+            
+            {# Add a section for Admin specific fields like is_admin and cargo #}
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Credenciales y Rol de Administrador</h5>
+                        </div>
+                        <div class="card-body">
+                            {# Assuming username/password are not directly editable here for simplicity, focus on is_admin and cargo #}
+                            {# If you allow editing username/password, add those fields too #}
+                             <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" {% if persona.is_admin %}checked{% endif %}>
+                                <label class="form-check-label" for="is_admin">
+                                    Es Administrador
+                                </label>
+                            </div>
+                            <div id="cargo_field_container_edit" class="mb-3" {% if not persona.is_admin %}style="display: none;"{% endif %}>
+                                <label for="cargo" class="form-label">Cargo</label>
+                                <input type="text" class="form-control" id="cargo" name="cargo" value="{{ persona.cargo or '' }}">
+                                <div class="form-text">
+                                    Especifique el cargo o rol del administrador.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary" id="submitButton" onclick="console.log('Button clicked')">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -127,6 +160,28 @@
                     form.submit();
                 }
             });
+        }
+
+        const isAdminCheckboxEdit = document.getElementById('is_admin');
+        const cargoFieldContainerEdit = document.getElementById('cargo_field_container_edit');
+        const cargoInputEdit = document.getElementById('cargo');
+
+        function toggleCargoFieldEdit() {
+            if (isAdminCheckboxEdit.checked) {
+                cargoFieldContainerEdit.style.display = 'block';
+            } else {
+                cargoFieldContainerEdit.style.display = 'none';
+                if (cargoInputEdit) {
+                    cargoInputEdit.value = ''; // Clear cargo field if not admin
+                }
+            }
+        }
+
+        if (isAdminCheckboxEdit && cargoFieldContainerEdit) {
+            // Initial check
+            toggleCargoFieldEdit();
+            // Listen for changes
+            isAdminCheckboxEdit.addEventListener('change', toggleCargoFieldEdit);
         }
     });
 </script>

@@ -92,15 +92,7 @@
                                     {% endif %}
                                 {% endfor %}
                             </div>
-                        </div>
-                        {% endif %}
-                        {% if miembro.can_add_tema and not concurso.sustanciacion.temas_exposicion %}
-                        <div class="text-end mt-2">
-                            <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary">
-                                <i class="bi bi-plus"></i> Cargar Temas de Sorteo
-                            </a>
-                        </div>
-                        {% endif %}
+                        </div>                        {% endif %}
                     </div>
                     
                     <!-- Exposición -->
@@ -321,34 +313,159 @@
                 <h4 class="mb-0">Postulantes Inscriptos</h4>
             </div>
             <div class="card-body">
-                {% if postulantes %}
-                <div class="list-group">
+                {% if postulantes %}                <div class="list-group">
                     {% for postulante in postulantes %}
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
                             <h5 class="mb-1">{{ postulante.nombre }} {{ postulante.apellido }}</h5>
                         </div>
                         <p class="mb-1"><small>DNI: {{ postulante.dni }}</small></p>
-                        {% if postulante.documentos.count() > 0 %}
-                        <div class="mt-2">
-                            <strong>Documentos:</strong>
-                            <div class="mt-1">
-                                {% for doc in postulante.documentos %}
-                                <a href="{{ doc.url }}" target="_blank" class="btn btn-sm btn-outline-secondary m-1">
-                                    <i class="bi bi-file-earmark-pdf"></i> {{ doc.tipo }}
-                                </a>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
+                        <p class="mb-1"><small>Estado: <span class="badge bg-{{ 'success' if postulante.estado == 'activo' else 'secondary' }}">{{ postulante.estado | upper }}</span></small></p>
                     </div>
                     {% endfor %}
                 </div>
+                {% if miembro.can_view_postulante_docs and postulantes|length > 0 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('tribunal.documentacion_postulantes', concurso_id=concurso.id) }}" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-text"></i> Ver la documentación de los postulantes
+                    </a>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="alert alert-info">
                     No hay postulantes inscriptos en este concurso.
                 </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>    <!-- Temas de Sorteo section -->
+    {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion or miembro.can_add_tema %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">Temas de Sorteo</h4>
+            </div>
+            <div class="card-body">                <!-- Only show individual member topics if sorteo hasn't happened yet -->
+                {% if not concurso.sustanciacion.tema_sorteado %}
+                    {% if mi_propuesta %}
+                    <div class="mb-4">
+                        <h5>Mis Temas Propuestos:</h5>
+                        <div class="temas-list mt-2">
+                            {% for tema in mi_propuesta.temas_propuestos.split('|') %}
+                                {% if tema.strip() %}
+                                <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-2">
+                            {% if mi_propuesta.propuesta_cerrada %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-lock"></i> Ya ha cerrado su propuesta de temas. Contacte al administrador si necesita realizar cambios.
+                                </div>
+                            {% else %}
+                                <div class="d-flex">
+                                    <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+                                        <i class="bi bi-pencil"></i> {% if mi_propuesta.temas_propuestos %}Editar Mis Temas{% else %}Cargar Mis Temas{% endif %}
+                                    </a>
+                                    
+                                    {% if mi_propuesta.temas_propuestos and mi_propuesta.temas_propuestos.split('|')|map('trim')|reject('equalto', '')|list|length == 3 %}
+                                    <form action="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" method="POST">
+                                        <input type="hidden" name="temas_exposicion" value="{{ mi_propuesta.temas_propuestos }}">
+                                        <input type="hidden" name="action" value="save_and_close">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-lock"></i> Guardar y Enviar Temas
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    {% elif miembro.can_add_tema %}
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <p>Aún no ha propuesto temas para el sorteo.</p>
+                            <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus"></i> Cargar Mis Temas
+                            </a>
+                        </div>
+                    </div>
+                    <hr>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- Then show consolidated topics if they exist -->
+                {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion %}
+                <div>
+                    {% if concurso.sustanciacion.tema_sorteado %}
+                    <!-- Show selected topic when drawn -->
+                    <h5>Temas Consolidados:</h5>
+                    {% if concurso.sustanciacion.temas_exposicion %}
+                    <div class="temas-list mt-2">
+                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                            {% if tema.strip() %}
+                            <div class="badge {% if tema.strip() == concurso.sustanciacion.tema_sorteado %}bg-success{% else %}bg-light text-dark{% endif %} p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="alert alert-success mt-3">
+                        <h5><i class="bi bi-check-circle"></i> Tema Sorteado:</h5>
+                        <p class="mb-0">{{ concurso.sustanciacion.tema_sorteado }}</p>
+                    </div>
+                    {% elif concurso.sustanciacion.temas_cerrados %}
+                    <!-- When topics are closed but not yet drawn, only show the closed message -->
+                    <h5>Temas Consolidados:</h5>
+                    <div class="temas-list mt-2">
+                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                            {% if tema.strip() %}
+                            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="bi bi-lock"></i> Los temas han sido consolidados y cerrados. Pendiente de sorteo.
+                    </div>
+                    {% else %}
+                    <!-- Show topics when not closed -->
+                    <h5>Temas Consolidados:</h5>
+                    {% if concurso.sustanciacion.temas_exposicion %}
+                    <div class="temas-list mt-2">
+                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                            {% if tema.strip() %}
+                            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i> Estos temas están en revisión y pueden cambiar hasta que el administrador los consolide.
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% else %}
+                    {% if not mi_propuesta and not miembro.can_add_tema %}
+                    <div class="alert alert-info">
+                        <p class="mb-0">Aún no se han cargado temas para el sorteo.</p>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Asignaturas information -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h4 class="mb-0">Asignaturas Relacionadas (Información Externa)</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Información obtenida de <a href="https://huayca.crub.uncoma.edu.ar/catedras/1.0/rest/materias" target="_blank">API Huayra Cátedras</a>. Se muestran asignaturas no optativas que coinciden con el departamento, área y orientación (si aplica) del concurso.</p>
+                {% include 'shared/tarjetas_asignaturas.html' %}
             </div>
         </div>
     </div>
@@ -381,4 +498,5 @@ function startFirmaLoading(documentoId) {
     return true;
 }
 </script>
+<script src="{{ url_for('static', filename='js/programas-auto.js') }}"></script>
 {% endblock %}

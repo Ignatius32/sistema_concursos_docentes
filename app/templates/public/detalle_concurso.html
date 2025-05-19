@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Concurso - {{ concurso.categoria_nombre }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{{ url_for('public.index') }}" class="btn btn-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> Volver al listado
+        </a>
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h2 class="mb-0">{{ concurso.categoria_nombre }} - {{ concurso.dedicacion }}</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4>Información del Concurso</h4>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="40%">Departamento</th>
+                                <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Área</th>
+                                <td>{{ concurso.area }}</td>
+                            </tr>
+                            <tr>
+                                <th>Orientación</th>
+                                <td>{{ concurso.orientacion }}</td>
+                            </tr>
+                            <tr>
+                                <th>Categoría</th>
+                                <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                            </tr>
+                            <tr>
+                                <th>Dedicación</th>
+                                <td>{{ concurso.dedicacion }}</td>
+                            </tr>
+                            <tr>
+                                <th>Tipo de Concurso</th>
+                                <td>{{ concurso.tipo }}</td>
+                            </tr>
+                            <tr>
+                                <th>Carácter</th>
+                                <td>{{ concurso.cerrado_abierto }}</td>
+                            </tr>
+                            <tr>
+                                <th>Cantidad de Cargos</th>
+                                <td>{{ concurso.cant_cargos }}</td>
+                            </tr>
+                            <tr>
+                                <th>Localización</th>
+                                <td>{{ concurso.localizacion }}</td>
+                            </tr>
+                            {% if concurso.asignaturas %}
+                            <tr>
+                                <th>Asignaturas</th>
+                                <td>{{ concurso.asignaturas }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Fecha de Cierre de Inscripción</th>
+                                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">Instructivo para Postulantes</h4>
+                            </div>
+                            <div class="card-body">
+                                {% if instructivo %}
+                                <div class="mb-4">
+                                    <h5>Requisitos Generales</h5>
+                                    <p>{{ instructivo.base }}</p>
+                                </div>
+                                
+                                <div>
+                                    <h5>Requisitos por Dedicación: {{ concurso.dedicacion }}</h5>
+                                    <p>{{ instructivo.dedicacion }}</p>
+                                </div>
+                                
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle"></i> Para más información y para presentar su postulación, contacte a la Secretaría Académica.
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <p>No hay instructivos específicos disponibles para este concurso. Por favor, contacte a la Secretaría Académica para más detalles.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Asignaturas related to this concurso -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">Asignaturas Relacionadas</h3>
+            </div>
+            <div class="card-body">
+                {% include 'shared/tarjetas_asignaturas.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/programas-auto.js') }}"></script>
+{% endblock %}

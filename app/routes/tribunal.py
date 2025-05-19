@@ -1,14 +1,20 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file
 from flask_login import login_required, current_user
-from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona
+from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona, Postulante, Sustanciacion
 from app.integrations.google_drive import GoogleDriveAPI
 from app.helpers.pdf_utils import add_signature_stamp, verify_signed_pdf
+from app.helpers.api_services import get_asignaturas_from_external_api
 from datetime import datetime
-import os
-import random
-import string
 from werkzeug.utils import secure_filename
 from functools import wraps
+import os
+import json
+import base64
+import io
+import random
+import string
+import string
+import random
 import io
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
@@ -124,20 +130,22 @@ def agregar(concurso_id):
                 drive_folder_id=folder_id,
                 notificado=False
             )
-            
-            # Set default permissions based on role
+              # Set default permissions based on role
             if rol == 'Presidente':
                 miembro.can_add_tema = True                
                 miembro.can_upload_file = True
                 miembro.can_sign_file = True
+                miembro.can_view_postulante_docs = True
             elif rol == 'Titular':
                 miembro.can_add_tema = True
                 miembro.can_sign_file = True
                 miembro.can_upload_file = False
+                miembro.can_view_postulante_docs = True
             else:  # Suplente and others
                 miembro.can_add_tema = False
                 miembro.can_upload_file = False
                 miembro.can_sign_file = False
+                miembro.can_view_postulante_docs = False
             
             db.session.add(miembro)
             db.session.commit()
@@ -173,11 +181,11 @@ def editar(miembro_id):
             # Update assignment data
             miembro.rol = request.form.get('rol')
             miembro.claustro = request.form.get('claustro')
-            
-            # Handle permission checkboxes
+              # Handle permission checkboxes
             miembro.can_add_tema = 'can_add_tema' in request.form
             miembro.can_upload_file = 'can_upload_file' in request.form
             miembro.can_sign_file = 'can_sign_file' in request.form
+            miembro.can_view_postulante_docs = 'can_view_postulante_docs' in request.form
             
             # Update Drive folder name if needed
             if miembro.drive_folder_id:
@@ -935,9 +943,8 @@ def portal_concurso(concurso_id):
     if not assignment:
         flash('No tiene permisos para ver este concurso', 'danger')
         return redirect(url_for('tribunal.portal'))
-    
-    # Get template configs for document action control
-    from app.models.models import DocumentTemplateConfig
+      # Get template configs for document action control
+    from app.models.models import DocumentTemplateConfig, TemaSetTribunal
     template_configs = DocumentTemplateConfig.query.all()
     template_configs_dict = {config.document_type_key: config for config in template_configs}
     
@@ -947,17 +954,156 @@ def portal_concurso(concurso_id):
     # Get postulantes
     postulantes = concurso.postulantes.all()
     
+    # Get this member's personal tema proposal if it exists
+    mi_propuesta = None
+    if concurso.sustanciacion:
+        mi_propuesta = TemaSetTribunal.query.filter_by(
+            sustanciacion_id=concurso.sustanciacion.id,
+            miembro_id=miembro.id
+        ).first()
+    
+    # Get asignaturas from external API
+    asignaturas_externas = []
+    if concurso.departamento_rel:
+        asignaturas_externas = get_asignaturas_from_external_api(
+            departamento=concurso.departamento_rel.nombre,
+            area=concurso.area,
+            orientacion_concurso=concurso.orientacion
+        )
+    
     # Ensure role is set properly for template checks
     if 'tribunal_rol' in session:
         miembro.rol = session['tribunal_rol']
-    
     return render_template('tribunal/portal_concurso.html',
                           miembro=miembro,
                           persona=persona,
                           concurso=concurso,
                           miembros=miembros,
                           template_configs_dict=template_configs_dict,
-                          postulantes=postulantes)
+                          postulantes=postulantes,
+                          asignaturas_externas=asignaturas_externas,
+                          mi_propuesta=mi_propuesta)
+
+@tribunal.route('/concurso/<int:concurso_id>/documentacion-postulantes')
+@tribunal_login_required
+def documentacion_postulantes(concurso_id):
+    """View for tribunal members to see all postulantes documents for a specific concurso."""
+    # Check if persona is logged in
+    if 'persona_id' not in session or 'tribunal_miembro_id' not in session:
+        flash('Debe iniciar sesión como miembro del tribunal para acceder.', 'warning')
+        return redirect(url_for('tribunal.acceso'))
+    
+    # Get persona and their assigned tribunal
+    persona_id = session['persona_id']
+    persona = Persona.query.get_or_404(persona_id)
+    miembro_id = session['tribunal_miembro_id']
+    miembro = TribunalMiembro.query.get_or_404(miembro_id)
+    
+    # Get concurso and verify this persona is assigned to it
+    concurso = Concurso.query.get_or_404(concurso_id)
+    assignment = TribunalMiembro.query.filter_by(persona_id=persona_id, concurso_id=concurso_id).first()
+    
+    if not assignment:
+        flash('No tiene permisos para ver este concurso', 'danger')
+        return redirect(url_for('tribunal.portal'))
+    
+    # Check if the tribunal member has permission to view postulante documents
+    if not miembro.can_view_postulante_docs:
+        flash('No tiene permisos para ver la documentación de los postulantes', 'danger')
+        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+    
+    # Get postulantes with their documents
+    postulantes = concurso.postulantes.all()
+    
+    # Organize documents by postulante
+    postulantes_with_docs = {}
+    for postulante in postulantes:
+        documentos = postulante.documentos.all()
+        if documentos:
+            postulantes_with_docs[postulante] = documentos
+    
+    # Load roles_categorias.json to determine required documents
+    required_docs = []
+    try:
+        import os
+        import json
+        from flask import current_app
+        
+        with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
+            categorias_data = json.load(f)
+            
+        for rol in categorias_data:
+            for cat in rol['categorias']:
+                if cat['codigo'] == concurso.categoria:
+                    # Add base documents
+                    required_docs.extend(cat['documentacionRequerida']['base'])
+                    
+                    # Add documents by dedicacion if available
+                    if 'porDedicacion' in cat['documentacionRequerida'] and concurso.dedicacion in cat['documentacionRequerida']['porDedicacion']:
+                        required_docs.extend(cat['documentacionRequerida']['porDedicacion'][concurso.dedicacion])
+                    break
+    except Exception as e:
+        print(f"Error loading required documents: {e}")
+    
+    return render_template('tribunal/documentacion_postulantes.html',
+                          concurso=concurso,
+                          miembro=miembro,
+                          persona=persona,
+                          postulantes=postulantes,
+                          postulantes_with_docs=postulantes_with_docs,
+                          required_docs=required_docs)
+
+@tribunal.route('/concurso/<int:concurso_id>/postulante/<int:postulante_id>/documento/<int:documento_id>/view', methods=['GET'])
+@tribunal_login_required
+def ver_documento_postulante(concurso_id, postulante_id, documento_id):
+    """Display postulante document content in a viewer."""
+    try:
+        from app.models.models import DocumentoPostulante
+        import base64
+        import io
+        
+        # Get concurso, postulante, documento and current tribunal member
+        concurso = Concurso.query.get_or_404(concurso_id)
+        postulante = Postulante.query.filter_by(id=postulante_id, concurso_id=concurso_id).first_or_404()
+        documento = DocumentoPostulante.query.get_or_404(documento_id)
+        
+        persona_id = session['persona_id']
+        miembro = TribunalMiembro.query.filter_by(
+            persona_id=persona_id,
+            concurso_id=concurso_id
+        ).first_or_404()
+        
+        # Verify the document belongs to this postulante
+        if documento.postulante_id != postulante_id:
+            flash('El documento no pertenece a este postulante', 'danger')
+            return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+        
+        # Verify tribunal member has permission to view documents
+        if not miembro.can_view_postulante_docs:
+            flash('No tiene permisos para ver la documentación de los postulantes', 'danger')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+        
+        # Extract file ID from Google Drive URL
+        file_id = documento.url.split('/')[-2]  # Assuming URL format ends with /file_id/view
+        
+        # Get file content from Drive
+        file_content_response = drive_api.get_file_content(file_id)
+        if not file_content_response.get('fileData'):
+            flash('No se pudo obtener el contenido del archivo', 'danger')
+            return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+        
+        # Decode base64 content
+        pdf_content = base64.b64decode(file_content_response['fileData'])
+        
+        # Return the PDF content with proper headers
+        return send_file(
+            io.BytesIO(pdf_content),
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        flash(f'Error al obtener el documento: {str(e)}', 'danger')
+        return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
 
 @tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir-firmado', methods=['POST'])
 @tribunal_login_required
@@ -1211,56 +1357,144 @@ def ver_documento(concurso_id, documento_id):
 @tribunal.route('/<int:concurso_id>/cargar-sorteos', methods=['GET', 'POST'])
 @tribunal_login_required
 def cargar_sorteos(concurso_id):
-    """Load sorteo temas for a concurso. Only accessible by members with can_add_tema permission."""
+    """Load sorteo temas for a concurso. Only accessible by members with can_add_tema permission.
+    This route now handles both saving and saving & closing topics for individual tribunal members."""
     concurso = Concurso.query.get_or_404(concurso_id)
     persona_id = session['persona_id']
     miembro = TribunalMiembro.query.filter_by(
         persona_id=persona_id,
         concurso_id=concurso_id
     ).first_or_404()
+    persona = Persona.query.get_or_404(persona_id)
     
     # Ensure role is set from session for proper template checks
     if 'tribunal_rol' in session:
         miembro.rol = session['tribunal_rol']
+    
+    # Make sure sustanciacion record exists
+    sustanciacion = concurso.sustanciacion
+    if not sustanciacion:
+        sustanciacion = Sustanciacion(concurso_id=concurso_id)
+        concurso.sustanciacion = sustanciacion
+        db.session.add(sustanciacion)
+        db.session.commit()
+    
+    # Check if global topics are already closed
+    if concurso.sustanciacion and concurso.sustanciacion.temas_cerrados:
+        if request.method == 'POST':
+            flash('La carga de temas ya ha sido finalizada por un administrador. No se pueden realizar modificaciones.', 'warning')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+    
+    # Get or create individual tema proposal for this miembro
+    from app.models.models import TemaSetTribunal
+    tema_propuesta = TemaSetTribunal.query.filter_by(
+        sustanciacion_id=sustanciacion.id,
+        miembro_id=miembro.id
+    ).first()
+    
+    if tema_propuesta and tema_propuesta.propuesta_cerrada:
+        if request.method == 'POST':
+            flash('Ya ha cerrado sus temas de sorteo. Contacte al administrador si necesita realizar cambios.', 'warning')
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
     
     if request.method == 'POST':
         if not miembro.can_add_tema:
             flash('No tiene permisos para cargar los temas de sorteo.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
-        temas = request.form.get('temas_exposicion')
-        if not temas:            
-            flash('Debe ingresar al menos un tema.', 'warning')
-            persona = Persona.query.get_or_404(persona_id)
-            return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro, persona=persona)
+        action = request.form.get('action', 'save')
+        temas = request.form.get('temas_exposicion', '')
         
         try:
-            # Create or update sustanciacion record
-            sustanciacion = concurso.sustanciacion
-            if not sustanciacion:
-                flash('No existe información de sustanciación para este concurso.', 'danger')
-                return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            # Create tema_propuesta if it doesn't exist
+            if not tema_propuesta:
+                tema_propuesta = TemaSetTribunal(
+                    sustanciacion_id=sustanciacion.id,
+                    miembro_id=miembro.id,
+                    temas_propuestos=temas,
+                    propuesta_cerrada=False
+                )
+                db.session.add(tema_propuesta)
+            else:
+                tema_propuesta.temas_propuestos = temas
+                tema_propuesta.fecha_propuesta = datetime.utcnow()  # Update timestamp
             
-            # Update temas
-            sustanciacion.temas_exposicion = temas
-              # Add entry to history
-            persona = miembro.persona
-            historial = HistorialEstado(
-                concurso=concurso,
-                estado="TEMAS_SORTEO_CARGADOS",
-                observaciones=f"Temas de sorteo cargados por el miembro del tribunal {persona.nombre} {persona.apellido}"
-            )
-            db.session.add(historial)
-            db.session.commit()
+            # Process based on action
+            if action == 'save_and_close':
+                # Validate that we have exactly 3 topics
+                temas_lista = [t.strip() for t in temas.split('|') if t.strip()]
+                
+                if len(temas_lista) != 3:
+                    flash('Para cerrar los temas, deben ser exactamente 3.', 'warning')
+                    # Return to the form with current topics
+                    return render_template(
+                        'tribunal/cargar_sorteos.html', 
+                        concurso=concurso, 
+                        miembro=miembro, 
+                        persona=persona,
+                        current_temas_str=temas,
+                        tema_propuesta=tema_propuesta
+                    )
+                
+                # Mark as closed for this tribunal member
+                tema_propuesta.propuesta_cerrada = True
+                
+                # Add entry to history
+                historial = HistorialEstado(
+                    concurso=concurso,
+                    estado="TEMAS_SORTEO_MIEMBRO_CERRADOS",
+                    observaciones=f"Propuesta de temas cerrada por {persona.nombre} {persona.apellido} ({miembro.rol})"
+                )
+                db.session.add(historial)
+                db.session.commit()
+                
+                flash('Sus temas de sorteo han sido guardados y cerrados. Ya no se pueden realizar modificaciones.', 'success')
+                
+            else:  # default action: save
+                # Get previous state for history logging
+                old_temas = tema_propuesta.temas_propuestos if tema_propuesta else ''
+                
+                # Add appropriate history entry
+                estado = "TEMAS_SORTEO_MIEMBRO_GUARDADOS"
+                if not temas.strip() and old_temas:
+                    estado = "TEMAS_SORTEO_MIEMBRO_BORRADOS"
+                
+                historial = HistorialEstado(
+                    concurso=concurso,
+                    estado=estado,
+                    observaciones=f"Propuesta de temas actualizada por {persona.nombre} {persona.apellido} ({miembro.rol})"
+                )
+                db.session.add(historial)
+                db.session.commit()
+                
+                flash('Sus temas de sorteo han sido guardados exitosamente.', 'success')
             
-            flash('Temas de sorteo guardados exitosamente.', 'success')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al guardar los temas: {str(e)}', 'danger')
+            return render_template(
+                'tribunal/cargar_sorteos.html', 
+                concurso=concurso, 
+                miembro=miembro, 
+                persona=persona,
+                current_temas_str=temas,
+                tema_propuesta=tema_propuesta
+            )
     
-    persona = Persona.query.get_or_404(persona_id)
-    return render_template('tribunal/cargar_sorteos.html', concurso=concurso, miembro=miembro, persona=persona)
+    # For GET requests, get existing topics for this member if available
+    current_temas_str = ''
+    if tema_propuesta:
+        current_temas_str = tema_propuesta.temas_propuestos
+    return render_template(
+        'tribunal/cargar_sorteos.html', 
+        concurso=concurso, 
+        miembro=miembro,
+        persona=persona,
+        current_temas_str=current_temas_str,
+        tema_propuesta=tema_propuesta
+    )
 
 @tribunal.route('/<int:concurso_id>/reset-temas', methods=['POST'])
 @login_required
@@ -1273,24 +1507,98 @@ def reset_temas(concurso_id):
         return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
     
     try:
+        # Clear temas_exposicion
         concurso.sustanciacion.temas_exposicion = None
+        
+        # Always reset the temas_cerrados flag to allow tribunal to restart
+        concurso.sustanciacion.temas_cerrados = False
         
         # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,
-            estado="TEMAS_SORTEO_ELIMINADOS",
-            observaciones=f"Temas de sorteo eliminados por administrador {current_user.username}"
+            estado="TEMAS_SORTEO_REINICIADOS",
+            observaciones=f"Temas de sorteo eliminados y proceso reabierto para el tribunal por administrador {current_user.username}"
         )
         db.session.add(historial)
         db.session.commit()
         
-        flash('Temas de sorteo eliminados exitosamente.', 'success')
+        flash('Temas de sorteo eliminados exitosamente. El tribunal podrá cargar nuevos temas.', 'success')
         
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar los temas: {str(e)}', 'danger')
     
     return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+
+@tribunal.route('/<int:concurso_id>/reset-temas-miembro/<int:miembro_id>', methods=['POST'])
+@login_required
+def reset_temas_miembro(concurso_id, miembro_id):
+    """Reset sorteo temas for a specific tribunal member. Only accessible by admin."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    miembro_target = TribunalMiembro.query.get_or_404(miembro_id)
+    
+    # Verify the member belongs to this concurso
+    if miembro_target.concurso_id != concurso_id:
+        flash('El miembro no pertenece a este concurso.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    if not concurso.sustanciacion:
+        flash('El concurso no tiene información de sustanciación.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    try:
+        # Find the TemaSetTribunal record for this member
+        from app.models.models import TemaSetTribunal
+        tema_propuesta = TemaSetTribunal.query.filter_by(
+            sustanciacion_id=concurso.sustanciacion.id,
+            miembro_id=miembro_id
+        ).first()
+        
+        if not tema_propuesta:
+            flash(f'El miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} no tiene temas propuestos.', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Check if topics are already consolidated
+        temas_were_consolidated = concurso.sustanciacion.temas_cerrados
+        tema_was_drawn = concurso.sustanciacion.tema_sorteado is not None
+        
+        # Delete the tema proposal
+        db.session.delete(tema_propuesta)
+        
+        # If topics were consolidated, we need to un-consolidate them
+        if temas_were_consolidated:
+            concurso.sustanciacion.temas_exposicion = None
+            concurso.sustanciacion.temas_cerrados = False
+            
+            # If a topic was drawn, it's no longer valid
+            if tema_was_drawn:
+                concurso.sustanciacion.tema_sorteado = None
+            
+            # Add entry to history with details about un-consolidation
+            estado = "TEMAS_SORTEO_MIEMBRO_Y_CONSOLIDACION_REINICIADOS"
+            observaciones = f"Temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados por administrador {current_user.username}. La consolidación de temas y el tema sorteado (si existía) han sido reiniciados. El miembro puede cargar nuevos temas. Se requerirá nueva consolidación."
+            flash_message = f'Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados exitosamente. La consolidación general y el tema sorteado (si existía) han sido reiniciados. El miembro puede cargar nuevos temas. Por favor, vuelva a consolidar los temas una vez que el miembro haya cargado los suyos.'
+        else:
+            # Standard reset without un-consolidation
+            estado = "TEMAS_SORTEO_MIEMBRO_REINICIADOS"
+            observaciones = f"Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados por administrador {current_user.username}"
+            flash_message = f'Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados exitosamente.'
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado=estado,
+            observaciones=observaciones
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        flash(flash_message, 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar los temas: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @tribunal.route('/api/buscar-persona', methods=['GET'])
 @login_required

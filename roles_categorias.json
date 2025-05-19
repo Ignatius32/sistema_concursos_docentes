@@ -5,6 +5,22 @@
       {
         "codigo": "PTIT",
         "nombre": "Profesor Titular",
+        "instructivo_postulantes": {
+          "base": "Para postulantes a Profesor Titular: Deberá presentar CV completo, documentación respaldatoria, título universitario, antecedentes de idoneidad, propuesta de programa detallada, plan de actividades y programa de formación de recursos humanos. Su propuesta debe demostrar capacidad de liderazgo académico.",
+          "porDedicacion": {
+            "Simple": "Dedicación Simple: Adicionalmente, puede presentar un plan de investigación/vinculación/extensión opcional. Carga horaria: 10 horas semanales.",
+            "Parcial": "Dedicación Parcial: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión. Carga horaria: 20 horas semanales.",
+            "Exclusiva": "Dedicación Exclusiva: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión detallado con objetivos a corto y largo plazo. Carga horaria: 40 horas semanales."
+          }
+        },
+        "instructivo_tribunal": {
+          "base": "Para tribunal evaluando Profesor Titular: Evaluar trayectoria académica destacada, experiencia en gestión académica, capacidad de dirección de grupos de investigación, y calidad de la propuesta programática. Evaluar capacidad para liderar equipos de trabajo.",
+          "porDedicacion": {
+            "Simple": "Para dedicación simple: Enfatizar evaluación de propuesta docente y capacidad de formación.",
+            "Parcial": "Para dedicación parcial: Evaluar equilibrio entre propuesta docente y plan de investigación/vinculación/extensión.",
+            "Exclusiva": "Para dedicación exclusiva: Evaluar profundidad del plan de investigación y capacidad para desarrollarlo a largo plazo."
+          }
+        },
         "documentacionRequerida": {
           "base": [
             "DNI",
@@ -26,6 +42,22 @@
       {
         "codigo": "PAS",
         "nombre": "Profesor Asociado",
+        "instructivo_postulantes": {
+          "base": "Para postulantes a Profesor Asociado: Deberá presentar CV completo, documentación respaldatoria, título universitario, antecedentes de idoneidad, propuesta de programa detallada, plan de actividades y programa de formación de recursos humanos. Demuestre experiencia en coordinación académica.",
+          "porDedicacion": {
+            "Simple": "Dedicación Simple: Adicionalmente, puede presentar un plan de investigación/vinculación/extensión opcional. Carga horaria: 10 horas semanales.",
+            "Parcial": "Dedicación Parcial: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión. Carga horaria: 20 horas semanales.",
+            "Exclusiva": "Dedicación Exclusiva: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión detallado con metodología clara. Carga horaria: 40 horas semanales."
+          }
+        },
+        "instructivo_tribunal": {
+          "base": "Para tribunal evaluando Profesor Asociado: Evaluar trayectoria académica, experiencia docente, capacidad de coordinación de actividades académicas, y calidad de la propuesta programática.",
+          "porDedicacion": {
+            "Simple": "Para dedicación simple: Priorizar evaluación de experiencia docente y calidad de la propuesta de enseñanza.",
+            "Parcial": "Para dedicación parcial: Evaluar propuesta docente y viabilidad del plan de investigación/vinculación/extensión.",
+            "Exclusiva": "Para dedicación exclusiva: Evaluar integración entre docencia e investigación y factibilidad del plan IVE."
+          }
+        },
         "documentacionRequerida": {
           "base": [
             "DNI",
@@ -47,6 +79,22 @@
       {
         "codigo": "PAD",
         "nombre": "Profesor Adjunto",
+        "instructivo_postulantes": {
+          "base": "Para postulantes a Profesor Adjunto: Deberá presentar CV completo, documentación respaldatoria, título universitario, antecedentes de idoneidad, propuesta de programa y plan de actividades. Enfatice su experiencia docente y capacidad para colaborar en equipos académicos.",
+          "porDedicacion": {
+            "Simple": "Dedicación Simple: Adicionalmente, puede presentar un plan de investigación/vinculación/extensión opcional. Carga horaria: 10 horas semanales.",
+            "Parcial": "Dedicación Parcial: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión. Carga horaria: 20 horas semanales.",
+            "Exclusiva": "Dedicación Exclusiva: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión detallado con cronograma de trabajo. Carga horaria: 40 horas semanales."
+          }
+        },
+        "instructivo_tribunal": {
+          "base": "Para tribunal evaluando Profesor Adjunto: Evaluar formación académica, experiencia docente, y pertinencia de la propuesta de actividades. Considerar capacidad para integrarse a equipos de trabajo.",
+          "porDedicacion": {
+            "Simple": "Para dedicación simple: Evaluar principalmente la propuesta docente y experiencia previa.",
+            "Parcial": "Para dedicación parcial: Evaluar equilibrio entre propuesta docente y actividades de investigación/vinculación/extensión.",
+            "Exclusiva": "Para dedicación exclusiva: Evaluar coherencia entre la propuesta docente y el plan de investigación."
+          }
+        },
         "documentacionRequerida": {
           "base": [
             "DNI",
@@ -72,6 +120,22 @@
       {
         "codigo": "JTP",
         "nombre": "Jefe de Trabajos Prácticos",
+        "instructivo_postulantes": {
+          "base": "Para postulantes a JTP: Deberá presentar CV completo, documentación respaldatoria, título universitario, antecedentes de idoneidad y plan de actividades. Su propuesta debe enfocarse en la planificación y ejecución de trabajos prácticos.",
+          "porDedicacion": {
+            "Simple": "Dedicación Simple: Adicionalmente, puede presentar un plan de investigación/vinculación/extensión opcional. Carga horaria: 10 horas semanales.",
+            "Parcial": "Dedicación Parcial: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión. Carga horaria: 20 horas semanales.",
+            "Exclusiva": "Dedicación Exclusiva: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión detallado con objetivos específicos. Carga horaria: 40 horas semanales."
+          }
+        },
+        "instructivo_tribunal": {
+          "base": "Para tribunal evaluando JTP: Evaluar experiencia en la conducción de trabajos prácticos, capacidad pedagógica y habilidades para la organización de actividades prácticas.",
+          "porDedicacion": {
+            "Simple": "Para dedicación simple: Evaluar principalmente la capacidad para conducir trabajos prácticos.",
+            "Parcial": "Para dedicación parcial: Evaluar propuesta práctica y capacidad para desarrollar actividades de investigación/vinculación/extensión.",
+            "Exclusiva": "Para dedicación exclusiva: Evaluar profundidad de la propuesta práctica y su articulación con el plan de investigación."
+          }
+        },
         "documentacionRequerida": {
           "base": [
             "DNI",
@@ -91,6 +155,22 @@
       {
         "codigo": "AYP",
         "nombre": "Ayudante de Primera",
+        "instructivo_postulantes": {
+          "base": "Para postulantes a Ayudante de Primera: Deberá presentar CV completo, documentación respaldatoria, título universitario, antecedentes de idoneidad y propuesta de ejercicios prácticos. Demuestre capacidad para asistir en la enseñanza.",
+          "porDedicacion": {
+            "Simple": "Dedicación Simple: Adicionalmente, puede presentar un plan de investigación/vinculación/extensión opcional. Carga horaria: 10 horas semanales.",
+            "Parcial": "Dedicación Parcial: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión. Carga horaria: 20 horas semanales.",
+            "Exclusiva": "Dedicación Exclusiva: Adicionalmente, debe presentar un plan de investigación/vinculación/extensión con metodología clara. Carga horaria: 40 horas semanales."
+          }
+        },
+        "instructivo_tribunal": {
+          "base": "Para tribunal evaluando Ayudante de Primera: Evaluar formación académica, aptitud para la docencia y calidad de la propuesta de ejercicios prácticos. Considerar potencial para desarrollo académico.",
+          "porDedicacion": {
+            "Simple": "Para dedicación simple: Priorizar evaluación de aptitudes para la asistencia docente.",
+            "Parcial": "Para dedicación parcial: Evaluar propuesta práctica y capacidad inicial para actividades de investigación.",
+            "Exclusiva": "Para dedicación exclusiva: Evaluar potencial para desarrollar carrera académica integral."
+          }
+        },
         "documentacionRequerida": {
           "base": [
             "DNI",

@@ -1,0 +1,22 @@
+<div class="modal fade" id="resetTemasMiembroModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación de Temas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="" method="POST" id="resetTemasMiembroForm">
+                    <input type="hidden" name="miembro_id" id="resetTemasMiembroId">
+                    <p>¿Está seguro que desea eliminar los temas de sorteo propuestos por <strong id="resetTemasMiembroNombre"></strong>?</p>
+                    <p>Esta acción permitirá a este miembro del tribunal acceder nuevamente a la página de carga de temas.</p>
+                    <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning">Eliminar Temas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,249 @@
+<div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Documentos Generados</h4>
+        {% if available_documents %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                Generar Documento
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% for doc in available_documents %}
+                <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha Generación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for documento in concurso.documentos|sort(attribute='creado', reverse=true) %}
+                <tr>
+                    <td>
+                        {{ documento.get_friendly_name() }}
+                    </td>
+                    <td>
+                        {% if documento.estado == 'FIRMADO' %}
+                        <span class="badge bg-success">
+                            {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                        </span>
+                        {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                        <span class="badge bg-info">
+                            {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning">
+                            {{ documento.estado }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <!-- Botones de acciones -->
+                        <div class="btn-group">
+                            <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-text"></i> Abrir
+                            </a>
+                              {% if documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}
+                            <form action="{{ url_for('tribunal.notificar_tribunal', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-info">
+                                    <i class="bi bi-send"></i> Notificar Tribunal
+                                </button>
+                            </form>                                        {% endif %}
+
+                            {% if documento.estado == 'BORRADOR' and current_user.role == 'admin' %}
+                                {% set t_config = template_configs_dict.get(documento.tipo) %}
+                                {% if t_config and t_config.admin_can_sign %}
+                                <form action="{{ url_for('concursos.admin_firmar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('¿Está seguro que desea firmar este documento como Administrador?');">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-pen-fill"></i> Firmar Admin
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if (documento.estado == 'BORRADOR' or documento.estado == 'ENVIADO PARA FIRMAR' and 'RESOLUCION' in documento.tipo.upper()) and template_configs_dict.get(documento.tipo, {}).admin_can_send_for_signature %}
+                            <button type="button" class="btn btn-sm btn-outline-success" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#enviarFirmaModal{{ documento.id }}">
+                                <i class="bi bi-envelope"></i> Enviar para firma
+                            </button>
+                            {% endif %}
+                            
+                            {% if documento.estado != 'FIRMADO' and concurso.documentos_firmados_folder_id %}
+                            <button type="button" class="btn btn-sm btn-outline-success" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#subirFirmadoModal{{ documento.id }}">
+                                <i class="bi bi-file-earmark-check"></i> Subir Firmado
+                            </button>
+                            {% endif %}
+
+                            <!-- Delete borrador button (only if it exists in borrador folder) -->
+                            {% if documento.borrador_file_id %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#eliminarBorradorModal{{ documento.id }}">
+                                <i class="bi bi-trash"></i> Eliminar Borrador
+                            </button>
+                            {% endif %}
+
+                            <!-- Delete uploaded document button (if it exists in signed/uploaded folder) -->
+                            {% if documento.file_id and documento.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#eliminarSubidoModal{{ documento.id }}">
+                                <i class="bi bi-trash"></i> Eliminar Subido
+                                {% if documento.estado == 'FIRMADO' and documento.firma_count > 0 %}
+                                ({{ documento.firma_count }})
+                                {% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Modal para enviar a firma -->
+                        <div class="modal fade" id="enviarFirmaModal{{ documento.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Enviar Documento para Firma</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ url_for('concursos.enviar_firma', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="destinatario{{ documento.id }}" class="form-label">Correo del destinatario</label>
+                                                <input type="email" class="form-control" id="destinatario{{ documento.id }}" 
+                                                       name="destinatario" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="observaciones{{ documento.id }}" class="form-label">Observaciones (opcional)</label>
+                                                <textarea class="form-control" id="observaciones{{ documento.id }}" 
+                                                          name="observaciones" rows="3"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-success">Enviar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modal para subir documento firmado -->
+                        <div class="modal fade" id="subirFirmadoModal{{ documento.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Subir Documento Firmado</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ url_for('concursos.subir_documento_firmado', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" enctype="multipart/form-data">
+                                        <div class="modal-body">
+                                            <p>Seleccione el documento firmado para subir. El archivo será guardado en la carpeta de documentos firmados.</p>
+                                            <div class="mb-3">
+                                                <label for="documento_firmado{{ documento.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
+                                                <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-success">Subir</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modal de confirmación de eliminación de documento -->
+                        <div class="modal fade" id="eliminarDocumentoModal{{ documento.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Confirmar Eliminación de Documento</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Está seguro que desea eliminar este documento?</p>
+                                        <p>Esta acción eliminará el documento tanto de la base de datos como de Google Drive.</p>
+                                        <p class="text-danger">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <form action="{{ url_for('concursos.eliminar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger">Eliminar</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal para eliminar borrador -->
+                        <div class="modal fade" id="eliminarBorradorModal{{ documento.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Eliminar Borrador</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Está seguro que desea eliminar el borrador de este documento?</p>
+                                        <p>Esta acción solo eliminará la versión borrador del documento.</p>
+                                        <p>No afectará al documento subido/firmado si existe.</p>
+                                        <p class="text-danger">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <form action="{{ url_for('concursos.eliminar_borrador', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
+                                            <button type="submit" class="btn btn-danger">Eliminar Borrador</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal para eliminar documento subido/firmado -->
+                        <div class="modal fade" id="eliminarSubidoModal{{ documento.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Eliminar Documento Subido</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Está seguro que desea eliminar el documento subido?</p>
+                                        {% if documento.estado == 'FIRMADO' and documento.firma_count > 0 %}
+                                        <p>Este documento tiene {{ documento.firma_count }} firma{{ 's' if documento.firma_count > 1 else '' }}.</p>
+                                        {% endif %}
+                                        <p>Esta acción eliminará el documento de la carpeta de documentos firmados.</p>
+                                        <p>No afectará al borrador si existe.</p>
+                                        <p class="text-danger">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <form action="{{ url_for('concursos.eliminar_subido', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
+                                            <button type="submit" class="btn btn-danger">Eliminar Subido</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay documentos generados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+<div class="modal fade" id="finalizarCargaTemasModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Consolidación de Temas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.finalizar_carga_temas', concurso_id=concurso.id) }}" method="POST" id="finalizarCargaTemasForm">
+                    <p>¿Está seguro que desea consolidar y finalizar la carga de temas?</p>
+                    <p>Esta acción bloqueará las propuestas individuales y creará un conjunto consolidado de temas para el sorteo.</p>
+                    <p class="text-warning"><strong>Nota:</strong> Una vez consolidados, los miembros del tribunal no podrán modificar sus propuestas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Consolidar Temas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

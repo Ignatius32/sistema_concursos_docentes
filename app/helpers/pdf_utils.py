@@ -29,7 +29,7 @@ def convert_byte_array_to_bytes(byte_array):
         logger.error(f"Error converting byte array to bytes: {str(e)}")
         return None
 
-def add_signature_stamp(pdf_content, apellido, nombre, dni, signature_count=0):
+def add_signature_stamp(pdf_content, apellido, nombre, dni, cargo=None, signature_count=0):
     """Add a signature stamp to the footer of each page in a PDF.
     
     Args:
@@ -37,6 +37,7 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, signature_count=0):
         apellido (str): Last name of the signer
         nombre (str): First name of the signer
         dni (str): DNI of the signer
+        cargo (str, optional): Role or position of the signer. If provided, included in stamp.
         signature_count (int): Current count of signatures on the document (0-based)
         
     Returns:
@@ -61,12 +62,14 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, signature_count=0):
         page = existing_pdf.pages[0]
         page_width = float(page.mediabox.width)
         page_height = float(page.mediabox.height)
-        
-        # Create timestamp
+          # Create timestamp
         timestamp = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         
         # Prepare stamp text
-        stamp_text = f"Firmado por: {apellido}, {nombre} (DNI: {dni}) - {timestamp}"
+        if cargo:
+            stamp_text = f"Firmado por: {apellido}, {nombre} (Cargo: {cargo}, DNI: {dni}) - {timestamp}"
+        else:
+            stamp_text = f"Firmado por: {apellido}, {nombre} (DNI: {dni}) - {timestamp}"
         
         # Metadata to be added to the PDF - note the forward slashes for PDF spec compliance
         metadata = {
@@ -76,6 +79,10 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, signature_count=0):
             '/SignerTimestamp': timestamp,
             '/SignatureCount': str(signature_count + 1),
         }
+        
+        # Add cargo to metadata if provided
+        if cargo:
+            metadata['/SignerCargo'] = cargo
         
         # Add each page with a stamp
         for i in range(len(existing_pdf.pages)):
@@ -166,14 +173,14 @@ def verify_signed_pdf(pdf_bytes, expected_signers):
         for page_num in range(len(pdf.pages)):
             page = pdf.pages[page_num]
             text += page.extract_text()
-        
-        # Check for each expected signer
+          # Check for each expected signer
         missing_signers = []
         for signer in expected_signers:
-            # Look for signature pattern: "Firmado por: {apellido}, ... (DNI: {dni})"
+            # Look for signature pattern: "Firmado por: {apellido}, ... (DNI: {dni})" or with Cargo
             signature_pattern = f"Firmado por: {signer['apellido']}"
             dni_pattern = f"DNI: {signer['dni']}"
             
+            # A signer is present if both signature pattern and DNI pattern are found
             if signature_pattern not in text or dni_pattern not in text:
                 missing_signers.append(signer)
         

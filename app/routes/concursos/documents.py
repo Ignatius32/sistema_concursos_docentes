@@ -696,3 +696,171 @@ def generar_documento(concurso_id, document_type_key):
         flash(message, 'danger')
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+# Add the admin signature route
+@concursos.route('/<int:concurso_id>/documento/<int:documento_id>/admin-firmar', methods=['POST'])
+@login_required
+def admin_firmar_documento(concurso_id, documento_id):
+    """Allow an admin to digitally sign a draft document."""
+    # Verify user is logged in and is an admin
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        flash('Debe ser administrador para firmar documentos', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        # Fetch concurso and document
+        concurso = Concurso.query.get_or_404(concurso_id)
+        documento = DocumentoConcurso.query.get_or_404(documento_id)
+        
+        # Check document belongs to this concurso
+        if documento.concurso_id != concurso_id:
+            flash('El documento no corresponde a este concurso', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Get document template config
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        if not template_config or not template_config.admin_can_sign:
+            flash('Este tipo de documento no permite firma administrativa', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Verify document is in BORRADOR state
+        if documento.estado != 'BORRADOR':
+            flash('Solo se pueden firmar documentos en estado BORRADOR', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Verify document draft exists
+        if not documento.borrador_file_id:
+            flash('El documento no tiene un borrador para firmar', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Verify concurso has documentos_firmados_folder
+        if not concurso.documentos_firmados_folder_id:
+            flash('El concurso no tiene una carpeta de documentos firmados configurada', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Get admin persona record
+        from app.models.models import Persona, User
+        admin_persona = Persona.query.filter_by(username=current_user.username).first()
+        
+        if not admin_persona:
+            # Look for any admin persona records - if none found, use default information
+            admin_personas = Persona.query.filter(Persona.username.like('%admin%')).all()
+            if admin_personas:
+                # Use the first admin-like persona found
+                admin_persona = admin_personas[0]
+                nombre = admin_persona.nombre
+                apellido = admin_persona.apellido
+                dni = admin_persona.dni
+                cargo = getattr(admin_persona, 'cargo', 'Administrador')
+            else:
+                # Create default admin information if no Persona record exists
+                nombre = "Admin"  # Default values
+                apellido = "Sistema"
+                dni = "00000000"
+                cargo = "Administrador"
+                
+                # Try to get User record for better information
+                admin_user = User.query.filter_by(username=current_user.username).first()
+                if admin_user:
+                    username_parts = admin_user.username.split('.')
+                    if len(username_parts) > 1:
+                        nombre = username_parts[0].capitalize()
+                        apellido = username_parts[1].capitalize()
+        else:
+            # Use admin's information for signing
+            nombre = admin_persona.nombre
+            apellido = admin_persona.apellido
+            dni = admin_persona.dni
+            
+            # Use 'Administrador' as default cargo if not set
+            cargo = getattr(admin_persona, 'cargo', 'Administrador')
+            if not cargo:
+                cargo = 'Administrador'
+            
+        # Get the draft document
+        file_data = drive_api.get_file_content(documento.borrador_file_id)
+        if not file_data or 'fileData' not in file_data:
+            flash('No se pudo recuperar el documento para firmar', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Decode base64 fileData
+        import base64
+        file_bytes = base64.b64decode(file_data.get('fileData'))
+        file_name = file_data.get('fileName', f"documento_{documento.id}.pdf")
+        mime_type = file_data.get('mimeType', 'application/pdf')
+        
+        # Handle conversion to PDF if needed
+        if mime_type != 'application/pdf':
+            # If the document is a Google Doc, the API might already return it as PDF
+            if mime_type == 'application/vnd.google-apps.document':
+                # Assuming API already converts to PDF
+                pass
+            else:
+                flash('Solo se pueden firmar documentos en formato PDF', 'danger')
+                return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+                
+        # Add signature to PDF
+        from app.helpers.pdf_utils import add_signature_stamp
+        
+        try:
+            signed_pdf_bytes = add_signature_stamp(
+                file_bytes, 
+                apellido, 
+                nombre, 
+                dni, 
+                cargo=cargo,
+                signature_count=documento.firma_count
+            )
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            flash(f'Error al firmar el documento: {str(e)}', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        # Prepare filename for signed document
+        if '.' in file_name:
+            name_part, ext_part = file_name.rsplit('.', 1)
+            signed_file_name = f"{name_part}_firmado_admin.{ext_part}"
+        else:
+            signed_file_name = f"{file_name}_firmado_admin.pdf"
+            
+        # Upload signed document
+        try:
+            file_id, web_view_link = drive_api.upload_document(
+                concurso.documentos_firmados_folder_id,
+                signed_file_name,
+                signed_pdf_bytes,  # Pass bytes directly, not base64 encoded string
+                'application/pdf'
+            )
+            
+            # Update DocumentoConcurso record
+            documento.file_id = file_id
+            documento.url = web_view_link
+            documento.estado = 'FIRMADO'
+            documento.firma_count += 1
+              # Add record to HistorialEstado
+            historial = HistorialEstado(
+                concurso_id=concurso_id,
+                estado='FIRMADO',
+                observaciones=f'Documento {documento.tipo} firmado digitalmente por {nombre} {apellido} (Cargo: {cargo})'
+            )
+            
+            db.session.add(historial)
+            db.session.commit()
+            
+            flash(f'Documento firmado exitosamente por {nombre} {apellido} (Cargo: {cargo})', 'success')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            print(traceback.format_exc())
+            flash(f'Error al subir el documento firmado: {str(e)}', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(traceback.format_exc())
+        flash(f'Error inesperado: {str(e)}', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))

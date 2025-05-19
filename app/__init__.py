@@ -109,10 +109,39 @@ def create_app():
       # Register admin personas blueprint
     from app.routes.admin_personas import admin_personas_bp
     app.register_blueprint(admin_personas_bp)
-    
-    # Register notifications blueprint
+      # Register notifications blueprint
     from app.routes.notifications import notifications_bp
     app.register_blueprint(notifications_bp)
+    
+    # Register API blueprint
+    from app.routes.api import api_bp
+    app.register_blueprint(api_bp)
+    
+    # Register public blueprint
+    from app.routes.public import public as public_blueprint
+    app.register_blueprint(public_blueprint)
+      # Add context processor for template functions
+    from app.helpers.api_services import get_programa_download_url
+    @app.context_processor
+    def utility_processor():
+        return {
+            'get_programa_download_url': get_programa_download_url
+        }
+    
+    # Add custom filters for templates
+    @app.template_filter('format_datetime')
+    def format_datetime(value, format='%d/%m/%Y %H:%M'):
+        """Format a datetime object for display in templates"""
+        if value is None:
+            return ""
+        return value.strftime(format)
+
+    @app.template_filter('trim')
+    def trim_filter(value):
+        """Trim whitespace from string"""
+        if value is None:
+            return ""
+        return value.strip()
 
     @login_manager.user_loader
     def load_user(user_id):

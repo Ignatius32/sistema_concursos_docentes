@@ -1,0 +1,231 @@
+<div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">
+    <h4>Sustanciación de Concurso</h4>
+    <div class="table-responsive">
+        <table class="table">
+            <!-- Constitución del Jurado section -->
+            <tr>
+                <th colspan="2" class="bg-light">
+                    <h5 class="mb-0">Constitución del Jurado</h5>
+                </th>
+            </tr>
+            <tr>
+                <th>Fecha de Constitución del Tribunal:</th>
+                <td>{{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Lugar:</th>
+                <td>{{ concurso.sustanciacion.constitucion_lugar or '-' }}</td>
+            </tr>
+            {% if concurso.sustanciacion.constitucion_virtual_link %}
+            <tr>
+                <th>Enlace a Reunión Virtual:</th>
+                <td>
+                    <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+            {% if concurso.sustanciacion.constitucion_observaciones %}
+            <tr>
+                <th>Observaciones:</th>
+                <td>{{ concurso.sustanciacion.constitucion_observaciones }}</td>
+            </tr>
+            {% endif %}
+            <!-- Sorteo section -->
+            <tr>
+                <th colspan="2" class="bg-light">
+                    <h5 class="mb-0">Sorteo de Tema</h5>
+                </th>
+            </tr>
+            <tr>
+                <th>Fecha de Sorteo de Tema:</th>
+                <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Lugar del Sorteo:</th>
+                <td>{{ concurso.sustanciacion.sorteo_lugar or '-' }}</td>
+            </tr>
+            {% if concurso.sustanciacion.sorteo_virtual_link %}
+            <tr>
+                <th>Enlace a Reunión Virtual del Sorteo:</th>
+                <td>
+                    <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+            {% if concurso.sustanciacion.sorteo_observaciones %}
+            <tr>
+                <th>Observaciones del Sorteo:</th>
+                <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
+            </tr>
+            {% endif %}
+              <!-- Propuestas de temas por miembro del tribunal -->
+            {% if temas_por_miembro and temas_por_miembro|length > 0 %}
+            <tr>
+                <th>Propuestas de Temas por Miembro del Tribunal:</th>
+                <td>
+                    <div class="mb-3">
+                        <div class="accordion" id="temasProposalAccordion">
+                            {% for miembro_id, info in temas_por_miembro.items() %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ miembro_id }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse{{ miembro_id }}" aria-expanded="false" 
+                                                aria-controls="collapse{{ miembro_id }}">
+                                            {{ info.miembro.persona.nombre }} {{ info.miembro.persona.apellido }} ({{ info.miembro.rol }})
+                                            {% if info.propuesta_cerrada %}
+                                                <span class="badge bg-success ms-2">Propuesta Cerrada</span>
+                                            {% else %}
+                                                <span class="badge bg-warning ms-2">Propuesta en Edición</span>
+                                            {% endif %}
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ miembro_id }}" class="accordion-collapse collapse" 
+                                         aria-labelledby="heading{{ miembro_id }}" data-bs-parent="#temasProposalAccordion">
+                                        <div class="accordion-body">
+                                            <div class="temas-list">
+                                                {% for tema in info.temas %}
+                                                    <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema }}</span>
+                                                {% else %}
+                                                    <em class="text-muted">No ha propuesto temas todavía.</em>
+                                                {% endfor %}
+                                            </div>
+                                            <small class="text-muted d-block mt-2">Última actualización: {{ info.fecha_propuesta|format_datetime }}</small>
+                                            
+                                            <!-- Admin actions for this member's topics -->
+                                            {% if current_user.is_admin %}
+                                                <div class="mt-2">                                                    <button class="btn btn-sm btn-outline-danger reset-temas-miembro-btn" 
+                                                            data-miembro-id="{{ miembro_id }}" 
+                                                            data-miembro-nombre="{{ info.miembro.persona.nombre }} {{ info.miembro.persona.apellido }}" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#resetTemasMiembroModal">
+                                                        <i class="bi bi-trash"></i> Resetear Temas
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if current_user.is_admin and (not concurso.sustanciacion.temas_cerrados) %}
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finalizarCargaTemasModal">
+                                    <i class="bi bi-lock"></i> Finalizar y Consolidar Temas
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            
+            {% if concurso.sustanciacion.temas_exposicion %}
+            <tr>
+                <th>Temas Consolidados para Sorteo:</th>
+                <td>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="temas-list flex-grow-1">
+                            {% if concurso.sustanciacion.tema_sorteado %}
+                                {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                                    {% if tema.strip() %}
+                                    <span class="badge bg-{% if tema.strip() == concurso.sustanciacion.tema_sorteado %}success{% else %}light text-dark{% endif %} p-2 me-2 mb-2">{{ tema.strip() }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                                    {% if tema.strip() %}
+                                    <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ tema.strip() }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <em class="text-muted d-block mt-2">Los temas están definidos pero no se ha realizado el sorteo.</em>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown ms-2">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% if not concurso.sustanciacion.tema_sorteado and concurso.sustanciacion.temas_cerrados %}
+                                <li>
+                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
+                                        <i class="bi bi-shuffle"></i> Realizar Sorteo de Tema
+                                    </button>
+                                </li>
+                                {% endif %}
+                                  {% if concurso.sustanciacion.tema_sorteado %}
+                                <li>
+                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Eliminar tema sorteado
+                                    </button>
+                                </li>
+                                {% endif %}
+                                
+                                {% if concurso.sustanciacion.temas_cerrados %}
+                                <li>
+                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#desconsolidarTemasModal">
+                                        <i class="bi bi-unlock"></i> Desconsolidar temas
+                                    </button>
+                                </li>
+                                {% endif %}
+                                
+                                <li>
+                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
+                                        <i class="bi bi-trash"></i> Eliminar todos los temas
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        {% if concurso.sustanciacion.tema_sorteado %}
+                            <div class="alert alert-success">
+                                <strong>Tema sorteado:</strong> {{ concurso.sustanciacion.tema_sorteado }}
+                            </div>
+                        {% else %}
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
+                                <i class="bi bi-shuffle"></i> Sortear Tema
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+
+            <!-- Exposicion section -->
+            <tr>
+                <th colspan="2" class="bg-light">
+                    <h5 class="mb-0">Exposición</h5>
+                </th>
+            </tr>
+            <tr>
+                <th>Fecha de Exposición:</th>
+                <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Lugar de la Exposición:</th>
+                <td>{{ concurso.sustanciacion.exposicion_lugar or '-' }}</td>
+            </tr>
+            {% if concurso.sustanciacion.exposicion_virtual_link %}
+            <tr>
+                <th>Enlace a Reunión Virtual de la Exposición:</th>
+                <td>
+                    <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+            {% if concurso.sustanciacion.exposicion_observaciones %}
+            <tr>
+                <th>Observaciones de la Exposición:</th>
+                <td>{{ concurso.sustanciacion.exposicion_observaciones }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>

@@ -13,33 +13,56 @@
         </div>
     </div>
     <div class="card-body">
-        {% if concurso.sustanciacion.temas_exposicion %}
-        <div class="alert alert-info">
-            <h5>Temas Actuales:</h5>
-            <div class="temas-list mt-2">
-                {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                    {% if tema.strip() %}
-                    <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-            {% if current_user.is_authenticated %}
-            <hr>
-            <form action="{{ url_for('tribunal.reset_temas', concurso_id=concurso.id) }}" method="POST" class="mt-3">
-                <button type="submit" class="btn btn-warning" onclick="return confirm('¿Está seguro que desea eliminar todos los temas? Esta acción no se puede deshacer.')">
-                    <i class="bi bi-trash"></i> Eliminar Temas
-                </button>
-            </form>
-            {% endif %}
+        <div class="alert alert-primary mb-4">
+            <h5><i class="bi bi-info-circle-fill"></i> ¿Cómo funciona la carga de temas?</h5>
+            <p>En este sistema, cada miembro del tribunal puede proponer hasta 3 temas para el sorteo. Estos temas son individuales y representan su propuesta personal. Una vez que finalice y cierre su propuesta, no podrá realizar cambios adicionales.</p>
+            <p>Posteriormente, un administrador consolidará todas las propuestas en un único conjunto de temas que se utilizará para el sorteo.</p>
         </div>
+
+        {% if concurso.sustanciacion and concurso.sustanciacion.temas_cerrados %}
+            <div class="alert alert-info">
+                <h5>Temas Consolidados (Cerrados):</h5>
+                {% if concurso.sustanciacion.temas_exposicion %}
+                <div class="temas-list mt-2">
+                    {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+                        {% if tema.strip() %}
+                        <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-lock"></i> Los temas han sido consolidados y cerrados por el administrador. No se pueden realizar modificaciones.
+                </div>
+            </div>
+        {% elif tema_propuesta and tema_propuesta.propuesta_cerrada %}
+            <div class="alert alert-info">
+                <h5>Mis Temas Propuestos (Cerrados):</h5>
+                {% if tema_propuesta.temas_propuestos %}
+                <div class="temas-list mt-2">
+                    {% for tema in tema_propuesta.temas_propuestos.split('|') %}
+                        {% if tema.strip() %}
+                        <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-lock"></i> Ya ha cerrado su propuesta de temas. Contacte al administrador si necesita realizar cambios.
+                </div>
+            </div>
+        {% elif not miembro.can_add_tema %}
+            <div class="alert alert-warning">
+                Solo el presidente del tribunal puede cargar los temas de sorteo.
+            </div>
         {% else %}
-            {% if miembro.can_add_tema %}
-            <form method="POST">
+            <!-- User has permission and topics are not closed -->
+            <form method="POST" id="temasForm">
                 <div class="mb-3">
-                    <label class="form-label">Agregar Tema de Sorteo</label>
+                    <label class="form-label">Mis Temas de Sorteo <span class="text-muted">(Proponga exactamente 3 temas)</span></label>
                     <div class="row">
                         <div class="col">
-                            <input type="text" class="form-control" id="nuevo-tema" placeholder="Ingrese el tema">
+                            <input type="text" class="form-control" id="nuevo-tema" placeholder="Ingrese un tema para proponer">
                         </div>
                         <div class="col-auto">
                             <button type="button" class="btn btn-primary" id="btn-add-tema">
@@ -50,22 +73,37 @@
                 </div>
 
                 <div id="temas-container" class="mb-4">
-                    <!-- Temas will be displayed here -->
+                    <!-- Temas will be displayed here and pre-filled with existing ones -->
                 </div>
 
                 <input type="hidden" name="temas_exposicion" id="temas_exposicion">
-
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="submit" class="btn btn-success" id="btn-submit" disabled>
-                        <i class="bi bi-save"></i> Guardar Temas
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="btn-reset" class="btn btn-outline-warning">
+                        <i class="bi bi-trash"></i> Limpiar Formulario
                     </button>
+                    <div>
+                        <button type="submit" name="action" value="save" class="btn btn-primary me-2" id="btn-submit">
+                            <i class="bi bi-save"></i> Guardar Cambios
+                        </button>
+                        <button type="button" class="btn btn-success" id="btn-confirm-close">
+                            <i class="bi bi-lock"></i> Guardar y Cerrar Mi Propuesta
+                        </button>
+                        <button type="submit" name="action" value="save_and_close" class="btn btn-success d-none" id="btn-save-and-close" disabled>
+                            Confirmar y Cerrar Mi Propuesta
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle"></i> Información importante sobre el proceso de carga de temas: 
+                    <ul class="mb-0 mt-2">
+                        <li>Debe proponer <strong>exactamente 3 temas</strong> para finalizar su propuesta.</li>
+                        <li>Puede guardar sus cambios en cualquier momento como borrador.</li>
+                        <li>Una vez que utilice "Guardar y Cerrar Mi Propuesta", no podrá realizar más modificaciones.</li>
+                        <li>Sus temas son una <strong>propuesta individual</strong> que posteriormente será revisada.</li>
+                        <li>El administrador consolidará todas las propuestas para generar el conjunto final de temas.</li>
+                    </ul>
                 </div>
             </form>
-            {% else %}
-            <div class="alert alert-warning">
-                Solo el presidente del tribunal puede cargar los temas de sorteo.
-            </div>
-            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -79,16 +117,55 @@ document.addEventListener('DOMContentLoaded', function() {
     const temasContainer = document.getElementById('temas-container');
     const temasInput = document.getElementById('temas_exposicion');
     const btnSubmit = document.getElementById('btn-submit');
+    const btnSaveAndClose = document.getElementById('btn-save-and-close');
+    const btnConfirmClose = document.getElementById('btn-confirm-close');
+    const btnReset = document.getElementById('btn-reset');
+      // Initialize with any existing topics
+    const initialTemasStr = "{{ current_temas_str|default('', true) }}";
 
-    function updateTemasInput() {
+    function renumberTemas() {
+        temasContainer.querySelectorAll('.tema-item').forEach((item, index) => {
+            const temaText = item.querySelector('span').textContent.replace(/^\d+\)/, '').trim();
+            item.querySelector('span').textContent = `${index + 1}) ${temaText}`;
+        });
+    }
+
+    function updateTemasState() {
         const temaElements = temasContainer.querySelectorAll('.tema-item');
         const temas = Array.from(temaElements).map(el => el.dataset.texto);
         temasInput.value = temas.join('|');
-        btnSubmit.disabled = temas.length === 0;
+        
+        // Update submit button state
+        if (temas.length > 0 || initialTemasStr !== '') {
+            btnSubmit.disabled = false;
+        } else {
+            btnSubmit.disabled = true;
+        }
+        
+        // Update save and close button state - only enabled if exactly 3 topics
+        btnSaveAndClose.disabled = (temas.length !== 3);
+        btnConfirmClose.disabled = (temas.length !== 3);
     }
 
     function addTema(texto) {
         if (!texto || texto.trim() === '') return;
+        
+        // Check if we already have 3 topics
+        if (temasContainer.children.length >= 3) {
+            alert('No se pueden agregar más de 3 temas.');
+            return;
+        }
+        
+        // Check for duplicates (case insensitive)
+        const normalized = texto.trim().toLowerCase();
+        const duplicado = Array.from(temasContainer.querySelectorAll('.tema-item')).some(
+            el => el.dataset.texto.toLowerCase() === normalized
+        );
+        
+        if (duplicado) {
+            alert('Este tema ya ha sido agregado.');
+            return;
+        }
 
         const temaElement = document.createElement('div');
         temaElement.className = 'tema-item badge bg-light text-dark p-2 me-2 mb-2';
@@ -102,16 +179,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         temaElement.querySelector('.btn-delete-tema').addEventListener('click', function() {
             temaElement.remove();
-            // Renumber remaining temas
-            temasContainer.querySelectorAll('.tema-item').forEach((item, index) => {
-                const temaText = item.querySelector('span').textContent.replace(/^\d+\)/, '');
-                item.querySelector('span').textContent = `${index + 1})${temaText}`;
-            });
-            updateTemasInput();
+            renumberTemas();
+            updateTemasState();
         });
 
         temasContainer.appendChild(temaElement);
-        updateTemasInput();
+        updateTemasState();
+    }    // Load existing temas from the controller if available
+    if (initialTemasStr && initialTemasStr.trim() !== '') {
+        const temasList = initialTemasStr.split('|');
+        for (const tema of temasList) {
+            if (tema.trim()) {
+                addTema(tema.trim());
+            }
+        }
     }
 
     if (btnAddTema && nuevoTemaInput) {
@@ -132,9 +213,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    if (btnReset) {
+        btnReset.addEventListener('click', function() {
+            if (confirm('¿Está seguro que desea eliminar todos los temas? Esta acción solo afecta a este formulario.')) {
+                temasContainer.innerHTML = '';
+                updateTemasState();
+            }
+        });
+    }
+    
+    if (btnConfirmClose) {
+        btnConfirmClose.addEventListener('click', function() {
+            const temaElements = temasContainer.querySelectorAll('.tema-item');
+            if (temaElements.length !== 3) {
+                alert('Debe tener exactamente 3 temas para poder cerrar y enviar.');
+                return;
+            }
+            
+            if (confirm('¿Está seguro que desea cerrar y enviar los temas? Esta acción NO SE PUEDE DESHACER y los temas ya no podrán ser modificados.')) {
+                // Show the real submit button and click it
+                btnSaveAndClose.classList.remove('d-none');
+                btnConfirmClose.classList.add('d-none');
+                btnSaveAndClose.click();
+            }
+        });
+    }
+
     document.querySelector('form')?.addEventListener('submit', function(e) {
-        updateTemasInput();
+        updateTemasState();
     });
+    
+    // Initial state update
+    updateTemasState();
 });
 </script>
 

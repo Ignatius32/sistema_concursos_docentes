@@ -61,862 +61,68 @@
                 </button>
             </li>
             {% endif %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="asignaturas-externas-tab" data-bs-toggle="tab" data-bs-target="#asignaturas-externas-content" type="button" role="tab" aria-controls="asignaturas-externas-content" aria-selected="false">
+                    <i class="bi bi-journals"></i> Asignaturas (Info Externa)
+                </button>
+            </li>
         </ul>        <!-- Tab content -->
         <div class="tab-content">
-            <!-- Tab 1: Información y Detalles -->            <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4>Información General</h4>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Respaldo Presupuestario
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cargarTkdModal">
-                                        <i class="bi bi-upload"></i> Cargar TKD Respaldo
-                                    </a></li>
-                                    {% if concurso.tkd or concurso.tkd_file_id %}
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#borrarTkdModal">
-                                        <i class="bi bi-trash"></i> Borrar TKD Respaldo
-                                    </a></li>
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </div>
-                        <table class="table">
-                    <tr>
-                        <th>Tipo:</th>
-                        <td>{{ concurso.tipo }}</td>
-                    </tr>
-                    {% if concurso.tipo == 'Interino' and concurso.nro_res_llamado_interino %}
-                    <tr>
-                        <th>N° Res. Llamado Interino:</th>
-                        <td>{{ concurso.nro_res_llamado_interino }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.tipo == 'Regular' %}
-                    {% if concurso.nro_res_llamado_regular %}
-                    <tr>
-                        <th>N° Res. Llamado Regular:</th>
-                        <td>{{ concurso.nro_res_llamado_regular }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.nro_res_tribunal_regular %}
-                    <tr>
-                        <th>N° Res. Tribunal Regular:</th>
-                        <td>{{ concurso.nro_res_tribunal_regular }}</td>
-                    </tr>
-                    {% endif %}
-                    {% endif %}
-                    <tr>
-                        <th>Cerrado/Abierto:</th>
-                        <td>{{ concurso.cerrado_abierto }}</td>
-                    </tr>
-                    <tr>
-                        <th>Cantidad de Cargos:</th>
-                        <td>{{ concurso.cant_cargos }}</td>
-                    </tr>
-                    <tr>
-                        <th>Departamento:</th>
-                        <td>{{ concurso.departamento_rel.nombre }}</td>
-                    </tr>
-                    <tr>
-                        <th>Área:</th>
-                        <td>{{ concurso.area }}</td>
-                    </tr>
-                    <tr>
-                        <th>Orientación:</th>
-                        <td>{{ concurso.orientacion }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="col-md-6">
-                <h4>Detalles del Cargo</h4>
-                <table class="table">
-                    <tr>
-                        <th>Categoría:</th>
-                        <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
-                    </tr>
-                    <tr>
-                        <th>Dedicación:</th>
-                        <td>{{ concurso.dedicacion }}</td>
-                    </tr>
-                    <tr>
-                        <th>Localización:</th>
-                        <td>{{ concurso.localizacion }}</td>
-                    </tr>
-                    {% if concurso.asignaturas %}
-                    <tr>
-                        <th>Asignaturas:</th>
-                        <td>{{ concurso.asignaturas }}</td>
-                    </tr>
-                    {% endif %}                    
-                    {% if concurso.expediente %}
-                    <tr>
-                        <th>Expediente:</th>
-                        <td>{{ concurso.expediente }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.tkd %}
-                    <tr>
-                        <th>TKD:</th>
-                        <td>
-                            {{ concurso.tkd }}
-                            {% if concurso.tkd_file_id %}
-                            <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" 
-                               target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                                <i class="bi bi-file-earmark-pdf"></i> Ver archivo
-                            </a>
-                            {% endif %}
-                        </td>                    
-                    </tr>                    
-                    {% endif %}
-                    <tr>
-                        <th>Cierre Inscripción:</th>
-                        <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</td>
-                    </tr>
-                    {% if concurso.vencimiento %}
-                    <tr>
-                        <th>Vencimiento:</th>
-                        <td>{{ concurso.vencimiento.strftime('%d/%m/%Y') }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.origen_vacante %}
-                    <tr>
-                        <th>Origen de Vacante:</th>
-                        <td>{{ concurso.origen_vacante }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.docente_vacante %}
-                    <tr>
-                        <th>Docente que genera vacante:</th>
-                        <td>{{ concurso.docente_vacante }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if concurso.id_designacion_mocovi %}
-                    <tr>
-                        <th>ID Designación MOCOVI:</th>
-                        <td>{{ concurso.id_designacion_mocovi }}</td>
-                    </tr>
-                    {% endif %}                      {% if concurso.drive_folder_id %}
-                    <tr>
-                        <th>Carpeta Google Drive:</th>
-                        <td>
-                            <a href="https://drive.google.com/drive/folders/{{ concurso.drive_folder_id }}" 
-                               target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-folder"></i> Abrir carpeta
-                            </a>
-                        </td>                    </tr>
-                    {% endif %}
-                </table>
-            </div>
-        </div>
-            </div>
-              <!-- Tab 2: Documentos Generados -->            <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4>Documentos Generados</h4>
-                    {% if available_documents %}
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            Generar Documento
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            {% for doc in available_documents %}
-                            <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Fecha Generación</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for documento in concurso.documentos|sort(attribute='creado', reverse=true) %}
-                            <tr>
-                                <td>
-                                    {{ documento.get_friendly_name() }}
-                                </td>
-                                <td>
-                                    {% if documento.estado == 'FIRMADO' %}
-                                    <span class="badge bg-success">
-                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
-                                    </span>
-                                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
-                                    <span class="badge bg-info">
-                                        {{ documento.estado }} {% if documento.firma_count > 0 %}({{ documento.firma_count }}){% endif %}
-                                    </span>
-                                    {% else %}
-                                    <span class="badge bg-warning">
-                                        {{ documento.estado }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
-                                <td>
-                                    <!-- Botones de acciones -->
-                                    <div class="btn-group">
-                                        <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-file-earmark-text"></i> Abrir
-                                        </a>
-                                        
-                                        {% if documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}
-                                        <form action="{{ url_for('tribunal.notificar_tribunal', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-info">
-                                                <i class="bi bi-send"></i> Notificar Tribunal
-                                            </button>
-                                        </form>                                        {% endif %}
-
-                                        {% if (documento.estado == 'BORRADOR' or documento.estado == 'ENVIADO PARA FIRMAR' and 'RESOLUCION' in documento.tipo.upper()) and template_configs_dict.get(documento.tipo, {}).admin_can_send_for_signature %}
-                                        <button type="button" class="btn btn-sm btn-outline-success" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#enviarFirmaModal{{ documento.id }}">
-                                            <i class="bi bi-envelope"></i> Enviar para firma
-                                        </button>
-                                        {% endif %}
-                                        
-                                        {% if documento.estado != 'FIRMADO' and concurso.documentos_firmados_folder_id %}
-                                        <button type="button" class="btn btn-sm btn-outline-success" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#subirFirmadoModal{{ documento.id }}">
-                                            <i class="bi bi-file-earmark-check"></i> Subir Firmado
-                                        </button>
-                                        {% endif %}
-
-                                        <!-- Delete borrador button (only if it exists in borrador folder) -->
-                                        {% if documento.borrador_file_id %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#eliminarBorradorModal{{ documento.id }}">
-                                            <i class="bi bi-trash"></i> Eliminar Borrador
-                                        </button>
-                                        {% endif %}
-
-                                        <!-- Delete uploaded document button (if it exists in signed/uploaded folder) -->
-                                        {% if documento.file_id and documento.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#eliminarSubidoModal{{ documento.id }}">
-                                            <i class="bi bi-trash"></i> Eliminar Subido
-                                            {% if documento.estado == 'FIRMADO' and documento.firma_count > 0 %}
-                                            ({{ documento.firma_count }})
-                                            {% endif %}
-                                        </button>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Modal para enviar a firma -->
-                                    <div class="modal fade" id="enviarFirmaModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Enviar Documento para Firma</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <form action="{{ url_for('concursos.enviar_firma', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label for="destinatario{{ documento.id }}" class="form-label">Correo del destinatario</label>
-                                                            <input type="email" class="form-control" id="destinatario{{ documento.id }}" 
-                                                                   name="destinatario" required>
-                                                        </div>
-                                                        <div class="mb-3">
-                                                            <label for="observaciones{{ documento.id }}" class="form-label">Observaciones (opcional)</label>
-                                                            <textarea class="form-control" id="observaciones{{ documento.id }}" 
-                                                                      name="observaciones" rows="3"></textarea>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-success">Enviar</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Modal para subir documento firmado -->
-                                    <div class="modal fade" id="subirFirmadoModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Subir Documento Firmado</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <form action="{{ url_for('concursos.subir_documento_firmado', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" enctype="multipart/form-data">
-                                                    <div class="modal-body">
-                                                        <p>Seleccione el documento firmado para subir. El archivo será guardado en la carpeta de documentos firmados.</p>
-                                                        <div class="mb-3">
-                                                            <label for="documento_firmado{{ documento.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
-                                                            <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-success">Subir</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Modal de confirmación de eliminación de documento -->
-                                    <div class="modal fade" id="eliminarDocumentoModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Confirmar Eliminación de Documento</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>¿Está seguro que desea eliminar este documento?</p>
-                                                    <p>Esta acción eliminará el documento tanto de la base de datos como de Google Drive.</p>
-                                                    <p class="text-danger">Esta acción no se puede deshacer.</p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <form action="{{ url_for('concursos.eliminar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST" style="display: inline;">
-                                                        <button type="submit" class="btn btn-danger">Eliminar</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Modal para eliminar borrador -->
-                                    <div class="modal fade" id="eliminarBorradorModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Eliminar Borrador</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>¿Está seguro que desea eliminar el borrador de este documento?</p>
-                                                    <p>Esta acción solo eliminará la versión borrador del documento.</p>
-                                                    <p>No afectará al documento subido/firmado si existe.</p>
-                                                    <p class="text-danger">Esta acción no se puede deshacer.</p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <form action="{{ url_for('concursos.eliminar_borrador', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
-                                                        <button type="submit" class="btn btn-danger">Eliminar Borrador</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Modal para eliminar documento subido/firmado -->
-                                    <div class="modal fade" id="eliminarSubidoModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Eliminar Documento Subido</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>¿Está seguro que desea eliminar el documento subido?</p>
-                                                    {% if documento.estado == 'FIRMADO' and documento.firma_count > 0 %}
-                                                    <p>Este documento tiene {{ documento.firma_count }} firma{{ 's' if documento.firma_count > 1 else '' }}.</p>
-                                                    {% endif %}
-                                                    <p>Esta acción eliminará el documento de la carpeta de documentos firmados.</p>
-                                                    <p>No afectará al borrador si existe.</p>
-                                                    <p class="text-danger">Esta acción no se puede deshacer.</p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <form action="{{ url_for('concursos.eliminar_subido', concurso_id=concurso.id, documento_id=documento.id) }}" method="POST">
-                                                        <button type="submit" class="btn btn-danger">Eliminar Subido</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center">No hay documentos generados</td>
-                            </tr>
-                            {% endfor %}                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- Tab 1: Información y Detalles -->            
+            {% include 'concursos/partials/ver/_info_tab.html' %}
+              
+            <!-- Tab 2: Documentos Generados -->            
+            {% include 'concursos/partials/ver/_documentos_tab.html' %}
             
             <!-- Tab 3: Panel de Notificaciones -->
-            <div class="tab-pane fade" id="notificaciones" role="tabpanel" aria-labelledby="notificaciones-tab">
-                <h4>Panel de Notificaciones</h4>
-                {% include 'notifications/_notification_panel.html' %}
-            </div>
+            {% include 'concursos/partials/ver/_notificaciones_tab.html' %}
             
             <!-- Tab 4: Tribunal -->
-            <div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
-                <h4>Tribunal</h4>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Rol</th>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Correo</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>                        
-                        <tbody>
-                            {% for miembro in concurso.asignaciones_tribunal.all() %}
-                            <tr>
-                                <td><span class="badge bg-{{ 'primary' if miembro.rol == 'Presidente' else ('info' if miembro.rol == 'Titular' else 'secondary') }}">{{ miembro.rol }}</span></td>
-                                <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
-                                <td>{{ miembro.persona.dni }}</td>
-                                <td>{{ miembro.persona.correo }}</td>
-                                <td>
-                                    {% if miembro.notificado_sustanciacion %}
-                                    <span class="badge bg-success">Sustanciación Notificada</span>
-                                    {% elif miembro.notificado %}
-                                    <span class="badge bg-info">Credenciales Notificadas</span>
-                                    {% else %}
-                                    <span class="badge bg-warning">No notificado</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                    </div>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center">No hay miembros en el tribunal</td>
-                            </tr>
-                            {% endfor %}                        </tbody>
-                    </table>
-                </div>
-                <div class="text-end mt-2">
-                    <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
-                        <i class="bi bi-plus-circle"></i> Agregar Miembro
-                    </a>
-                    <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
-                        Ver Tribunal Completo
-                    </a>
-                </div>
-            </div>
+            {% include 'concursos/partials/ver/_tribunal_tab.html' %}
             
             <!-- Tab 4: Postulantes -->
-            <div class="tab-pane fade" id="postulantes" role="tabpanel" aria-labelledby="postulantes-tab">
-                <h4>Postulantes</h4>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Apellido</th>
-                                <th>DNI</th>
-                                <th>Correo</th>
-                                <th>Teléfono</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for postulante in concurso.postulantes %}
-                            <tr>
-                                <td>{{ postulante.nombre }}</td>
-                                <td>{{ postulante.apellido }}</td>
-                                <td>{{ postulante.dni }}</td>
-                                <td>{{ postulante.correo }}</td>
-                                <td>{{ postulante.telefono or '-' }}</td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center">No hay postulantes inscriptos</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>                </table>
-                </div>
-                <div class="text-end mt-2">
-                    <a href="{{ url_for('postulantes.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
-                        <i class="bi bi-plus-circle"></i> Agregar Postulante
-                    </a>
-                    <a href="{{ url_for('postulantes.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
-                        Ver Postulantes Completo
-                    </a>
-                </div>
-            </div>
+            {% include 'concursos/partials/ver/_postulantes_tab.html' %}
             
             <!-- Tab 5: Historial de Estados -->
-            <div class="tab-pane fade" id="historial" role="tabpanel" aria-labelledby="historial-tab">
-                <h4>Historial de Estados</h4>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                                <th>Observaciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for estado in concurso.historial_estados %}
-                            <tr>
-                                <td>{{ estado.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-                                <td>{{ estado.estado }}</td>
-                                <td>{{ estado.observaciones }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {% include 'concursos/partials/ver/_historial_tab.html' %}
             
             <!-- Tab 6: Sustanciación (only if exists) -->
             {% if concurso.sustanciacion %}
-            <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">
-                <h4>Sustanciación de Concurso</h4>
-                <div class="table-responsive">
-                    <table class="table">
-                        <!-- Constitución del Jurado section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Constitución del Jurado</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Constitución del Tribunal:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.constitucion_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.constitucion_observaciones %}
-                        <tr>
-                            <th>Observaciones:</th>
-                            <td>{{ concurso.sustanciacion.constitucion_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                        <!-- Sorteo section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Sorteo de Tema</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Sorteo de Tema:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar del Sorteo:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.sorteo_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual del Sorteo:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.sorteo_observaciones %}
-                        <tr>
-                            <th>Observaciones del Sorteo:</th>
-                            <td>{{ concurso.sustanciacion.sorteo_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                        
-                        {% if concurso.sustanciacion.temas_exposicion %}
-                        <tr>
-                            <th>Temas de Exposición:</th>
-                            <td>
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="temas-list flex-grow-1">
-                                        {% if concurso.sustanciacion.tema_sorteado %}
-                                            {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                                                {% if tema.strip() %}
-                                                <span class="badge bg-light text-dark p-2 me-2 mb-2">{{ tema.strip() }}</span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        {% else %}
-                                            <em class="text-muted">Los temas están definidos pero serán visibles después del sorteo</em>
-                                        {% endif %}
-                                    </div>
-                                    <div class="dropdown ms-2">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            {% if concurso.sustanciacion.tema_sorteado %}
-                                            <li>
-                                                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
-                                                    <i class="bi bi-arrow-counterclockwise"></i> Eliminar tema sorteado
-                                                </button>
-                                            </li>
-                                            {% endif %}
-                                            <li>
-                                                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
-                                                    <i class="bi bi-trash"></i> Eliminar todos los temas
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    {% if concurso.sustanciacion.tema_sorteado %}
-                                        <div class="alert alert-success">
-                                            <strong>Tema sorteado:</strong> {{ concurso.sustanciacion.tema_sorteado }}
-                                        </div>
-                                    {% else %}
-                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
-                                            <i class="bi bi-shuffle"></i> Sortear Tema
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
-
-                        <!-- Exposicion section -->
-                        <tr>
-                            <th colspan="2" class="bg-light">
-                                <h5 class="mb-0">Exposición</h5>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Fecha de Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar de la Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_lugar or '-' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.exposicion_virtual_link %}
-                        <tr>
-                            <th>Enlace a Reunión Virtual de la Exposición:</th>
-                            <td>
-                                <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if concurso.sustanciacion.exposicion_observaciones %}
-                        <tr>
-                            <th>Observaciones de la Exposición:</th>
-                            <td>{{ concurso.sustanciacion.exposicion_observaciones }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
-                </div>
-            </div>
+            {% include 'concursos/partials/ver/_sustanciacion_tab.html' %}
             {% endif %}
+              
+            <!-- Tab for Asignaturas from external source -->
+            {% include 'concursos/partials/ver/_asignaturas_externas_tab.html' %}
         </div>
     </div>
 </div>
 
 <!-- Modal de confirmación de eliminación -->
-<div class="modal fade" id="eliminarModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Eliminación</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro que desea eliminar el concurso #{{ concurso.id }}?</p>
-                <p class="text-danger"><strong>¡Atención!</strong> Esta acción eliminará también:</p>
-                <ul class="text-danger">
-                    <li>Todos los miembros del tribunal</li>
-                    <li>Todos los postulantes y sus documentos</li>
-                    <li>Todos los documentos del concurso</li>
-                    <li>Todo el historial y sustanciación</li>
-                </ul>
-                <p class="text-danger">Esta acción no se puede deshacer.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form action="{{ url_for('concursos.eliminar', concurso_id=concurso.id) }}" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_eliminar_concurso_modal.html' %}
 
 <!-- Modal de confirmación de eliminación de temas -->
-<div class="modal fade" id="resetTemasModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Eliminación de Temas</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro que desea eliminar todos los temas de sorteo?</p>
-                <p class="text-danger">Esta acción no se puede deshacer.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form action="{{ url_for('concursos.reset_temas', concurso_id=concurso.id) }}" method="POST">
-                    <button type="submit" class="btn btn-warning">Eliminar Temas</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_reset_temas_modal.html' %}
 
 <!-- Modal para sortear tema -->
-<div class="modal fade" id="sortearTemaModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Sortear Tema</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="sorteo-animation" class="text-center">
-                    <div class="mb-4">
-                        <h3>Sorteando tema...</h3>
-                        <div class="dice-animation">
-                            <i class="bi bi-dice-6 fa-4x fa-spin"></i>
-                        </div>
-                        <div class="progress mt-3">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="sorteo-result" class="text-center d-none">
-                    <h3>Resultado del sorteo</h3>
-                    <div class="temas-container mt-4">
-                        <!-- Temas will be dynamically added here -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button id="btn-iniciar-sorteo" type="button" class="btn btn-primary">Iniciar Sorteo</button>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_sortear_tema_modal.html' %}
 
 <!-- Modal for eliminar tema sorteado -->
-<div class="modal fade" id="resetTemaSorteadoModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Eliminación de Tema Sorteado</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro que desea eliminar solo el tema sorteado?</p>
-                <p>Los temas de exposición se mantendrán y podrá realizar un nuevo sorteo.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form action="{{ url_for('concursos.reset_tema_sorteado', concurso_id=concurso.id) }}" method="POST">
-                    <button type="submit" class="btn btn-warning">Eliminar Tema Sorteado</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_reset_tema_sorteado_modal.html' %}
+
+<!-- Modal para resetear temas de un miembro específico -->
+{% include 'concursos/partials/ver/_reset_temas_miembro_modal.html' %}
 
 <!-- Modal para cargar TKD -->
-<div class="modal fade" id="cargarTkdModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cargar TKD Respaldo</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ url_for('concursos.cargar_tkd', concurso_id=concurso.id) }}" method="POST" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="tkd_number" class="form-label">Número de TKD</label>
-                        <input type="text" class="form-control" id="tkd_number" name="tkd_number" value="{{ concurso.tkd or '' }}" required>
-                        <div class="form-text">Este número será utilizado como referencia en los documentos generados.</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="tkd_file" class="form-label">Archivo PDF del TKD</label>
-                        <input type="file" class="form-control" id="tkd_file" name="tkd_file" accept="application/pdf" {% if not concurso.tkd_file_id %}required{% endif %}>
-                        {% if concurso.tkd_file_id %}
-                        <div class="form-text text-info">
-                            Ya existe un archivo TKD cargado. Subir uno nuevo reemplazará el archivo anterior.
-                            <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" target="_blank">Ver archivo actual</a>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Guardar TKD</button>                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_cargar_tkd_modal.html' %}
 
 <!-- Modal para borrar TKD -->
-<div class="modal fade" id="borrarTkdModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Borrar TKD Respaldo</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro que desea eliminar el TKD respaldo?</p>
-                {% if concurso.tkd and concurso.tkd_file_id %}
-                <p>Esta acción eliminará:</p>
-                <ul>
-                    <li>El número de TKD: <strong>{{ concurso.tkd }}</strong></li>
-                    <li>El archivo PDF de respaldo</li>
-                </ul>
-                {% elif concurso.tkd %}
-                <p>Esta acción eliminará el número de TKD: <strong>{{ concurso.tkd }}</strong></p>
-                {% elif concurso.tkd_file_id %}
-                <p>Esta acción eliminará el archivo PDF de respaldo</p>
-                {% endif %}
-                <p class="text-danger">Esta acción no se puede deshacer.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form action="{{ url_for('concursos.borrar_tkd', concurso_id=concurso.id) }}" method="POST">
-                    <button type="submit" class="btn btn-danger">Eliminar TKD</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_borrar_tkd_modal.html' %}
+
+<!-- Modal para desconsolidar temas -->
+{% include 'concursos/partials/ver/_desconsolidar_temas_modal.html' %}
+
+<!-- Modal para finalizar carga de temas -->
+{% include 'concursos/partials/ver/_finalizar_carga_temas_modal.html' %}
 
 {% endblock %}
 
@@ -933,6 +139,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/fetch-programas.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle TKD file requirement based on existing file
@@ -1068,21 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {# gestionar_notas_adicionales_modal.html is temporarily disabled #}
 
 <!-- Modal para Panel de Notificaciones -->
-<div class="modal fade" id="notificacionesModal" tabindex="-1" aria-labelledby="notificacionesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="notificacionesModalLabel">Panel de Notificaciones</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                {% include 'notifications/_notification_panel.html' %}
-            </div>            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'concursos/partials/ver/_notificaciones_main_modal.html' %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1102,12 +295,82 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Handle the resetTemasModal
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if URL hash is #notificacionesModal
-    if (window.location.hash === '#notificacionesModal') {
-        // Open the modal
-        var notificacionesModal = new bootstrap.Modal(document.getElementById('notificacionesModal'));
-        notificacionesModal.show();
+    // Check if the resetTemasModal exists
+    const resetTemasModal = document.getElementById('resetTemasModal');
+    if (resetTemasModal) {
+        // Add confirmation for the reset temas action
+        const resetTemasForm = document.getElementById('resetTemasForm');
+        if (resetTemasForm) {
+            resetTemasForm.addEventListener('submit', function(e) {
+                const confirmMessage = '¿Está seguro que desea eliminar los temas y permitir al tribunal cargarlos nuevamente?';
+                
+                if (!confirm(confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+    }
+});
+
+// Handle the resetTemasMiembroModal
+document.addEventListener('DOMContentLoaded', function() {
+    const resetTemasMiembroModal = document.getElementById('resetTemasMiembroModal');
+    if (resetTemasMiembroModal) {
+        const resetTemasMiembroForm = resetTemasMiembroModal.querySelector('form');
+        const resetTemasMiembroId = document.getElementById('resetTemasMiembroId');
+        const resetTemasMiembroNombre = document.getElementById('resetTemasMiembroNombre');
+        
+        // Listen for modal opening to set the correct action URL and member info
+        resetTemasMiembroModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const miembroId = button.getAttribute('data-miembro-id');
+            const miembroNombre = button.getAttribute('data-miembro-nombre');
+            
+            resetTemasMiembroId.value = miembroId;
+            resetTemasMiembroNombre.textContent = miembroNombre;
+            resetTemasMiembroForm.action = "{{ url_for('tribunal.reset_temas_miembro', concurso_id=concurso.id, miembro_id=0) }}".replace('/0', '/' + miembroId);
+        });
+    }
+});
+
+// Handle the desconsolidarTemasModal
+document.addEventListener('DOMContentLoaded', function() {
+    const desconsolidarTemasModal = document.getElementById('desconsolidarTemasModal');
+    if (desconsolidarTemasModal) {
+        const desconsolidarTemasForm = document.getElementById('desconsolidarTemasForm');
+        
+        if (desconsolidarTemasForm) {
+            desconsolidarTemasForm.addEventListener('submit', function(e) {
+                const confirmMessage = '¿Está seguro que desea desconsolidar los temas? Se mantendrán las propuestas individuales de cada miembro.';
+                
+                if (!confirm(confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+    }
+});
+
+// Handle the finalizarCargaTemasModal
+document.addEventListener('DOMContentLoaded', function() {
+    const finalizarCargaTemasModal = document.getElementById('finalizarCargaTemasModal');
+    if (finalizarCargaTemasModal) {
+        const finalizarCargaTemasForm = document.getElementById('finalizarCargaTemasForm');
+        
+        if (finalizarCargaTemasForm) {
+            finalizarCargaTemasForm.addEventListener('submit', function(e) {
+                const confirmMessage = '¿Está seguro que desea consolidar y finalizar la carga de temas? Esta acción impedirá que los miembros del tribunal puedan modificar sus propuestas.';
+                
+                if (!confirm(confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
     }
 });
 </script>

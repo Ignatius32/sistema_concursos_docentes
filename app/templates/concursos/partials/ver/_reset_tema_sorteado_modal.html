@@ -1,0 +1,20 @@
+<div class="modal fade" id="resetTemaSorteadoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación de Tema Sorteado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar solo el tema sorteado?</p>
+                <p>Los temas de exposición se mantendrán y podrá realizar un nuevo sorteo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('concursos.reset_tema_sorteado', concurso_id=concurso.id) }}" method="POST">
+                    <button type="submit" class="btn btn-warning">Eliminar Tema Sorteado</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

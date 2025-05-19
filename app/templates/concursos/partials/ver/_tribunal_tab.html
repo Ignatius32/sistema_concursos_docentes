@@ -1,0 +1,52 @@
+<div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
+    <h4>Tribunal</h4>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Rol</th>
+                    <th>Nombre</th>
+                    <th>DNI</th>
+                    <th>Correo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>                        
+            <tbody>
+                {% for miembro in concurso.asignaciones_tribunal.all() %}
+                <tr>
+                    <td><span class="badge bg-{{ 'primary' if miembro.rol == 'Presidente' else ('info' if miembro.rol == 'Titular' else 'secondary') }}">{{ miembro.rol }}</span></td>
+                    <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
+                    <td>{{ miembro.persona.dni }}</td>
+                    <td>{{ miembro.persona.correo }}</td>
+                    <td>
+                        {% if miembro.notificado_sustanciacion %}
+                        <span class="badge bg-success">Sustanciación Notificada</span>
+                        {% elif miembro.notificado %}
+                        <span class="badge bg-info">Credenciales Notificadas</span>
+                        {% else %}
+                        <span class="badge bg-warning">No notificado</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center">No hay miembros en el tribunal</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-end mt-2">
+        <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+            <i class="bi bi-plus-circle"></i> Agregar Miembro
+        </a>
+        <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
+            Ver Tribunal Completo
+        </a>
+    </div>
+</div>

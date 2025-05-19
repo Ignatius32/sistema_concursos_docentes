@@ -1,0 +1,220 @@
+{% if asignaturas_externas and asignaturas_externas|length > 0 %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for asignatura in asignaturas_externas %}
+    <div class="col">
+        <div class="card h-100">            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {{ asignatura.nombre_materia }}
+                    {% if asignatura.optativa == "SI" %}
+                    <span class="badge rounded-pill bg-primary text-white small ms-2" style="font-size: 0.7rem; vertical-align: middle;">Optativa</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">                <h6 class="card-subtitle mb-2 text-muted">{{ asignatura.nombre_carrera }}</h6>
+                
+                {% if asignatura.depto or asignatura.area or asignatura.orientacion %}
+                <div class="mb-3">
+                    <strong>Departamento:</strong> <span class="small">{{ asignatura.depto }}</span><br>
+                    <strong>Área:</strong> <span class="small">{{ asignatura.area }}</span><br>
+                    <strong>Orientación:</strong> <span class="small">{{ asignatura.orientacion }}</span>
+                </div>
+                {% endif %}
+                  {% if asignatura.contenidos_minimos and asignatura.contenidos_minimos not in ["NC", "N/C"] %}
+                <div class="mb-3">
+                    <strong>Contenidos mínimos:</strong>
+                    <div class="content-preview">
+                        <p class="card-text small mb-1">{{ asignatura.contenidos_minimos|truncate(100, true) }}</p>
+                        <div class="collapse" id="contenidos-{{ loop.index }}">
+                            <p class="card-text small">{{ asignatura.contenidos_minimos }}</p>
+                        </div>
+                        {% if asignatura.contenidos_minimos|length > 100 %}
+                        <button class="btn btn-link btn-sm p-0 text-primary" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#contenidos-{{ loop.index }}" 
+                                aria-expanded="false" 
+                                aria-controls="contenidos-{{ loop.index }}"
+                                onclick="toggleButtonText(this)">
+                            Ver más
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if asignatura.correlativas_para_cursar %}
+                <div class="mb-2">
+                    <strong>Correlativas para cursar:</strong>
+                    <p class="card-text small">{{ asignatura.correlativas_para_cursar }}</p>
+                </div>
+                {% endif %}
+                  {% if asignatura.correlativas_para_aprobar %}
+                <div>
+                    <strong>Correlativas para aprobar:</strong>
+                    <p class="card-text small">{{ asignatura.correlativas_para_aprobar }}</p>
+                </div>
+                {% endif %}                {% if asignatura.id_materia and asignatura.id_materia|int > 0 %}                <div class="mt-3 d-flex justify-content-end programa-button-container" data-id-materia="{{ asignatura.id_materia }}">
+                    <!-- Default button state -->
+                    <button type="button" 
+                            class="btn btn-primary w-100 download-programa-btn" 
+                            data-id-materia="{{ asignatura.id_materia }}"
+                            onclick="checkAndDownloadPrograma({{ asignatura.id_materia }})">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Buscar programa
+                    </button>
+                    
+                    <!-- Individual loading indicator (hidden by default) -->
+                    <div class="programa-loading-indicator d-none w-100 justify-content-center">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                        <span class="small ms-2">Cargando programa...</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-secondary">
+    <i class="bi bi-info-circle-fill me-2"></i> No se encontraron asignaturas relacionadas para los criterios del concurso, o el servicio de datos no se encuentra disponible.
+</div>
+{% endif %}
+
+<style>
+    .content-preview .collapse:not(.show) {
+        display: none;
+    }
+    .content-preview p.card-text.small:first-child {
+        margin-bottom: 0;
+    }
+    .card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-body {
+        flex: 1 1 auto;
+        overflow: hidden;
+    }    .manual-search-msg {
+        font-size: 0.85rem;
+        border-top: 1px dotted #dee2e6;
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .manual-search-msg a {
+        text-decoration: underline;
+    }
+    .programa-loading-indicator {
+        display: flex;
+        align-items: center;
+        color: #6c757d;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+</style>
+
+<script>
+    function toggleButtonText(button) {
+        if (button.innerHTML.trim() === 'Ver más') {
+            button.innerHTML = 'Ver menos';
+            // Hide the truncated preview when expanded
+            button.previousElementSibling.previousElementSibling.style.display = 'none';
+        } else {
+            button.innerHTML = 'Ver más';
+            // Show the truncated preview when collapsed
+            button.previousElementSibling.previousElementSibling.style.display = 'block';
+        }
+    }    // Function to check if program exists and download it
+    function checkAndDownloadPrograma(idMateria) {
+        const container = document.querySelector(`.programa-button-container[data-id-materia="${idMateria}"]`);
+        const button = container.querySelector('.download-programa-btn');
+        const loadingIndicator = container.querySelector('.programa-loading-indicator');
+        
+        // Display loading state
+        button.classList.add('d-none');
+        loadingIndicator.classList.remove('d-none');
+        
+        console.log(`Fetching programa for materia ID: ${idMateria}`);
+        
+        // Add random cache-busting parameter to prevent caching
+        const timestamp = new Date().getTime();
+        
+        // Make an AJAX request to check if the program exists
+        fetch(`/api/programa/${idMateria}?_=${timestamp}`)
+            .then(response => {
+                console.log(`Response status: ${response.status}`);
+                if (!response.ok && response.status !== 200) {
+                    throw new Error(`Error en respuesta del servidor: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                
+                // Hide loading indicator
+                loadingIndicator.classList.add('d-none');
+                  if (data.status === 'success' && data.download_url) {
+                    console.log(`Download URL: ${data.download_url}`);
+                    // Program exists, trigger download in a new tab
+                    window.open(data.download_url, '_blank');
+                    
+                    // Replace with full width green button
+                    container.innerHTML = `
+                        <button type="button" class="btn btn-success w-100 download-programa-btn">
+                            <i class="bi bi-check"></i> Programa descargado
+                        </button>
+                    `;
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        container.innerHTML = `
+                            <a href="${data.download_url}" target="_blank" 
+                                class="btn btn-success w-100 download-programa-btn">
+                                <i class="bi bi-file-earmark-arrow-down"></i> Descargar programa
+                            </a>
+                        `;
+                    }, 3000);
+                } else if (data.status === 'not_found' || data.status === 'error') {
+                    // Program not found, show full width grey button with manual search link
+                    const manualUrl = data.manual_url || "https://huayca.crub.uncoma.edu.ar/programas/";
+                    container.innerHTML = `
+                        <a href="${manualUrl}" target="_blank" 
+                            class="btn btn-secondary w-100 text-wrap">
+                            <i class="bi bi-search"></i> Programa no encontrado automáticamente, por favor haga una búsqueda manual en este enlace
+                        </a>
+                    `;                } else {
+                    throw new Error('Respuesta inesperada del servidor');
+                }
+            })
+            .catch(error => {
+                // Hide loading indicator
+                loadingIndicator.classList.add('d-none');
+                  // Error state with full width error button
+                const manualUrl = "https://huayca.crub.uncoma.edu.ar/programas/";
+                container.innerHTML = `
+                    <a href="${manualUrl}" target="_blank" 
+                        class="btn btn-secondary w-100 text-wrap">
+                        <i class="bi bi-search"></i> Error al buscar programa, por favor haga una búsqueda manual en este enlace
+                    </a>
+                `;
+                
+                console.error('Error fetching programa:', error);
+            });
+    }
+    
+    // Optional: Preload program status when page loads to auto-hide buttons for unavailable programs
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all download buttons
+        const downloadButtons = document.querySelectorAll('.download-programa-btn');
+        
+        // We won't preload status for all buttons automatically as it could create too many requests
+        // Instead, this functionality can be enabled if needed
+        
+        // Alternative: Add a class to flag when a button has been checked
+        downloadButtons.forEach(button => {
+            button.classList.add('program-status-unchecked');
+        });
+    });
+</script>

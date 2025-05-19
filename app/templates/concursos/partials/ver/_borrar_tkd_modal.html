@@ -1,0 +1,31 @@
+<div class="modal fade" id="borrarTkdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Borrar TKD Respaldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar el TKD respaldo?</p>
+                {% if concurso.tkd and concurso.tkd_file_id %}
+                <p>Esta acción eliminará:</p>
+                <ul>
+                    <li>El número de TKD: <strong>{{ concurso.tkd }}</strong></li>
+                    <li>El archivo PDF de respaldo</li>
+                </ul>
+                {% elif concurso.tkd %}
+                <p>Esta acción eliminará el número de TKD: <strong>{{ concurso.tkd }}</strong></p>
+                {% elif concurso.tkd_file_id %}
+                <p>Esta acción eliminará el archivo PDF de respaldo</p>
+                {% endif %}
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('concursos.borrar_tkd', concurso_id=concurso.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Eliminar TKD</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,8 +1,8 @@
+import json
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-import json
 
 db = SQLAlchemy()
 
@@ -19,10 +19,12 @@ class User(db.Model, UserMixin):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        if self.password_hash is None:
+            return False
         return check_password_hash(self.password_hash, password)
         
     @property
-    def is_admin(self):
+    def is_admin(self): # Optional: for consistency if checking current_user.is_admin
         return self.role == 'admin'
 
 class Departamento(db.Model):
@@ -53,6 +55,8 @@ class Categoria(db.Model):
     codigo = db.Column(db.String(10), nullable=False)
     nombre = db.Column(db.String(100), nullable=False)
     rol = db.Column(db.String(50), nullable=False)  # 'Profesor' or 'Auxiliar'
+    instructivo_postulantes = db.Column(db.JSON, nullable=True)
+    instructivo_tribunal = db.Column(db.JSON, nullable=True)
     
 class Persona(db.Model, UserMixin):
     __tablename__ = 'personas'
@@ -69,16 +73,19 @@ class Persona(db.Model, UserMixin):
     cv_drive_file_id = db.Column(db.String(100), nullable=True)
     cv_drive_web_link = db.Column(db.String(255), nullable=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    cargo = db.Column(db.String(100), nullable=True) 
     
     # Relationships
     asignaciones = db.relationship('TribunalMiembro', back_populates='persona', lazy='dynamic')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-        self.reset_token = None  # Clear reset token after password is set
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password) if self.password_hash else False
+        if self.password_hash is None: # Ensure password_hash exists
+            return False
+        return check_password_hash(self.password_hash, password)
+    
     def generate_reset_token(self):
         """Generate a unique token for password setup."""
         from secrets import token_urlsafe
@@ -160,11 +167,11 @@ class TribunalMiembro(db.Model):
     rol = db.Column(db.String(50), nullable=False)  # Presidente, Titular, Suplente, Veedor
     claustro = db.Column(db.String(20), nullable=True, default='Docente')  # Docente, Estudiante
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
-    
-    # Permission fields
+      # Permission fields
     can_add_tema = db.Column(db.Boolean, default=False)  # Permission to add topics
     can_upload_file = db.Column(db.Boolean, default=False)  # Permission to upload files
     can_sign_file = db.Column(db.Boolean, default=False)  # Permission to sign documents
+    can_view_postulante_docs = db.Column(db.Boolean, default=False)  # Permission to view applicant documents
     
     # Notification fields (specific to this assignment)
     notificado = db.Column(db.Boolean, default=False)
@@ -379,6 +386,7 @@ class Sustanciacion(db.Model):
     sorteo_virtual_link = db.Column(db.String(255), nullable=True)  # Link to virtual meeting
     temas_exposicion = db.Column(db.Text, nullable=True)  # List of topics for exposition
     tema_sorteado = db.Column(db.Text, nullable=True)  # The randomly selected topic
+    temas_cerrados = db.Column(db.Boolean, default=False)  # Flag to indicate if temas are closed
     
     # Exposición
     exposicion_fecha = db.Column(db.DateTime)
@@ -477,7 +485,28 @@ class NotificationLog(db.Model):
     # Relationships    
     campaign = db.relationship('NotificationCampaign', back_populates='logs')
     concurso = db.relationship('Concurso')
+
+class TemaSetTribunal(db.Model):
+    """
+    Stores topic proposals from individual tribunal members.
+    Each tribunal member can propose up to 3 topics for a concurso.
+    """
+    __tablename__ = 'temas_set_tribunal'
+    id = db.Column(db.Integer, primary_key=True)
+    sustanciacion_id = db.Column(db.Integer, db.ForeignKey('sustanciacion.id', ondelete='CASCADE'), nullable=False)
+    miembro_id = db.Column(db.Integer, db.ForeignKey('tribunal_miembros.id', ondelete='CASCADE'), nullable=False)
+    temas_propuestos = db.Column(db.Text, nullable=False)  # Pipe-delimited topics: "Tema A|Tema B|Tema C"
+    fecha_propuesta = db.Column(db.DateTime, default=datetime.utcnow)
+    propuesta_cerrada = db.Column(db.Boolean, default=False)  # True when member has finalized their submission
     
+    # Relationships
+    sustanciacion = db.relationship('Sustanciacion', backref=db.backref('temas_propuestos', lazy='dynamic'))
+    miembro = db.relationship('TribunalMiembro', backref=db.backref('temas_propuestos', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('sustanciacion_id', 'miembro_id', name='uq_sustanciacion_miembro'),
+    )
+
 class DocumentTemplateConfig(db.Model):
     __tablename__ = 'document_template_configs'
     id = db.Column(db.Integer, primary_key=True)
@@ -490,11 +519,11 @@ class DocumentTemplateConfig(db.Model):
     # New fields for enhanced document template configuration
     concurso_visibility = db.Column(db.String(50), nullable=False, default='BOTH')  # REGULAR, INTERINO, BOTH
     is_unique_per_concurso = db.Column(db.Boolean, default=True, nullable=False)
-    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text
-    # New fields for permission control
+    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text    # New fields for permission control
     admin_can_send_for_signature = db.Column(db.Boolean, default=True, nullable=False)
     tribunal_can_sign = db.Column(db.Boolean, default=False, nullable=False)
     tribunal_can_upload_signed = db.Column(db.Boolean, default=False, nullable=False)
+    admin_can_sign = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -578,7 +607,9 @@ def init_categories_from_json(app, json_data):
                 categoria = Categoria(
                     codigo=cat['codigo'],
                     nombre=cat['nombre'],
-                    rol=rol_name
+                    rol=rol_name,
+                    instructivo_postulantes=cat.get('instructivo_postulantes'),
+                    instructivo_tribunal=cat.get('instructivo_tribunal')
                 )
                 db.session.add(categoria)
         

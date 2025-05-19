@@ -1,0 +1,22 @@
+<div class="modal fade" id="desconsolidarTemasModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Desconsolidación de Temas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.desconsolidar_temas', concurso_id=concurso.id) }}" method="POST" id="desconsolidarTemasForm">
+                    <p>¿Está seguro que desea desconsolidar los temas de sorteo?</p>
+                    <p>Esta acción permitirá gestionar las propuestas individuales de los miembros del tribunal.</p>
+                    <p>Si había un tema sorteado, este también será eliminado.</p>
+                    <p class="text-warning"><strong>Nota:</strong> Las propuestas individuales de los miembros se mantendrán intactas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Desconsolidar Temas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion, TribunalMiembro, Persona
 from app.services.placeholder_resolver import get_core_placeholders
-from app.helpers.api_services import get_considerandos_data
+from app.helpers.api_services import get_considerandos_data, get_asignaturas_from_external_api
 from . import concursos, drive_api
 
 @concursos.route('/')
@@ -157,9 +157,18 @@ def nuevo():
 @login_required
 def ver(concurso_id):
     """View details of a specific concurso."""
-    from app.models.models import DocumentTemplateConfig, NotificationCampaign, NotificationLog
+    from app.models.models import DocumentTemplateConfig, NotificationCampaign, NotificationLog, TemaSetTribunal
     
     concurso = Concurso.query.get_or_404(concurso_id)
+    
+    # Get asignaturas from external API based on concurso criteria
+    asignaturas_externas = []
+    if concurso.departamento_rel:
+        asignaturas_externas = get_asignaturas_from_external_api(
+            departamento=concurso.departamento_rel.nombre,
+            area=concurso.area,
+            orientacion_concurso=concurso.orientacion
+        )
     
     # Get available document types based on configurations in database
     available_documents = []
@@ -211,7 +220,25 @@ def ver(concurso_id):
         if log.campaign_id not in notification_logs_by_campaign:
             notification_logs_by_campaign[log.campaign_id] = []
         notification_logs_by_campaign[log.campaign_id].append(log)
-      # Debug: print what's being passed to the template
+        
+    # Fetch tribunal member topic proposals if a sustanciacion exists
+    temas_por_miembro = {}
+    if concurso.sustanciacion and hasattr(concurso.sustanciacion, 'id'):
+        # Get all topic proposals from tribunal members for this sustanciacion
+        tema_proposals = TemaSetTribunal.query.filter_by(
+            sustanciacion_id=concurso.sustanciacion.id
+        ).all()
+        
+        # Organize by tribunal member for easy access in template
+        for proposal in tema_proposals:
+            temas_por_miembro[proposal.miembro_id] = {
+                'temas': [tema.strip() for tema in proposal.temas_propuestos.split('|') if tema.strip()],
+                'propuesta_cerrada': proposal.propuesta_cerrada,
+                'fecha_propuesta': proposal.fecha_propuesta,
+                'miembro': proposal.miembro  # Include the miembro relationship
+            }
+    
+    # Debug: print what's being passed to the template
     print(f"Passing {len(available_documents)} available documents to template")
     for doc in available_documents:
         print(f"Document: {doc['name']} ({doc['id']}) URL: {doc['url']}")
@@ -221,7 +248,9 @@ def ver(concurso_id):
                       available_documents=available_documents,
                       template_configs_dict=template_configs_dict,
                       notification_campaigns=notification_campaigns,
-                      notification_logs_by_campaign=notification_logs_by_campaign)
+                      notification_logs_by_campaign=notification_logs_by_campaign,
+                      asignaturas_externas=asignaturas_externas,
+                      temas_por_miembro=temas_por_miembro)
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
 @login_required

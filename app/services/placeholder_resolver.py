@@ -89,14 +89,7 @@ def get_core_placeholders(concurso_id, persona_id=None):
     tribunal_titular_estudiante = []
     tribunal_suplente_docente = []
     tribunal_suplente_estudiante = []
-    
-    # Lists for DNI only
-    tribunal_titular_docente_dni = []
-    tribunal_titular_estudiante_dni = []
-    tribunal_suplente_docente_dni = []
-    tribunal_suplente_estudiante_dni = []
-    
-    # Process tribunal members
+      # Process tribunal members
     for miembro in tribunal_members:
         persona_tribunal = miembro.persona
         if not persona_tribunal:
@@ -105,19 +98,17 @@ def get_core_placeholders(concurso_id, persona_id=None):
         # Format the member string with name and DNI
         member_str = f"{persona_tribunal.apellido}, {persona_tribunal.nombre} (DNI {persona_tribunal.dni})"
         
-        if miembro.es_titular:
+        if miembro.rol == "Titular" or miembro.rol == "Presidente":
             tribunal_titulares.append(member_str)
             
             # Add to the correct claustro list
             if miembro.claustro == "Docente":
                 tribunal_titular_docente.append(member_str)
-                tribunal_titular_docente_dni.append(persona_tribunal.dni)
             elif miembro.claustro == "Estudiante":
                 tribunal_titular_estudiante.append(member_str)
-                tribunal_titular_estudiante_dni.append(persona_tribunal.dni)
             
             # If president, store separately
-            if miembro.es_presidente:
+            if miembro.rol == "Presidente":
                 tribunal_presidente = member_str
             else:
                 # If not president but titular, add to vocales
@@ -128,10 +119,8 @@ def get_core_placeholders(concurso_id, persona_id=None):
             # Add to the correct claustro list
             if miembro.claustro == "Docente":
                 tribunal_suplente_docente.append(member_str)
-                tribunal_suplente_docente_dni.append(persona_tribunal.dni)
             elif miembro.claustro == "Estudiante":
                 tribunal_suplente_estudiante.append(member_str)
-                tribunal_suplente_estudiante_dni.append(persona_tribunal.dni)
     
     # Get postulantes data
     postulantes = Postulante.query.filter_by(concurso_id=concurso_id).all()
@@ -188,7 +177,8 @@ def get_core_placeholders(concurso_id, persona_id=None):
         # Department Head
         'resp_departamento': dept_head.get('responsable', '') if dept_head else '',
         'prefijo_resp_departamento': dept_head.get('prefijo', '') if dept_head else '',
-          # Tribunal
+        
+        # Tribunal
         'tribunal_presidente': tribunal_presidente,
         'tribunal_titulares_lista': '\n'.join(tribunal_titulares),
         'tribunal_suplentes_lista': '\n'.join(tribunal_suplentes),
@@ -197,10 +187,6 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'tribunal_titular_estudiante_lista': '\n'.join(tribunal_titular_estudiante),
         'tribunal_suplente_docente_lista': '\n'.join(tribunal_suplente_docente),
         'tribunal_suplente_estudiante_lista': '\n'.join(tribunal_suplente_estudiante),
-        'tribunal_titular_docente_dni_lista': ', '.join(tribunal_titular_docente_dni),
-        'tribunal_titular_estudiante_dni_lista': ', '.join(tribunal_titular_estudiante_dni),
-        'tribunal_suplente_docente_dni_lista': ', '.join(tribunal_suplente_docente_dni),
-        'tribunal_suplente_estudiante_dni_lista': ', '.join(tribunal_suplente_estudiante_dni),
         
         # Postulantes
         'postulantes_lista_completa': '\n'.join(postulantes_list),
@@ -210,16 +196,16 @@ def get_core_placeholders(concurso_id, persona_id=None):
     # Add Sustanciacion data if available
     if sustanciacion:
         placeholders.update({
-            'constitucion_fecha': sustanciacion.fecha_constitucion.strftime("%d/%m/%Y") if sustanciacion.fecha_constitucion else '',
-            'constitucion_lugar': sustanciacion.lugar_constitucion or '',
-            'constitucion_virtual_link': sustanciacion.link_virtual_constitucion or '',
-            'sorteo_fecha': sustanciacion.fecha_sorteo.strftime("%d/%m/%Y") if sustanciacion.fecha_sorteo else '',
-            'sorteo_lugar': sustanciacion.lugar_sorteo or '',
-            'sorteo_virtual_link': sustanciacion.link_virtual_sorteo or '',
-            'exposicion_fecha': sustanciacion.fecha_clase.strftime("%d/%m/%Y") if sustanciacion.fecha_clase else '',
-            'exposicion_lugar': sustanciacion.lugar_clase or '',
-            'exposicion_virtual_link': sustanciacion.link_virtual_clase or '',
-            'temas_exposicion': '\n'.join(sustanciacion.temas_lista) if hasattr(sustanciacion, 'temas_lista') and sustanciacion.temas_lista else '',
+            'constitucion_fecha': sustanciacion.constitucion_fecha.strftime("%d/%m/%Y") if sustanciacion.constitucion_fecha else '',
+            'constitucion_lugar': sustanciacion.constitucion_lugar or '',
+            'constitucion_virtual_link': sustanciacion.constitucion_virtual_link or '',
+            'sorteo_fecha': sustanciacion.sorteo_fecha.strftime("%d/%m/%Y") if sustanciacion.sorteo_fecha else '',
+            'sorteo_lugar': sustanciacion.sorteo_lugar or '',
+            'sorteo_virtual_link': sustanciacion.sorteo_virtual_link or '',
+            'exposicion_fecha': sustanciacion.exposicion_fecha.strftime("%d/%m/%Y") if sustanciacion.exposicion_fecha else '',
+            'exposicion_lugar': sustanciacion.exposicion_lugar or '',
+            'exposicion_virtual_link': sustanciacion.exposicion_virtual_link or '',
+            'temas_exposicion': sustanciacion.temas_exposicion or '',
         })
     
     # Add Notification-specific placeholders

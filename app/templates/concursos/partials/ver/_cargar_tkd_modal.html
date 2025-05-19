@@ -1,0 +1,35 @@
+<div class="modal fade" id="cargarTkdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cargar TKD Respaldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('concursos.cargar_tkd', concurso_id=concurso.id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="tkd_number" class="form-label">Número de TKD</label>
+                        <input type="text" class="form-control" id="tkd_number" name="tkd_number" value="{{ concurso.tkd or '' }}" required>
+                        <div class="form-text">Este número será utilizado como referencia en los documentos generados.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tkd_file" class="form-label">Archivo PDF del TKD</label>
+                        <input type="file" class="form-control" id="tkd_file" name="tkd_file" accept="application/pdf" {% if not concurso.tkd_file_id %}required{% endif %}>
+                        {% if concurso.tkd_file_id %}
+                        <div class="form-text text-info">
+                            Ya existe un archivo TKD cargado. Subir uno nuevo reemplazará el archivo anterior.
+                            <a href="https://drive.google.com/file/d/{{ concurso.tkd_file_id }}/view" target="_blank">Ver archivo actual</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar TKD</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

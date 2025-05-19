@@ -48,7 +48,14 @@ def edit_persona(persona_id):
             persona.dni = request.form.get('dni', persona.dni)
             persona.correo = request.form.get('correo', persona.correo)
             persona.telefono = request.form.get('telefono', persona.telefono)
-            # persona.is_admin = 'is_admin' in request.form # Optional: if you want to manage admin status here
+            
+            is_admin_checked = 'is_admin' in request.form
+            persona.is_admin = is_admin_checked
+            
+            if is_admin_checked:
+                persona.cargo = request.form.get('cargo', persona.cargo)
+            else:
+                persona.cargo = None # Clear cargo if not admin
 
             cv_file = request.files.get('cv_file')
             if cv_file and cv_file.filename != '':
@@ -95,13 +102,19 @@ def edit_persona(persona_id):
 def nueva_persona():    
     if request.method == 'POST':
         try:
+            is_admin_checked = 'is_admin' in request.form
+            cargo_persona = None
+            if is_admin_checked:
+                cargo_persona = request.form.get('cargo')
+
             nueva_persona = Persona(
                 nombre=request.form.get('nombre'),
                 apellido=request.form.get('apellido'),
                 dni=request.form.get('dni'),
                 correo=request.form.get('correo'),
                 telefono=request.form.get('telefono'),
-                is_admin='is_admin' in request.form
+                is_admin=is_admin_checked,
+                cargo=cargo_persona
             )
             
             # If username is provided, set it and password
