@@ -1,20 +1,33 @@
 <div class="modal fade" id="resetTemasMiembroModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Eliminación de Temas</h5>
+        <div class="modal-content">            <div class="modal-header bg-info">
+                <h5 class="modal-title"><i class="bi bi-unlock"></i> Desbloquear propuesta de temas</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form action="" method="POST" id="resetTemasMiembroForm">
                     <input type="hidden" name="miembro_id" id="resetTemasMiembroId">
-                    <p>¿Está seguro que desea eliminar los temas de sorteo propuestos por <strong id="resetTemasMiembroNombre"></strong>?</p>
-                    <p>Esta acción permitirá a este miembro del tribunal acceder nuevamente a la página de carga de temas.</p>
-                    <p class="text-danger">Esta acción no se puede deshacer.</p>
-            </div>
-            <div class="modal-footer">
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i> Esta acción permitirá al miembro del tribunal modificar sus temas propuestos.
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">¿Qué sucederá?</div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li>Se mantendrán los temas propuestos por <strong id="resetTemasMiembroNombre"></strong></li>
+                                <li>Se desbloqueará la propuesta para que pueda ser editada nuevamente</li>
+                                <li>El miembro del tribunal podrá realizar modificaciones y volver a enviar su propuesta</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <p>¿Está seguro que desea desbloquear esta propuesta de temas?</p>
+            </div>            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-warning">Eliminar Temas</button>
+                <button type="submit" class="btn btn-info">
+                    <i class="bi bi-unlock"></i> Desbloquear Propuesta
+                </button>
                 </form>
             </div>
         </div>

@@ -11,6 +11,43 @@ from app.models.models import (
 from app.helpers.api_services import get_departamento_heads_data
 from app.helpers.text_formatting import format_cargos_text, format_descripcion_cargo
 
+def _format_topic_list(base_title_singular: str, base_title_plural: str, topics_raw_string: str, 
+                       item_prefix: str = "", empty_list_message: str = "(Ninguno)") -> str:
+    """
+    Format a raw string of topics into a human-readable list with a header.
+    
+    Args:
+        base_title_singular (str): The singular form of the list title (e.g., "Tema Propuesto")
+        base_title_plural (str): The plural form of the list title (e.g., "Temas Propuestos")
+        topics_raw_string (str): The raw string containing topics, separated by pipe (|)
+        item_prefix (str): A string to prefix each topic in the list (default: no prefix)
+        empty_list_message (str): Message to display if there are no topics
+        
+    Returns:
+        str: A formatted multi-line string with header and list of topics
+    """
+    topic_items = []
+    
+    # Parse the topics from the raw string if it exists
+    if topics_raw_string:
+        for topic in topics_raw_string.split('|'):
+            topic = topic.strip()
+            if topic:
+                topic_items.append(topic)
+    
+    # Determine the header based on number of topics
+    header_text = base_title_singular if len(topic_items) == 1 else base_title_plural
+    formatted_text = f"{header_text}:\n"
+    
+    # Build the list content
+    if not topic_items:
+        formatted_text += empty_list_message
+    else:
+        # Join topics with newline, optionally adding prefix to each
+        formatted_text += "\n".join(f"{item_prefix}{topic}" for topic in topic_items)
+    
+    return formatted_text
+
 def get_core_placeholders(concurso_id, persona_id=None):
     """
     Get a dictionary of resolved placeholders for a concurso and optionally a persona.
@@ -192,8 +229,7 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'postulantes_lista_completa': '\n'.join(postulantes_list),
         'postulantes_activos_lista': '\n'.join(postulantes_activos_list),
     })
-    
-    # Add Sustanciacion data if available
+      # Add Sustanciacion data if available
     if sustanciacion:
         placeholders.update({
             'constitucion_fecha': sustanciacion.constitucion_fecha.strftime("%d/%m/%Y") if sustanciacion.constitucion_fecha else '',
@@ -207,6 +243,32 @@ def get_core_placeholders(concurso_id, persona_id=None):
             'exposicion_virtual_link': sustanciacion.exposicion_virtual_link or '',
             'temas_exposicion': sustanciacion.temas_exposicion or '',
         })
+        
+        # Add formatted topic lists using the helper function
+        placeholders['temas_todos'] = _format_topic_list(
+            "Tema Propuesto", 
+            "Temas Propuestos", 
+            sustanciacion.temas_exposicion
+        )
+        
+        placeholders['temas_sorteados'] = _format_topic_list(
+            "Tema Sorteado", 
+            "Temas Sorteados", 
+            sustanciacion.tema_sorteado
+        )
+    else:
+        # If no sustanciacion data is available, add empty formatted lists
+        placeholders['temas_todos'] = _format_topic_list(
+            "Tema Propuesto", 
+            "Temas Propuestos", 
+            None
+        )
+        
+        placeholders['temas_sorteados'] = _format_topic_list(
+            "Tema Sorteado", 
+            "Temas Sorteados", 
+            None
+        )
     
     # Add Notification-specific placeholders
     placeholders['nombre_concurso_notificacion'] = f"Concurso #{concurso.id} - {categoria_nombre}"

@@ -55,7 +55,7 @@ def reset_temas(concurso_id):
 @concursos.route('/<int:concurso_id>/realizar-sorteo', methods=['POST'])
 @login_required
 def realizar_sorteo(concurso_id):
-    """Randomly select one tema from the list of consolidated temas_exposicion."""
+    """Randomly select tema(s) from the list of consolidated temas_exposicion based on configuration."""
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if not concurso.sustanciacion:
@@ -68,32 +68,54 @@ def realizar_sorteo(concurso_id):
         return jsonify({'error': 'La carga de temas no ha sido finalizada. Un administrador debe finalizar la carga antes de realizar el sorteo.'}), 400
     
     try:
+        # Get configuration for this tipo and categoria
+        from app.models.models import SorteoConfig
+        concurso_tipo = concurso.tipo.upper()
+        categoria_codigo = concurso.categoria.upper()
+        
+        # Query SorteoConfig to get number of temas to draw
+        config = SorteoConfig.query.filter_by(
+            concurso_tipo=concurso_tipo, 
+            categoria_codigo=categoria_codigo
+        ).first()
+        
+        # Default to 1 if config not found
+        num_to_draw = config.numero_temas_sorteados if config else 1
+        
         # Split temas by the separator and filter out empty strings
         temas = [tema.strip() for tema in concurso.sustanciacion.temas_exposicion.split('|') if tema.strip()]
         
         if not temas:
             return jsonify({'error': 'No hay temas válidos definidos'}), 400
         
-        # Randomly select one tema
-        selected_tema = random.choice(temas)
+        # Ensure there are enough temas available
+        if len(temas) < num_to_draw:
+            return jsonify({
+                'error': f'No hay suficientes temas disponibles ({len(temas)}) para sortear {num_to_draw}.'
+            }), 400
         
-        # Save the selected tema to the database
-        concurso.sustanciacion.tema_sorteado = selected_tema
+        # Randomly select the required number of temas
+        selected_temas_list = random.sample(temas, num_to_draw)
+        selected_temas_str = '|'.join(selected_temas_list)
+        
+        # Save the selected temas to the database
+        concurso.sustanciacion.tema_sorteado = selected_temas_str
         
         # Add an entry to the history
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMA_SORTEADO",
-            observaciones=f"Tema sorteado: {selected_tema}"
+            observaciones=f"{num_to_draw} tema(s) sorteado(s): {selected_temas_str}"
         )
         db.session.add(historial)
         db.session.commit()
         
-        # Return the selected tema and all temas
+        # Return the selected temas and all temas
         return jsonify({
             'success': True,
-            'selectedTema': selected_tema,
-            'allTemas': temas
+            'selectedTemas': selected_temas_str,
+            'allTemas': temas,
+            'numDrawn': num_to_draw
         })
         
     except Exception as e:
@@ -116,17 +138,16 @@ def reset_tema_sorteado(concurso_id):
         
         # Reset only the tema_sorteado field
         concurso.sustanciacion.tema_sorteado = None
-        
-        # Add entry to history
+          # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMA_SORTEADO_ELIMINADO",
-            observaciones=f"Tema sorteado eliminado por administrador {current_user.username}. Tema anterior: {tema_anterior}"
+            observaciones=f"Tema(s) sorteado(s) eliminado(s) por administrador {current_user.username}. Tema(s) anterior(es): {tema_anterior}"
         )
         db.session.add(historial)
         db.session.commit()
         
-        flash('Tema sorteado eliminado exitosamente. Puede realizar un nuevo sorteo.', 'success')
+        flash('Tema(s) sorteado(s) eliminado(s) exitosamente. Puede realizar un nuevo sorteo.', 'success')
         
     except Exception as e:
         db.session.rollback()

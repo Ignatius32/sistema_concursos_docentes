@@ -1533,7 +1533,7 @@ def reset_temas(concurso_id):
 @tribunal.route('/<int:concurso_id>/reset-temas-miembro/<int:miembro_id>', methods=['POST'])
 @login_required
 def reset_temas_miembro(concurso_id, miembro_id):
-    """Reset sorteo temas for a specific tribunal member. Only accessible by admin."""
+    """Unlock sorteo temas for a specific tribunal member to allow editing. Only accessible by admin."""
     concurso = Concurso.query.get_or_404(concurso_id)
     miembro_target = TribunalMiembro.query.get_or_404(miembro_id)
     
@@ -1561,8 +1561,8 @@ def reset_temas_miembro(concurso_id, miembro_id):
         temas_were_consolidated = concurso.sustanciacion.temas_cerrados
         tema_was_drawn = concurso.sustanciacion.tema_sorteado is not None
         
-        # Delete the tema proposal
-        db.session.delete(tema_propuesta)
+        # Instead of deleting, unlock the proposal for editing
+        tema_propuesta.propuesta_cerrada = False
         
         # If topics were consolidated, we need to un-consolidate them
         if temas_were_consolidated:
@@ -1574,14 +1574,14 @@ def reset_temas_miembro(concurso_id, miembro_id):
                 concurso.sustanciacion.tema_sorteado = None
             
             # Add entry to history with details about un-consolidation
-            estado = "TEMAS_SORTEO_MIEMBRO_Y_CONSOLIDACION_REINICIADOS"
-            observaciones = f"Temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados por administrador {current_user.username}. La consolidación de temas y el tema sorteado (si existía) han sido reiniciados. El miembro puede cargar nuevos temas. Se requerirá nueva consolidación."
-            flash_message = f'Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados exitosamente. La consolidación general y el tema sorteado (si existía) han sido reiniciados. El miembro puede cargar nuevos temas. Por favor, vuelva a consolidar los temas una vez que el miembro haya cargado los suyos.'
+            estado = "TEMAS_SORTEO_MIEMBRO_Y_CONSOLIDACION_DESBLOQUEADOS"
+            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {current_user.username}. La consolidación de temas y el tema sorteado (si existía) han sido reiniciados. El miembro puede editar sus temas propuestos. Se requerirá nueva consolidación."
+            flash_message = f'Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada exitosamente. La consolidación general y el tema sorteado (si existía) han sido reiniciados. El miembro puede editar sus temas propuestos. Por favor, vuelva a consolidar los temas una vez que el miembro haya actualizado y enviado su propuesta.'
         else:
-            # Standard reset without un-consolidation
-            estado = "TEMAS_SORTEO_MIEMBRO_REINICIADOS"
-            observaciones = f"Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados por administrador {current_user.username}"
-            flash_message = f'Temas de sorteo del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} eliminados exitosamente.'
+            # Standard unlock without un-consolidation
+            estado = "TEMAS_SORTEO_MIEMBRO_DESBLOQUEADOS"
+            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {current_user.username}"
+            flash_message = f'Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada exitosamente.'
         
         # Add entry to history
         historial = HistorialEstado(
@@ -1596,9 +1596,9 @@ def reset_temas_miembro(concurso_id, miembro_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al eliminar los temas: {str(e)}', 'danger')
+        flash(f'Error al desbloquear la propuesta de temas: {str(e)}', 'danger')
     
-    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id, _anchor='sustanciacion'))
 
 @tribunal.route('/api/buscar-persona', methods=['GET'])
 @login_required

@@ -1,18 +1,36 @@
 <div class="modal fade" id="resetTemaSorteadoModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Eliminación de Tema Sorteado</h5>
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise"></i> Reiniciar Sorteo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>¿Está seguro que desea eliminar solo el tema sorteado?</p>
-                <p>Los temas de exposición se mantendrán y podrá realizar un nuevo sorteo.</p>
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle"></i> Esta acción solo eliminará el resultado del sorteo.
+                </div>
+                
+                <div class="card mb-3">
+                    <div class="card-header bg-light">Qué sucederá:</div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>Se eliminará el tema sorteado actual</li>
+                            <li>Se conservarán los temas consolidados</li>
+                            <li>Podrá realizar un nuevo sorteo con los mismos temas</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <p>¿Está seguro que desea reiniciar el sorteo?</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
                 <form action="{{ url_for('concursos.reset_tema_sorteado', concurso_id=concurso.id) }}" method="POST">
-                    <button type="submit" class="btn btn-warning">Eliminar Tema Sorteado</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reiniciar Sorteo
+                    </button>
                 </form>
             </div>
         </div>

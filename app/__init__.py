@@ -52,6 +52,13 @@ def init_app_data(app):
                     init_categories_from_json(app, json_data)
         except Exception as e:
             print(f"Error loading categorias: {e}")
+            
+        # Initialize sorteo configuration with default values
+        try:
+            from app.routes.admin_sorteo_config import init_sorteo_config
+            init_sorteo_config()
+        except Exception as e:
+            print(f"Error initializing sorteo config: {e}")
 
 def create_app():
     # Load environment variables from the root directory
@@ -100,6 +107,9 @@ def create_app():
     app.register_blueprint(concursos_blueprint)
     from app.routes.admin_templates import admin_templates_bp
     app.register_blueprint(admin_templates_bp)
+    
+    from app.routes.admin_sorteo_config import admin_sorteo_config_bp, init_sorteo_config
+    app.register_blueprint(admin_sorteo_config_bp)
     
     from app.routes.postulantes import postulantes as postulantes_blueprint
     app.register_blueprint(postulantes_blueprint)

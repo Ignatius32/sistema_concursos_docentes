@@ -96,13 +96,12 @@
                                             <small class="text-muted d-block mt-2">Última actualización: {{ info.fecha_propuesta|format_datetime }}</small>
                                             
                                             <!-- Admin actions for this member's topics -->
-                                            {% if current_user.is_admin %}
-                                                <div class="mt-2">                                                    <button class="btn btn-sm btn-outline-danger reset-temas-miembro-btn" 
+                                            {% if current_user.is_admin %}                                                <div class="mt-2">                                                    <button class="btn btn-sm btn-outline-info reset-temas-miembro-btn" 
                                                             data-miembro-id="{{ miembro_id }}" 
                                                             data-miembro-nombre="{{ info.miembro.persona.nombre }} {{ info.miembro.persona.apellido }}" 
                                                             data-bs-toggle="modal" 
                                                             data-bs-target="#resetTemasMiembroModal">
-                                                        <i class="bi bi-trash"></i> Resetear Temas
+                                                        <i class="bi bi-unlock"></i> Desbloquear Propuesta
                                                     </button>
                                                 </div>
                                             {% endif %}
@@ -129,11 +128,11 @@
                 <th>Temas Consolidados para Sorteo:</th>
                 <td>
                     <div class="d-flex justify-content-between align-items-start">
-                        <div class="temas-list flex-grow-1">
-                            {% if concurso.sustanciacion.tema_sorteado %}
+                        <div class="temas-list flex-grow-1">                            {% if concurso.sustanciacion.tema_sorteado %}
+                                {% set sorteados_array = concurso.sustanciacion.tema_sorteado.split('|') %}
                                 {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
                                     {% if tema.strip() %}
-                                    <span class="badge bg-{% if tema.strip() == concurso.sustanciacion.tema_sorteado %}success{% else %}light text-dark{% endif %} p-2 me-2 mb-2">{{ tema.strip() }}</span>
+                                    <span class="badge bg-{% if tema.strip() in sorteados_array %}success{% else %}light text-dark{% endif %} p-2 me-2 mb-2">{{ tema.strip() }}</span>
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -144,48 +143,76 @@
                                 {% endfor %}
                                 <em class="text-muted d-block mt-2">Los temas están definidos pero no se ha realizado el sorteo.</em>
                             {% endif %}
-                        </div>
-                        <div class="dropdown ms-2">
+                        </div>                        <div class="dropdown ms-2">
                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
+                                <i class="bi bi-gear"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
+                                <!-- Sorteo actions -->
+                                <li><h6 class="dropdown-header">Acciones de Sorteo</h6></li>
+                                
                                 {% if not concurso.sustanciacion.tema_sorteado and concurso.sustanciacion.temas_cerrados %}
                                 <li>
-                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
-                                        <i class="bi bi-shuffle"></i> Realizar Sorteo de Tema
-                                    </button>
-                                </li>
-                                {% endif %}
-                                  {% if concurso.sustanciacion.tema_sorteado %}
-                                <li>
-                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Eliminar tema sorteado
+                                    <button class="dropdown-item text-primary" type="button" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
+                                        <i class="bi bi-dice-5"></i> Realizar Sorteo de Tema
                                     </button>
                                 </li>
                                 {% endif %}
                                 
-                                {% if concurso.sustanciacion.temas_cerrados %}
+                                {% if concurso.sustanciacion.tema_sorteado %}
                                 <li>
-                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#desconsolidarTemasModal">
-                                        <i class="bi bi-unlock"></i> Desconsolidar temas
+                                    <button class="dropdown-item text-warning" type="button" data-bs-toggle="modal" data-bs-target="#resetTemaSorteadoModal">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Reiniciar Sorteo
                                     </button>
                                 </li>
                                 {% endif %}
                                 
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Gestión de Temas</h6></li>
+                                
+                                {% if not concurso.sustanciacion.temas_cerrados and temas_por_miembro|length > 0 %}
                                 <li>
-                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#resetTemasModal">
-                                        <i class="bi bi-trash"></i> Eliminar todos los temas
+                                    <button class="dropdown-item text-success" type="button" data-bs-toggle="modal" data-bs-target="#finalizarCargaTemasModal">
+                                        <i class="bi bi-lock"></i> Consolidar Temas
                                     </button>
                                 </li>
+                                {% endif %}
+                                  {% if concurso.sustanciacion.temas_cerrados %}
+                                <li>
+                                    <button class="dropdown-item text-info" type="button" data-bs-toggle="modal" data-bs-target="#desconsolidarTemasModal">
+                                        <i class="bi bi-unlock"></i> Desconsolidar Temas
+                                    </button>
+                                </li>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
                     <div class="mt-2">
-                        {% if concurso.sustanciacion.tema_sorteado %}
-                            <div class="alert alert-success">
-                                <strong>Tema sorteado:</strong> {{ concurso.sustanciacion.tema_sorteado }}
-                            </div>
+                        {% if concurso.sustanciacion.tema_sorteado %}                            <div class="card mt-3 border-0">
+                                <div class="card-body">
+                                    <h5>
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        Tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} Sorteado{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} 
+                                        <span class="badge bg-primary">{{ concurso.sustanciacion.tema_sorteado.count('|') + 1 }} tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }}</span>:
+                                    </h5>
+                                    
+                                    <div class="row mt-3">
+                                        {% for tema in concurso.sustanciacion.tema_sorteado.split('|') %}
+                                            {% if tema.strip() %}
+                                            <div class="col-md-6 mb-2">
+                                                <div class="card border-success">
+                                                    <div class="card-body py-2 bg-success bg-opacity-10">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="me-2"><i class="bi bi-check-circle-fill text-success"></i></div>
+                                                            <div>{{ tema.strip() }}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
                         {% else %}
                             <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sortearTemaModal">
                                 <i class="bi bi-shuffle"></i> Sortear Tema

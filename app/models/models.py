@@ -564,6 +564,21 @@ class DocumentTemplateConfig(db.Model):
         return (self.concurso_visibility.upper() == 'BOTH' or 
                 self.concurso_visibility.upper() == tipo_concurso.upper())
 
+class SorteoConfig(db.Model):
+    """
+    Configuration for sorteo rules based on Concurso tipo and categoria.
+    Determines how many topics should be drawn in a sorteo.
+    """
+    __tablename__ = 'sorteo_config'
+    id = db.Column(db.Integer, primary_key=True)
+    concurso_tipo = db.Column(db.String(50), nullable=False)  # REGULAR, INTERINO
+    categoria_codigo = db.Column(db.String(10), nullable=False)  # PAD, JTP, etc.
+    numero_temas_sorteados = db.Column(db.Integer, nullable=False, default=1)
+    
+    __table_args__ = (
+        db.UniqueConstraint('concurso_tipo', 'categoria_codigo', name='uq_sorteo_config_tipo_categoria'),
+    )
+
 # Function to initialize the database with departments, areas, and orientations from JSON
 def init_db_from_json(app, json_data):
     with app.app_context():

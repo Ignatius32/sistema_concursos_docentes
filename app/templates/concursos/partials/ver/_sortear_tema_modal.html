@@ -1,15 +1,20 @@
 <div class="modal fade" id="sortearTemaModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Sortear Tema</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-dice-5"></i> Sortear Tema</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <!-- Information banner -->
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle"></i> El sistema seleccionará automáticamente el número de temas definido en la configuración para esta categoría y tipo de concurso.
+                </div>
+                
                 <div id="sorteo-animation" class="text-center">
                     <div class="mb-4">
                         <h3>Sorteando tema...</h3>
-                        <div class="dice-animation">
+                        <div class="dice-animation mb-3">
                             <i class="bi bi-dice-6 fa-4x fa-spin"></i>
                         </div>
                         <div class="progress mt-3">
@@ -26,8 +31,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button id="btn-iniciar-sorteo" type="button" class="btn btn-primary">Iniciar Sorteo</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cerrar
+                </button>
+                <button id="btn-iniciar-sorteo" type="button" class="btn btn-primary">
+                    <i class="bi bi-shuffle"></i> Iniciar Sorteo
+                </button>
             </div>
         </div>
     </div>

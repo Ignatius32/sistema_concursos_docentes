@@ -3,7 +3,13 @@
 {% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="card">    <div class="card-header d-flex justify-content-between align-items-center">        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>        <div class="d-flex align-items-center">
+<div class="card">    <div cla        // Check if there's no file input and there's no existing file, prevent submission
+            const hasTkdFileId = "{{ concurso.tkd_file_id }}" !== "";
+            if (!tkdFileInput.files.length && !hasTkdFileId) {
+                e.preventDefault();
+                alert('Debe subir un archivo PDF para el TKD');
+                return false;
+            }d-header d-flex justify-content-between align-items-center">        <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>        <div class="d-flex align-items-center">
             <!-- Three-dot vertical menu for Edit/Delete -->
             <div class="dropdown">
                 <button class="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -218,10 +224,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
             }
-        })
-        .then(response => {
+        })        .then(response => {
             if (!response.ok) {
-                throw new Error('Error en el sorteo');
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || 'Error en el sorteo');
+                });
             }
             return response.json();
         })
@@ -231,25 +238,30 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Ocurrió un error al realizar el sorteo. Por favor, inténtelo de nuevo.');
+            sorteoAnimation.classList.add('d-none');
+            alert('Ocurrió un error al realizar el sorteo: ' + error.message);
             btnIniciarSorteo.disabled = false;
         });
     }
-    
-    function displaySorteoResult(data) {
+      function displaySorteoResult(data) {
         // Clear previous results
         temasContainer.innerHTML = '';
+        
+        // Convert the selected temas string to an array
+        const drawnTopicsArray = data.selectedTemas ? data.selectedTemas.split('|') : [];
         
         // Create HTML for each tema
         if (data.allTemas && data.allTemas.length > 0) {
             data.allTemas.forEach(tema => {
+                const isSelected = drawnTopicsArray.includes(tema);
+                
                 const temaElement = document.createElement('div');
-                temaElement.className = 'card mb-2' + (tema === data.selectedTema ? ' border-success' : '');
+                temaElement.className = 'card mb-2' + (isSelected ? ' border-success' : '');
                 
                 const cardBody = document.createElement('div');
-                cardBody.className = 'card-body' + (tema === data.selectedTema ? ' bg-success bg-opacity-25' : '');
+                cardBody.className = 'card-body' + (isSelected ? ' bg-success bg-opacity-25' : '');
                 
-                if (tema === data.selectedTema) {
+                if (isSelected) {
                     cardBody.innerHTML = `<strong>${tema}</strong> <i class="bi bi-check-circle-fill text-success"></i>`;
                 } else {
                     cardBody.textContent = tema;
@@ -259,6 +271,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 temasContainer.appendChild(temaElement);
             });
         }
+        
+        // Show number of temas drawn
+        const numDrawnBadge = document.createElement('div');
+        numDrawnBadge.className = 'alert alert-info mt-3';
+        numDrawnBadge.innerHTML = `Se han sorteado <strong>${data.numDrawn}</strong> tema(s) de acuerdo a la configuración del sistema.`;
+        temasContainer.appendChild(numDrawnBadge);
         
         // Hide animation and show result
         sorteoAnimation.classList.add('d-none');

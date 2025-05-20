@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración de Sorteo de Temas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Configuración de Sorteo de Temas</h2>
+            <p class="text-muted">Configure la cantidad de temas a sortear según el tipo de concurso y categoría.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Reglas de Sorteo</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_sorteo_config.index') }}">                        <table class="table table-striped table-bordered">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th class="text-center">Nº Temas Sorteados (Regular)</th>
+                                    <th class="text-center">Nº Temas Sorteados (Interino)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for categoria in categorias %}
+                                <tr>
+                                    <td>{{ categoria.nombre }} ({{ categoria.codigo }})</td>
+                                    <td class="text-center">                                        <input type="number" 
+                                               name="regular_{{ categoria.codigo }}"
+                                               value="{{ config_dict.get('REGULAR_' + categoria.codigo, 1) }}"
+                                               min="1" max="10" class="form-control form-control-sm text-center" 
+                                               style="max-width: 80px; margin: 0 auto;">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number" 
+                                               name="interino_{{ categoria.codigo }}"
+                                               value="{{ config_dict.get('INTERINO_' + categoria.codigo, 1) }}"
+                                               min="1" max="10" class="form-control form-control-sm text-center"
+                                               style="max-width: 80px; margin: 0 auto;">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="text-end mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Guardar Configuración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <div class="small text-muted">
+                        <p><strong>Nota:</strong> Esta configuración determina cuántos temas se seleccionarán al realizar el sorteo para cada tipo de concurso y categoría.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

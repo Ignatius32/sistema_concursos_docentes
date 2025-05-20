@@ -398,23 +398,42 @@
                 
                 <!-- Then show consolidated topics if they exist -->
                 {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion %}
-                <div>
-                    {% if concurso.sustanciacion.tema_sorteado %}
+                <div>                    {% if concurso.sustanciacion.tema_sorteado %}
                     <!-- Show selected topic when drawn -->
                     <h5>Temas Consolidados:</h5>
                     {% if concurso.sustanciacion.temas_exposicion %}
                     <div class="temas-list mt-2">
+                        {% set sorteados_array = concurso.sustanciacion.tema_sorteado.split('|') %}
                         {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
                             {% if tema.strip() %}
-                            <div class="badge {% if tema.strip() == concurso.sustanciacion.tema_sorteado %}bg-success{% else %}bg-light text-dark{% endif %} p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                            <div class="badge {% if tema.strip() in sorteados_array %}bg-success{% else %}bg-light text-dark{% endif %} p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
                             {% endif %}
                         {% endfor %}
                     </div>
-                    {% endif %}
-                    <div class="alert alert-success mt-3">
-                        <h5><i class="bi bi-check-circle"></i> Tema Sorteado:</h5>
-                        <p class="mb-0">{{ concurso.sustanciacion.tema_sorteado }}</p>
-                    </div>
+                    {% endif %}                    <div class="card mt-3 border-0">
+                        <div class="card-body">
+                            <h5>
+                                <i class="bi bi-check-circle text-success"></i> 
+                                Tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} Sorteado{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} 
+                                <span class="badge bg-primary">{{ concurso.sustanciacion.tema_sorteado.count('|') + 1 }} tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }}</span>:
+                            </h5>
+                            
+                            <div class="row mt-3">
+                                {% for tema in concurso.sustanciacion.tema_sorteado.split('|') %}
+                                    {% if tema.strip() %}                                <div class="col-md-6 mb-2">
+                                        <div class="card border-success">
+                                            <div class="card-body py-2 bg-success bg-opacity-10">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="me-2"><i class="bi bi-check-circle-fill text-success"></i></div>
+                                                    <div>{{ tema.strip() }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
                     {% elif concurso.sustanciacion.temas_cerrados %}
                     <!-- When topics are closed but not yet drawn, only show the closed message -->
                     <h5>Temas Consolidados:</h5>

@@ -1,20 +1,50 @@
 <div class="modal fade" id="desconsolidarTemasModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Desconsolidación de Temas</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-unlock"></i> Desconsolidar Temas</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form action="{{ url_for('concursos.desconsolidar_temas', concurso_id=concurso.id) }}" method="POST" id="desconsolidarTemasForm">
-                    <p>¿Está seguro que desea desconsolidar los temas de sorteo?</p>
-                    <p>Esta acción permitirá gestionar las propuestas individuales de los miembros del tribunal.</p>
-                    <p>Si había un tema sorteado, este también será eliminado.</p>
-                    <p class="text-warning"><strong>Nota:</strong> Las propuestas individuales de los miembros se mantendrán intactas.</p>
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i> Esta acción permite reabrir la edición de propuestas individuales.
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-danger h-100">
+                                <div class="card-header bg-danger text-white">Se eliminará</div>
+                                <div class="card-body">
+                                    <ul class="mb-0">
+                                        <li>Consolidación de temas</li>
+                                        <li>Tema(s) sorteado(s) (si existe)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-success h-100">
+                                <div class="card-header bg-success text-white">Se conservará</div>
+                                <div class="card-body">
+                                    <ul class="mb-0">
+                                        <li>Todas las propuestas individuales</li>
+                                        <li>Los miembros podrán editar sus propuestas</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p>¿Está seguro que desea desconsolidar los temas para permitir su edición?</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">Desconsolidar Temas</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-unlock"></i> Desconsolidar Temas
+                    </button>
                 </form>
             </div>
         </div>
