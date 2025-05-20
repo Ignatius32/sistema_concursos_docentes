@@ -1,5 +1,9 @@
 import sys
 import os
+import site
+
+# Add the site-packages of the virtualenv
+site.addsitedir('/var/www/concursos-docentes/venv/lib/python3.9/site-packages')
 
 # Add the application directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

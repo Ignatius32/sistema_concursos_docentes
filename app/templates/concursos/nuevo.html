@@ -270,6 +270,17 @@
 
 {% block scripts %}
 <script>
+// Helper function to get the base URL for API calls
+function getBaseUrl() {
+    // Check if we're deployed under /concursos-docentes
+    const path = window.location.pathname;
+    if (path.includes('/concursos-docentes')) {
+        return '/concursos-docentes/concursos';
+    } else {
+        return '/concursos';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Add this at the beginning of your existing DOMContentLoaded handler
     const tipoSelect = document.getElementById('tipo');
@@ -295,13 +306,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const deptoSelect = document.getElementById('departamento_id');
     const areaSelect = document.getElementById('area');
-    const orientacionSelect = document.getElementById('orientacion');
-
-    // Handle departamento -> area -> orientacion chain
+    const orientacionSelect = document.getElementById('orientacion');    // Handle departamento -> area -> orientacion chain
     deptoSelect.addEventListener('change', function() {
         if (this.value) {
-            fetch(`/concursos/api/areas/${this.value}`)
-                .then(response => response.json())
+            // Get base URL - works both locally and on server
+            const baseUrl = getBaseUrl();
+            
+            // First try the local database API
+            fetch(`${baseUrl}/api/areas/${this.value}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     areaSelect.innerHTML = '<option value="">Seleccione...</option>';
                     data.forEach(area => {
@@ -310,6 +328,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     areaSelect.disabled = false;
                     orientacionSelect.disabled = true;
                     orientacionSelect.innerHTML = '<option value="">Seleccione un área primero...</option>';
+                })
+                .catch(error => {
+                    console.error('Error fetching areas:', error);
+                    // Try the external API as fallback
+                    fetch(`${baseUrl}/api/departamento_heads`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('External API also failed');
+                            return response.json();
+                        })
+                        .then(data => {
+                            areaSelect.innerHTML = '<option value="">Seleccione...</option>';
+                            // Filter areas by selected department
+                            if (Array.isArray(data)) {
+                                const deptoName = deptoSelect.options[deptoSelect.selectedIndex].text;
+                                const filteredAreas = new Set();
+                                data.forEach(item => {
+                                    if (item.departamento === deptoName && item.area) {
+                                        filteredAreas.add(item.area);
+                                    }
+                                });
+                                [...filteredAreas].forEach(area => {
+                                    areaSelect.innerHTML += `<option value="${area}">${area}</option>`;
+                                });
+                            }
+                            areaSelect.disabled = false;
+                        })
+                        .catch(err => {
+                            console.error('Both APIs failed:', err);
+                            alert('No se pudieron cargar las áreas. Por favor, inténtelo de nuevo más tarde.');
+                        });
                 });
         } else {
             areaSelect.disabled = true;
@@ -317,19 +365,64 @@ document.addEventListener('DOMContentLoaded', function() {
             orientacionSelect.disabled = true;
             orientacionSelect.innerHTML = '<option value="">Seleccione un área primero...</option>';
         }
-    });
-
-    areaSelect.addEventListener('change', function() {
+    });    areaSelect.addEventListener('change', function() {
         const deptoId = deptoSelect.value;
         if (deptoId && this.value) {
-            fetch(`/concursos/api/orientaciones/${deptoId}?area=${encodeURIComponent(this.value)}`)
-                .then(response => response.json())
+            // Get base URL - works both locally and on server
+            const baseUrl = getBaseUrl();
+            
+            fetch(`${baseUrl}/api/orientaciones/${deptoId}?area=${encodeURIComponent(this.value)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     orientacionSelect.innerHTML = '<option value="">Seleccione...</option>';
                     data.forEach(orientacion => {
                         orientacionSelect.innerHTML += `<option value="${orientacion.nombre}">${orientacion.nombre}</option>`;
                     });
                     orientacionSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error fetching orientaciones:', error);
+                    
+                    // Try external API as fallback
+                    fetch(`${baseUrl}/api/departamento_heads`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('External API also failed');
+                            return response.json();
+                        })
+                        .then(data => {
+                            orientacionSelect.innerHTML = '<option value="">Seleccione...</option>';
+                            
+                            // Filter orientaciones by selected department and area
+                            if (Array.isArray(data)) {
+                                const deptoName = deptoSelect.options[deptoSelect.selectedIndex].text;
+                                const areaName = this.value;
+                                const filteredOrientaciones = new Set();
+                                
+                                data.forEach(item => {
+                                    if (item.departamento === deptoName && 
+                                        item.area === areaName && 
+                                        item.orientacion) {
+                                        filteredOrientaciones.add(item.orientacion);
+                                    }
+                                });
+                                
+                                [...filteredOrientaciones].forEach(orientacion => {
+                                    orientacionSelect.innerHTML += `<option value="${orientacion}">${orientacion}</option>`;
+                                });
+                            }
+                            orientacionSelect.disabled = false;
+                        })
+                        .catch(err => {
+                            console.error('Both APIs failed:', err);
+                            alert('No se pudieron cargar las orientaciones. Por favor, inténtelo de nuevo más tarde.');
+                            orientacionSelect.innerHTML = '<option value="">Sin orientación</option>';
+                            orientacionSelect.disabled = false;
+                        });
                 });
         } else {
             orientacionSelect.disabled = true;

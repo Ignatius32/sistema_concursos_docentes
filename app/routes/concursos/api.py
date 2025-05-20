@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from app.models.models import Departamento, Area, Orientacion
 from . import concursos
-from app.helpers.api_services import get_programa_by_id_materia, get_programas_by_materia_ids
+from app.helpers.api_services import get_programa_by_id_materia, get_programas_by_materia_ids, get_departamento_heads_data
 
 @concursos.route('/api/areas/<int:departamento_id>')
 def get_areas(departamento_id):
@@ -49,3 +49,11 @@ def get_programas_bulk():
         return jsonify({"status": "error", "message": "Error fetching programas information"})
     
     return jsonify({"status": "success", "results": programas_info})
+
+@concursos.route('/api/departamento_heads')
+def get_departamento_heads_api():
+    """API endpoint to fetch departamento heads data from external source."""
+    data = get_departamento_heads_data()
+    if not data:
+        return jsonify({"status": "error", "message": "Error fetching departamento heads data"}), 404
+    return jsonify(data)

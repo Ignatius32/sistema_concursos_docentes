@@ -1,0 +1,126 @@
+# Apache2 Deployment Instructions for Concursos Docentes
+
+This file contains the commands needed to properly deploy the application to your Apache server at https://huayca.crub.uncoma.edu.ar
+
+## 1. Copy Files to Server
+
+```bash
+# Create the directory
+sudo mkdir -p /var/www/concursos-docentes
+
+# Copy all files (run this from your local machine or after uploading)
+sudo cp -r /path/to/local/sistema_concursos_docentes/* /var/www/concursos-docentes/
+
+# Set correct permissions
+sudo chown -R www-data:www-data /var/www/concursos-docentes
+sudo chmod -R 755 /var/www/concursos-docentes
+```
+
+## 2. Create Virtual Environment
+
+```bash
+# Create and setup virtual environment
+cd /var/www/concursos-docentes
+sudo python3 -m venv venv
+sudo chmod -R 755 venv
+sudo -u www-data ./venv/bin/pip install -r requirements.txt
+```
+
+## 3. Create .env File
+
+```bash
+# Create .env file with required variables
+sudo nano /var/www/concursos-docentes/.env
+```
+
+Add the following content (replace with actual values):
+
+```
+SECRET_KEY=your_secret_key_here
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=strong_password
+DATABASE_URI=sqlite:///concursos.db
+GOOGLE_DRIVE_CVS_FOLDER_ID=your_google_drive_folder_id
+```
+
+## 4. Add to Apache Configuration
+
+Edit your Apache configuration file:
+
+```bash
+sudo nano /etc/apache2/sites-available/huayca.crub.uncoma.edu.ar.conf
+```
+
+Add the configuration from apache_config.conf before the closing </VirtualHost> tag:
+
+```
+# === CONCURSOS DOCENTES APPLICATION ===
+WSGIDaemonProcess concursos_docentes_app python-home=/var/www/concursos-docentes/venv python-path=/var/www/concursos-docentes
+
+<Location /concursos-docentes>
+    WSGIProcessGroup concursos_docentes_app
+    WSGIApplicationGroup %{GLOBAL}
+</Location>
+
+WSGIScriptAlias /concursos-docentes /var/www/concursos-docentes/wsgi.py
+
+<Directory /var/www/concursos-docentes>
+    <Files wsgi.py>
+        Require all granted
+    </Files>
+    Require all granted
+    Options FollowSymLinks
+</Directory>
+
+# Static files
+Alias /concursos-docentes/static /var/www/concursos-docentes/app/static
+<Directory /var/www/concursos-docentes/app/static>
+    Require all granted
+    Options -Indexes
+</Directory>
+
+# Protect sensitive directories
+<Directory /var/www/concursos-docentes/instance>
+    Require all denied
+</Directory>
+```
+
+## 5. Create database directory and set permissions
+
+```bash
+# Make sure instance directory exists with proper permissions
+sudo mkdir -p /var/www/concursos-docentes/instance
+sudo chown www-data:www-data /var/www/concursos-docentes/instance
+sudo chmod 755 /var/www/concursos-docentes/instance
+```
+
+## 6. Test and reload Apache
+
+```bash
+# Test configuration
+sudo apachectl configtest
+
+# Reload Apache
+sudo systemctl reload apache2
+```
+
+## 7. Access Application
+
+The application should now be available at:
+https://huayca.crub.uncoma.edu.ar/concursos-docentes/
+
+## Troubleshooting
+
+1. Check Apache error logs:
+   ```bash
+   sudo tail -f /var/log/apache2/error.log
+   ```
+
+2. If you encounter module import errors, make sure the virtual environment path is correct in the Apache config.
+
+3. If database errors occur, check permissions on the instance directory:
+   ```bash
+   sudo chown -R www-data:www-data /var/www/concursos-docentes/instance
+   ```
+
+4. For static file issues (CSS/JS not loading), verify the Alias directive is correct and the static directory has proper permissions.
