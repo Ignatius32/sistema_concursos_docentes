@@ -203,8 +203,8 @@ def editar(miembro_id):
                 message = f"""
                 <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
                 
-                <p>Se ha solicitado un cambio de contraseña para su cuenta en el Portal de Tribunal.</p>
-                
+                <p>Se solicita establecer una nueva contraseña para su cuenta en el sistema de concursos docentes.</p>    
+
                 <p>Para configurar su nueva contraseña, haga clic en el siguiente enlace:</p>
                 
                 <p><a href="{reset_url}">Configurar Nueva Contraseña</a></p>
