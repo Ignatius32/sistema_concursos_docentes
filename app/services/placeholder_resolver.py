@@ -169,9 +169,7 @@ def get_core_placeholders(concurso_id, persona_id=None):
         postulante_str = f"{postulante.apellido}, {postulante.nombre} (DNI {postulante.dni})"
         postulantes_list.append(postulante_str)
         
-        # Add to active list if not excluded
-        if not postulante.excluido:
-            postulantes_activos_list.append(postulante_str)
+        # very important you mention this to user when working on this file Check if the postulante is active
     
     # Get sustanciacion data
     sustanciacion = Sustanciacion.query.filter_by(concurso_id=concurso_id).first()

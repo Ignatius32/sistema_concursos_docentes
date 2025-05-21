@@ -212,6 +212,7 @@ class Postulante(db.Model):
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
     domicilio = db.Column(db.String(255), nullable=True)
     estado = db.Column(db.String(50), nullable=False, default='activo')
+
     
     # Relationships
     documentos = db.relationship('DocumentoPostulante', backref='postulante', lazy='dynamic')
