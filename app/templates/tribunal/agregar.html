@@ -94,8 +94,17 @@ document.addEventListener('DOMContentLoaded', function() {    const dniInput = d
         btnBuscarDNI.disabled = true;
         
         // Make AJAX request to search for persona
-        fetch(`/tribunal/api/buscar-persona?dni=${dni}`)
-            .then(response => response.json())
+        const buscarPersonaUrl = "{{ url_for('tribunal.buscar_persona') }}"; // Define URL using url_for
+        fetch(`${buscarPersonaUrl}?dni=${dni}`) // Use the generated URL
+            .then(response => {
+                if (!response.ok) {
+                    // Log the full response for more details on the 404
+                    console.error('Fetch error response status:', response.status);
+                    response.text().then(text => console.error('Fetch error response body:', text));
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
                 btnBuscarDNI.disabled = false;
@@ -107,16 +116,17 @@ document.addEventListener('DOMContentLoaded', function() {    const dniInput = d
                     telefonoInput.value = data.telefono || '';
                     
                     // Display success message
+                    // Consider a less intrusive notification than alert if possible
                     alert(`Persona encontrada: ${data.nombre} ${data.apellido}`);
                 } else {
-                    alert('No se encontró ninguna persona con ese DNI. Por favor complete los datos manualmente.');
+                    alert(data.mensaje || 'No se encontró ninguna persona con ese DNI. Por favor complete los datos manualmente.');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error en buscarPersonaPorDNI:', error);
                 btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
                 btnBuscarDNI.disabled = false;
-                alert('Error al buscar la persona. Por favor intente nuevamente.');
+                alert('Error al buscar la persona. Por favor intente nuevamente o verifique la consola para más detalles.');
             });
     }
     
