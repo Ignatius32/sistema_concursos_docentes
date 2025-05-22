@@ -143,7 +143,9 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
         
         # Check if data preparation succeeded
         if not data:
-            return False, validation_message, None        # Use the central placeholder resolver to get all data
+            return False, validation_message, None        
+            
+        # Use the central placeholder resolver to get all data
         placeholders_data = get_core_placeholders(concurso_id)
         
         # Add committee and council information to placeholders data for template
@@ -284,6 +286,30 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
         )
         db.session.add(documento)
         
+        # Update concurso estado_actual and subestado if configured in template
+        if template_config.estado_al_generar_borrador:
+            concurso.estado_actual = template_config.estado_al_generar_borrador
+            
+        # Handle subestado - append new values or replace if needed
+        if template_config.subestado_al_generar_borrador:
+            if concurso.subestado:
+                try:
+                    # Try to parse existing subestado as JSON
+                    subestado_values = json.loads(concurso.subestado)
+                    if not isinstance(subestado_values, list):
+                        subestado_values = [subestado_values]
+                except (json.JSONDecodeError, TypeError):
+                    # If it's not valid JSON, treat as a single string value
+                    subestado_values = [concurso.subestado]
+                
+                # Add new value if not already present
+                if template_config.subestado_al_generar_borrador not in subestado_values:
+                    subestado_values.append(template_config.subestado_al_generar_borrador)
+                    concurso.subestado = json.dumps(subestado_values)
+            else:
+                # If subestado is empty, initialize with a single value
+                concurso.subestado = json.dumps([template_config.subestado_al_generar_borrador])
+                
         # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,

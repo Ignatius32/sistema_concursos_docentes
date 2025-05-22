@@ -6,6 +6,7 @@
                 <tr>
                     <th>Fecha</th>
                     <th>Estado</th>
+                    <th>Subestado</th>
                     <th>Observaciones</th>
                 </tr>
             </thead>
@@ -14,6 +15,24 @@
                 <tr>
                     <td>{{ estado.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>{{ estado.estado }}</td>
+                    <td>
+                        {% if loop.index0 == 0 %}
+                            {% if concurso.subestado %}
+                                {% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}
+                                {% if subestado_values is iterable and (subestado_values is not string) %}
+                                    {% for subestado in subestado_values %}
+                                        <span class="badge bg-secondary me-1">{{ subestado }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ concurso.subestado }}</span>
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td>{{ estado.observaciones }}</td>
                 </tr>
                 {% endfor %}

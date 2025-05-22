@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
+                <div>
+                    <span class="badge bg-primary">Estado: {{ concurso.estado_actual }}</span>
+                    {% if concurso.subestado %}
+                        {% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}
+                        {% if subestado_values is iterable and (subestado_values is not string) %}
+                            {% for subestado in subestado_values %}
+                                <span class="badge bg-secondary">{{ subestado }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="badge bg-secondary">{{ concurso.subestado }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <!-- Three-dot vertical menu for Edit/Delete -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item text-warning" href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#eliminarModal">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Rest of the template remains unchanged -->

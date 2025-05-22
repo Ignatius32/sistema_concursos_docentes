@@ -153,6 +153,14 @@ def create_app():
             return ""
         return value.strip()
 
+    @app.template_filter('fromjson')
+    def fromjson_filter(value):
+        """Parse a JSON string into a Python object"""
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return value
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))

@@ -294,11 +294,42 @@ def subir_documento_firmado(concurso_id, documento_id):
             new_filename,
             file_data
         )
-        
-        # Update document record for the signed version
+          # Update document record for the signed version
         documento.file_id = file_id  # Store the file ID of the signed version
         documento.url = web_view_link
         documento.estado = 'FIRMADO'
+        
+        # Get template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        
+        # Update concurso estado_actual and subestado if configured in template
+        if template_config and template_config.estado_al_subir_firmado:
+            concurso.estado_actual = template_config.estado_al_subir_firmado
+              # Handle subestado - replace values that were set at borrador creation time
+        if template_config and template_config.subestado_al_subir_firmado:
+            if concurso.subestado:
+                try:
+                    # Try to parse existing subestado as JSON
+                    subestado_values = json.loads(concurso.subestado)
+                    if not isinstance(subestado_values, list):
+                        subestado_values = [subestado_values]
+                          # If borrador subestado exists, remove it
+                    if template_config.subestado_al_generar_borrador and template_config.subestado_al_generar_borrador in subestado_values:
+                        subestado_values.remove(template_config.subestado_al_generar_borrador)
+                    
+                    # Add the firmado subestado with a special prefix to identify it as a firmado subestado
+                    firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                    if firmado_subestado not in subestado_values:
+                        subestado_values.append(firmado_subestado)
+                        
+                    concurso.subestado = json.dumps(subestado_values)
+                except (json.JSONDecodeError, TypeError):                    # If it's not valid JSON, start fresh with just the firmado value
+                    firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                    concurso.subestado = json.dumps([firmado_subestado])
+            else:
+                # If subestado is empty, initialize with a single value
+                firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                concurso.subestado = json.dumps([firmado_subestado])
         
         # Add entry to history
         historial = HistorialEstado(
@@ -467,10 +498,58 @@ def eliminar_documento_firmado(concurso_id, documento_id):
     if documento.concurso_id != concurso_id:
         flash('El documento no pertenece a este concurso.', 'danger')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
     try:
         # Update document status back to BORRADOR
         documento.estado = 'BORRADOR'
+        
+        # Get template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        
+        # If document affected estado when uploaded as firmado, revert those changes
+        if template_config and template_config.estado_al_subir_firmado and concurso.estado_actual == template_config.estado_al_subir_firmado:
+            # Revert to previous estado
+            previous_estado = "CREADO"  # Default fallback
+            
+            # Try to find a more appropriate previous state - either the borrador estado or an earlier state
+            if template_config.estado_al_generar_borrador:
+                previous_estado = template_config.estado_al_generar_borrador
+            else:
+                # Look for previous estado in history
+                prev_history = HistorialEstado.query.filter(
+                    HistorialEstado.concurso_id == concurso_id,
+                    HistorialEstado.estado != "DOCUMENTO_FIRMADO",
+                    HistorialEstado.estado != "DOCUMENTO_FIRMADO_ELIMINADO"
+                ).order_by(HistorialEstado.fecha.desc()).first()
+                
+                if prev_history:
+                    previous_estado = prev_history.estado
+            
+            concurso.estado_actual = previous_estado
+        
+        # Handle subestado if it was modified by this document type
+        if template_config and template_config.subestado_al_subir_firmado and concurso.subestado:
+            try:
+                # Try to parse existing subestado as JSON
+                subestado_values = json.loads(concurso.subestado)
+                if not isinstance(subestado_values, list):
+                    subestado_values = [subestado_values]
+                
+                # Remove the value added by this document type if it exists
+                firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                if firmado_subestado in subestado_values:
+                    subestado_values.remove(firmado_subestado)
+                # For backward compatibility, also check without prefix
+                elif template_config.subestado_al_subir_firmado in subestado_values:
+                    subestado_values.remove(template_config.subestado_al_subir_firmado)
+                    
+                    # Update subestado or set to null if empty
+                    if subestado_values:
+                        concurso.subestado = json.dumps(subestado_values)
+                    else:
+                        concurso.subestado = None
+            except (json.JSONDecodeError, TypeError):
+                # If subestado is not valid JSON, leave it as is
+                pass
         
         # Add entry to history
         historial = HistorialEstado(
@@ -558,14 +637,62 @@ def eliminar_borrador(concurso_id, documento_id):
                 drive_api.delete_file(documento.borrador_file_id)
             except Exception as e:
                 flash(f'Advertencia: No se pudo eliminar el archivo borrador de Google Drive: {str(e)}', 'warning')
-        
-        # Add entry to history
+          # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,
             estado="BORRADOR_ELIMINADO",
             observaciones=f"Borrador de {documento.tipo} eliminado por {current_user.username}"
         )
         db.session.add(historial)
+        
+        # Get template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        
+        # If document is being deleted, and it affected estado or subestado when generated,
+        # we may need to revert those changes
+        if template_config and template_config.estado_al_generar_borrador and concurso.estado_actual == template_config.estado_al_generar_borrador:
+            # Revert to previous estado if this was the only document of this type
+            existing_docs = DocumentoConcurso.query.filter_by(
+                concurso_id=concurso_id,
+                tipo=documento.tipo
+            ).filter(DocumentoConcurso.id != documento_id).all()
+            
+            if not existing_docs:
+                # No other documents of this type, revert estado to previous
+                previous_estado = "CREADO"  # Default fallback
+                
+                # Get the previous estado from history
+                prev_history = HistorialEstado.query.filter(
+                    HistorialEstado.concurso_id == concurso_id,
+                    HistorialEstado.estado != "DOCUMENTO_GENERADO",
+                    HistorialEstado.estado != "BORRADOR_ELIMINADO"
+                ).order_by(HistorialEstado.fecha.desc()).first()
+                
+                if prev_history:
+                    previous_estado = prev_history.estado
+                
+                concurso.estado_actual = previous_estado
+        
+        # Handle subestado if it was modified by this document type
+        if template_config and template_config.subestado_al_generar_borrador and concurso.subestado:
+            try:
+                # Try to parse existing subestado as JSON
+                subestado_values = json.loads(concurso.subestado)
+                if not isinstance(subestado_values, list):
+                    subestado_values = [subestado_values]
+                
+                # Remove the value added by this document type if it exists
+                if template_config.subestado_al_generar_borrador in subestado_values:
+                    subestado_values.remove(template_config.subestado_al_generar_borrador)
+                    
+                    # Update subestado or set to null if empty
+                    if subestado_values:
+                        concurso.subestado = json.dumps(subestado_values)
+                    else:
+                        concurso.subestado = None
+            except (json.JSONDecodeError, TypeError):
+                # If subestado is not valid JSON, leave it as is
+                pass
         
         # If this is the only version (no signed document exists), delete the document record
         if documento.estado == 'BORRADOR':
@@ -612,13 +739,61 @@ def eliminar_subido(concurso_id, documento_id):
         
         # Reset firma count
         documento.firma_count = 0
-        
-        # Reset document status to BORRADOR if there's still a draft version
+          # Reset document status to BORRADOR if there's still a draft version
         if documento.borrador_file_id:
             documento.estado = 'BORRADOR'
         else:
             # If no draft version exists, delete the document record
             db.session.delete(documento)
+        
+        # Get template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+        
+        # If document affected estado when uploaded, revert those changes
+        if template_config and template_config.estado_al_subir_firmado and concurso.estado_actual == template_config.estado_al_subir_firmado:
+            # Revert to previous estado
+            previous_estado = "CREADO"  # Default fallback
+            
+            # Try to find a more appropriate previous state - either the borrador estado or an earlier state
+            if template_config.estado_al_generar_borrador:
+                previous_estado = template_config.estado_al_generar_borrador
+            else:
+                # Look for previous estado in history
+                prev_history = HistorialEstado.query.filter(
+                    HistorialEstado.concurso_id == concurso_id,
+                    HistorialEstado.estado != "DOCUMENTO_FIRMADO",
+                    HistorialEstado.estado != "DOCUMENTO_SUBIDO_ELIMINADO"
+                ).order_by(HistorialEstado.fecha.desc()).first()
+                
+                if prev_history:
+                    previous_estado = prev_history.estado
+            
+            concurso.estado_actual = previous_estado
+        
+        # Handle subestado if it was modified by this document type
+        if template_config and template_config.subestado_al_subir_firmado and concurso.subestado:
+            try:
+                # Try to parse existing subestado as JSON
+                subestado_values = json.loads(concurso.subestado)
+                if not isinstance(subestado_values, list):
+                    subestado_values = [subestado_values]
+                
+                # Remove the value added by this document type if it exists
+                firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                if firmado_subestado in subestado_values:
+                    subestado_values.remove(firmado_subestado)
+                # For backward compatibility, also check without prefix
+                elif template_config.subestado_al_subir_firmado in subestado_values:
+                    subestado_values.remove(template_config.subestado_al_subir_firmado)
+                    
+                    # Update subestado or set to null if empty
+                    if subestado_values:
+                        concurso.subestado = json.dumps(subestado_values)
+                    else:
+                        concurso.subestado = None
+            except (json.JSONDecodeError, TypeError):
+                # If subestado is not valid JSON, leave it as is
+                pass
         
         # Add entry to history
         historial = HistorialEstado(

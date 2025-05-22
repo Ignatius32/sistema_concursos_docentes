@@ -38,11 +38,19 @@ class TemplateForm(FlaskForm):
     is_unique_per_concurso = BooleanField('Único por Concurso', default=True)
     tribunal_visibility_rules = TextAreaField('Reglas de Visibilidad para Tribunal', 
                                              validators=[validate_json],
-                                             render_kw={"rows": 10, "placeholder": '{\n  "BORRADOR": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "No Docente"]},\n  "PENDIENTE DE FIRMA": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]},\n  "FIRMADO": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]}\n}'})    # New permission fields
+                                             render_kw={"rows": 10, "placeholder": '{\n  "BORRADOR": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "No Docente"]},\n  "PENDIENTE DE FIRMA": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]},\n  "FIRMADO": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]}\n}'})
+    # New permission fields
     admin_can_send_for_signature = BooleanField('Admin puede enviar para firma', default=True)
     tribunal_can_sign = BooleanField('Tribunal puede firmar', default=False)
     tribunal_can_upload_signed = BooleanField('Tribunal puede subir firmado', default=False)
     admin_can_sign = BooleanField('Administración puede firmar', default=False)
+    # New fields for estado and subestado control
+    estado_al_generar_borrador = StringField('Estado al generar documento borrador', validators=[Length(max=50)])
+    subestado_al_generar_borrador = TextAreaField('Subestado al generar documento borrador', 
+                                                render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})
+    estado_al_subir_firmado = StringField('Estado al subir firmado', validators=[Length(max=50)])
+    subestado_al_subir_firmado = TextAreaField('Subestado al subir firmado', 
+                                             render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})
     submit = SubmitField('Guardar')
 
 # Access control decorator
@@ -85,7 +93,12 @@ def nuevo():
             # New permission fields
             admin_can_send_for_signature=form.admin_can_send_for_signature.data,
             tribunal_can_sign=form.tribunal_can_sign.data,
-            tribunal_can_upload_signed=form.tribunal_can_upload_signed.data
+            tribunal_can_upload_signed=form.tribunal_can_upload_signed.data,
+            # New estado and subestado fields
+            estado_al_generar_borrador=form.estado_al_generar_borrador.data,
+            subestado_al_generar_borrador=form.subestado_al_generar_borrador.data,
+            estado_al_subir_firmado=form.estado_al_subir_firmado.data,
+            subestado_al_subir_firmado=form.subestado_al_subir_firmado.data
         )
         db.session.add(template)
         try:

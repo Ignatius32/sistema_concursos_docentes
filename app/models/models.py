@@ -128,6 +128,7 @@ class Concurso(db.Model):
     cierre_inscripcion = db.Column(db.Date, nullable=True)  # Changed to nullable=True
     vencimiento = db.Column(db.Date, nullable=True)  # Already nullable
     estado_actual = db.Column(db.String(50), default="CREADO")
+    subestado = db.Column(db.Text, nullable=True)  # New field for subestado values (can hold multiple values as JSON)
     drive_folder_id = db.Column(db.String(100), nullable=True)  # Google Drive folder ID
     borradores_folder_id = db.Column(db.String(100), nullable=True)  # Borradores subfolder ID
     postulantes_folder_id = db.Column(db.String(100), nullable=True)  # Postulantes subfolder ID
@@ -366,6 +367,7 @@ class HistorialEstado(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     concurso_id = db.Column(db.Integer, db.ForeignKey('concursos.id'))
     estado = db.Column(db.String(50), nullable=False)
+    subestado_snapshot = db.Column(db.Text, nullable=True)  # Snapshot of subestado at the time of the change
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
     observaciones = db.Column(db.Text)
 
@@ -520,11 +522,17 @@ class DocumentTemplateConfig(db.Model):
     # New fields for enhanced document template configuration
     concurso_visibility = db.Column(db.String(50), nullable=False, default='BOTH')  # REGULAR, INTERINO, BOTH
     is_unique_per_concurso = db.Column(db.Boolean, default=True, nullable=False)
-    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text    # New fields for permission control
+    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text    
+    # New fields for permission control
     admin_can_send_for_signature = db.Column(db.Boolean, default=True, nullable=False)
     tribunal_can_sign = db.Column(db.Boolean, default=False, nullable=False)
     tribunal_can_upload_signed = db.Column(db.Boolean, default=False, nullable=False)
     admin_can_sign = db.Column(db.Boolean, default=False, nullable=False)
+    # New fields for estado and subestado control
+    estado_al_generar_borrador = db.Column(db.String(50), nullable=True)
+    subestado_al_generar_borrador = db.Column(db.Text, nullable=True)
+    estado_al_subir_firmado = db.Column(db.String(50), nullable=True)
+    subestado_al_subir_firmado = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
