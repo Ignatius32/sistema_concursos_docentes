@@ -12,60 +12,61 @@
             <div class="card-header bg-dark text-white">
                 <h2 class="mb-0">{{ concurso.categoria_nombre }} - {{ concurso.dedicacion }}</h2>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
+            <div class="card-body">                <div class="row">
+                    <div class="col-12 col-lg-6 mb-4">
                         <h4>Información del Concurso</h4>
-                        <table class="table table-bordered">
-                            <tr>
-                                <th width="40%">Departamento</th>
-                                <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <th>Área</th>
-                                <td>{{ concurso.area }}</td>
-                            </tr>
-                            <tr>
-                                <th>Orientación</th>
-                                <td>{{ concurso.orientacion }}</td>
-                            </tr>
-                            <tr>
-                                <th>Categoría</th>
-                                <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
-                            </tr>
-                            <tr>
-                                <th>Dedicación</th>
-                                <td>{{ concurso.dedicacion }}</td>
-                            </tr>
-                            <tr>
-                                <th>Tipo de Concurso</th>
-                                <td>{{ concurso.tipo }}</td>
-                            </tr>
-                            <tr>
-                                <th>Carácter</th>
-                                <td>{{ concurso.cerrado_abierto }}</td>
-                            </tr>
-                            <tr>
-                                <th>Cantidad de Cargos</th>
-                                <td>{{ concurso.cant_cargos }}</td>
-                            </tr>
-                            <tr>
-                                <th>Localización</th>
-                                <td>{{ concurso.localizacion }}</td>
-                            </tr>
-                            {% if concurso.asignaturas %}
-                            <tr>
-                                <th>Asignaturas</th>
-                                <td>{{ concurso.asignaturas }}</td>
-                            </tr>
-                            {% endif %}
-                            <tr>
-                                <th>Fecha de Cierre de Inscripción</th>
-                                <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</td>
-                            </tr>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th width="40%">Departamento</th>
+                                    <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Área</th>
+                                    <td>{{ concurso.area }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Orientación</th>
+                                    <td>{{ concurso.orientacion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                                </tr>
+                                <tr>
+                                    <th>Dedicación</th>
+                                    <td>{{ concurso.dedicacion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Tipo de Concurso</th>
+                                    <td>{{ concurso.tipo }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Carácter</th>
+                                    <td>{{ concurso.cerrado_abierto }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Cantidad de Cargos</th>
+                                    <td>{{ concurso.cant_cargos }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Localización</th>
+                                    <td>{{ concurso.localizacion }}</td>
+                                </tr>
+                                {% if concurso.asignaturas %}
+                                <tr>
+                                    <th>Asignaturas</th>
+                                    <td>{{ concurso.asignaturas }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>Fecha de Cierre de Inscripción</th>
+                                    <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-lg-6">
                         <div class="card h-100">
                             <div class="card-header bg-primary text-white">
                                 <h4 class="mb-0">Instructivo para Postulantes</h4>
@@ -92,7 +93,8 @@
                                 {% endif %}
                             </div>
                         </div>
-                    </div>                </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

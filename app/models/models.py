@@ -440,6 +440,9 @@ class NotificationCampaign(db.Model):
                                                                      #           {"tipo": "ACTA_CIERRE", "version": "firmado"}]
     adjuntos_personalizados = db.Column(db.JSON, nullable=True)  # List of Google Drive IDs for custom attachments
                                                                   # Example: ["1abc123def456", "9xyz987uvw654"]
+    # New fields for estado and subestado control
+    estado_al_enviar = db.Column(db.String(50), nullable=True)
+    subestado_al_enviar = db.Column(db.Text, nullable=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     creado_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)

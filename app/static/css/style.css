@@ -120,36 +120,213 @@ body {
         width: 100%;
         margin-bottom: 0.25rem;
     }
+    
+    /* Page header adjustments */
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    /* Card spacing on mobile */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    /* Filter form improvements */
+    .form-select, .btn {
+        height: 42px;
+    }
+    
+    /* Badge sizing */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375em 0.75em;
+    }
+    
+    /* Improved text sizing for readability */
+    .card-header h6 {
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+    
+    .fw-medium {
+        font-size: 0.9rem;
+    }
+    
+    /* Touch-friendly buttons */
+    .btn {
+        min-height: 44px;
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Better spacing for mobile cards */
+    .concurso-card .row.g-2 {
+        margin-bottom: 0.75rem;
+    }
+    
+    .concurso-card .row.g-2:last-of-type {
+        margin-bottom: 1rem;
+    }
 }
 
-/* Loading spinner overlay */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+/* Extra small devices (phones in portrait) */
+@media (max-width: 576px) {
+    /* Navbar brand text sizing */
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    /* Page title */
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    /* Filter card header */
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    /* Concurso card adjustments */
+    .concurso-card .card-header {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .concurso-card .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Smaller badges on very small screens */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25em 0.5em;
+    }
+    
+    /* Alert text sizing */
+    .alert {
+        font-size: 0.9rem;
+    }
 }
 
-.loading-overlay.active {
-    display: flex;
+/* Mobile-friendly styles for public concursos page */
+.concurso-card {
+    border-left: 4px solid #0d6efd;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #0d6efd;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.concurso-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.concurso-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 0.75rem 1rem;
+}
+
+.concurso-card .card-body {
+    padding: 1rem;
+}
+
+/* Mobile styles for detail page */
+@media (max-width: 992px) {
+    /* Detail page improvements */
+    .card-header h2 {
+        font-size: 1.3rem;
+        line-height: 1.3;
+    }
+    
+    .card-header h4 {
+        font-size: 1.1rem;
+    }
+    
+    /* Table responsiveness on detail page */
+    .table th {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.4rem;
+    }
+    
+    .table td {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.4rem;
+    }
+    
+    /* Instructivo card adjustments */
+    .card h5 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card p {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    /* Alert improvements */
+    .alert {
+        font-size: 0.85rem;
+        padding: 0.75rem;
+    }
+    
+    .alert i {
+        margin-right: 0.5rem;
+    }
+}
+
+/* Specific improvements for very small screens */
+@media (max-width: 576px) {
+    /* Back button styling */
+    .btn-secondary {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    /* Card header title */
+    .card-header h2 {
+        font-size: 1.1rem;
+        word-wrap: break-word;
+    }
+    
+    /* Section titles */
+    h4 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Table responsiveness */
+    .table-responsive {
+        border: none;
+    }
+    
+    .table th {
+        font-size: 0.8rem;
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        font-size: 0.8rem;
+        word-break: break-word;
+    }
+    
+    /* Card spacing */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Instructivo section */
+    .card h5 {
+        font-size: 0.95rem;
+        color: #495057;
+    }
+    
+    /* Alert adjustments for small screens */
+    .alert {
+        margin-top: 1rem;
+        border-radius: 0.375rem;
+    }
 }

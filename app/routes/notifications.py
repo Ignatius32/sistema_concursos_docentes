@@ -10,6 +10,7 @@ import json
 from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso, DocumentTemplateConfig
 from app.integrations.google_drive import GoogleDriveAPI
 from app.services.placeholder_resolver import get_core_placeholders, replace_text_with_placeholders
+from app.helpers.api_services import get_departamento_heads_data
 from app.utils.constants import DOCUMENTO_TIPOS
 
 # Initialize blueprint
@@ -47,7 +48,6 @@ def crear_notificacion_campaign_form():
 @login_required
 def crear_notificacion_campaign():
     """Handle creation of a new notification campaign."""
-    
     try:        # Get form data
         nombre_campana = request.form.get('nombre_campana')
         asunto_email = request.form.get('asunto_email')
@@ -55,6 +55,8 @@ def crear_notificacion_campaign():
         otros_roles = request.form.getlist('otros_roles_destinatarios')  # This will get multiple values
         emails_estaticos = request.form.get('emails_estaticos', '')
         adjuntos_personalizados = request.form.get('adjuntos_personalizados', '')
+        estado_al_enviar = request.form.get('estado_al_enviar', '').strip() or None
+        subestado_al_enviar = request.form.get('subestado_al_enviar', '').strip() or None
         
         # Process custom attachment IDs
         adjuntos_personalizados_list = []
@@ -96,13 +98,15 @@ def crear_notificacion_campaign():
             'tribunal_destinatarios': tribunal_destinatarios,
             'otros_roles_destinatarios': otros_roles,
             'emails_estaticos': parse_email_lines(emails_estaticos)
-        }          # Create new campaign
+        }        # Create new campaign
         campaign = NotificationCampaign(
             nombre_campana=nombre_campana,
             asunto_email=asunto_email,
             cuerpo_email_html=cuerpo_email_html,
             documentos_adjuntos_config=parsed_document_configs,  # Store parsed document configs
             adjuntos_personalizados=adjuntos_personalizados_list,  # Store custom attachment IDs
+            estado_al_enviar=estado_al_enviar,
+            subestado_al_enviar=subestado_al_enviar,
             creado_por_id=current_user.id
         )
         campaign.destinatarios_json = destinatarios_config
@@ -145,13 +149,17 @@ def editar_notificacion_campaign_form(campaign_id):
 def editar_notificacion_campaign(campaign_id):
     """Handle updating of an existing notification campaign."""
     campaign = NotificationCampaign.query.get_or_404(campaign_id)
-    try:        # Get form data
+    
+    try:
+        # Get form data
         nombre_campana = request.form.get('nombre_campana')
         asunto_email = request.form.get('asunto_email')
         cuerpo_email_html = request.form.get('cuerpo_email_html')
         otros_roles = request.form.getlist('otros_roles_destinatarios')
         emails_estaticos = request.form.get('emails_estaticos', '')
         adjuntos_personalizados = request.form.get('adjuntos_personalizados', '')
+        estado_al_enviar = request.form.get('estado_al_enviar', '').strip() or None
+        subestado_al_enviar = request.form.get('subestado_al_enviar', '').strip() or None
         
         # Process custom attachment IDs
         adjuntos_personalizados_list = []
@@ -186,12 +194,16 @@ def editar_notificacion_campaign(campaign_id):
         # Validate required fields
         if not nombre_campana or not asunto_email or not cuerpo_email_html:
             flash('Todos los campos son obligatorios', 'danger')
-            return redirect(url_for('notifications.editar_notificacion_campaign_form', campaign_id=campaign_id))          # Update campaign
+            return redirect(url_for('notifications.editar_notificacion_campaign_form', campaign_id=campaign_id))
+        
+        # Update campaign
         campaign.nombre_campana = nombre_campana
         campaign.asunto_email = asunto_email
         campaign.cuerpo_email_html = cuerpo_email_html
         campaign.documentos_adjuntos_config = parsed_document_configs  # Update document configs
         campaign.adjuntos_personalizados = adjuntos_personalizados_list  # Update custom attachment IDs
+        campaign.estado_al_enviar = estado_al_enviar
+        campaign.subestado_al_enviar = subestado_al_enviar
         campaign.destinatarios_json = {
             'tribunal_destinatarios': tribunal_destinatarios,
             'otros_roles_destinatarios': otros_roles,
@@ -241,11 +253,12 @@ def list_notification_campaigns():
 @notifications_bp.route('/concursos/<int:concurso_id>/notifications/campaigns/<int:campaign_id>/trigger', methods=['POST'])
 @login_required
 def trigger_notification_campaign(concurso_id, campaign_id):
-    """Trigger the sending of emails for a notification campaign in the context of a specific concurso."""
+    """Trigger the sending of emails for a notification campaign in the context of a specific concurso."""    
     concurso = Concurso.query.get_or_404(concurso_id)
     campaign = NotificationCampaign.query.get_or_404(campaign_id)
     
-    try:        # Initialize set for unique email addresses
+    try:
+        # Initialize set for unique email addresses
         resolved_emails = set()
         destination_names = {}  # Map of email -> name for personalization
         
@@ -296,11 +309,12 @@ def trigger_notification_campaign(concurso_id, campaign_id):
             except Exception as e:
                 current_app.logger.error(f"Error fetching department heads: {str(e)}")
                 flash(f'Error al obtener datos de jefes de departamento: {str(e)}', 'warning')
-        
-        # Add static emails
+          # Add static emails
         for email in config.get('emails_estaticos', []):
             if email:
-                resolved_emails.add(email)          # Collect document attachment file IDs
+                resolved_emails.add(email)
+                
+        # Collect document attachment file IDs
         attachment_file_ids = []
         if campaign.documentos_adjuntos_config and len(campaign.documentos_adjuntos_config) > 0:
             current_app.logger.info(f"Getting attachments for document configs: {campaign.documentos_adjuntos_config}")
@@ -343,15 +357,15 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 except Exception as e:
                     current_app.logger.error(f"Error retrieving document attachment of type {doc_tipo} (version: {doc_version}): {str(e)}")
                     flash(f'Error al adjuntar el documento de tipo {doc_tipo} ({doc_version}): {str(e)}', 'warning')
-        
-        # Add custom attachment IDs
+          # Add custom attachment IDs
         if campaign.adjuntos_personalizados and len(campaign.adjuntos_personalizados) > 0:
             current_app.logger.info(f"Adding custom attachments: {campaign.adjuntos_personalizados}")
             for file_id in campaign.adjuntos_personalizados:
                 if file_id and file_id.strip() and file_id.strip() not in attachment_file_ids:
                     attachment_file_ids.append(file_id.strip())
                     current_app.logger.info(f"Added custom attachment with ID: {file_id}")
-          # Begin sending emails
+        
+        # Begin sending emails
         sent_count = 0
         failed_count = 0
         
@@ -424,9 +438,35 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 )
                 db.session.add(log)
                 failed_count += 1
+        db.session.commit()        # Update concurso estado and subestado if configured
+        if sent_count > 0 and campaign.estado_al_enviar:
+            try:
+                concurso.estado_actual = campaign.estado_al_enviar
+                if campaign.subestado_al_enviar:
+                    # Handle subestado accumulation
+                    if concurso.subestado:
+                        try:
+                            # Try to parse existing subestado as JSON
+                            subestado_values = json.loads(concurso.subestado)
+                            if not isinstance(subestado_values, list):
+                                subestado_values = [subestado_values]
+                        except (json.JSONDecodeError, TypeError):
+                            # If it's not valid JSON, treat as a single string value
+                            subestado_values = [concurso.subestado]
+                        
+                        # Add new value if not already present
+                        if campaign.subestado_al_enviar not in subestado_values:
+                            subestado_values.append(campaign.subestado_al_enviar)
+                            concurso.subestado = json.dumps(subestado_values)
+                    else:
+                        # If subestado is empty, initialize with a single value
+                        concurso.subestado = json.dumps([campaign.subestado_al_enviar])
+                db.session.commit()
+                current_app.logger.info(f"Updated concurso {concurso_id} estado_actual to {campaign.estado_al_enviar}")
+            except Exception as e:
+                current_app.logger.error(f"Error updating concurso estado: {str(e)}")
         
-        db.session.commit()
-          # Flash summary message
+        # Flash summary message
         attachment_count = len(attachment_file_ids) if attachment_file_ids else 0
         if sent_count > 0 and failed_count == 0:
             flash(f'Campaña "{campaign.nombre_campana}" enviada con éxito a {sent_count} destinatarios con {attachment_count} documentos adjuntos.', 'success')
