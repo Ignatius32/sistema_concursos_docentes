@@ -3,16 +3,30 @@
 {% block title %}Documentación de Postulantes - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" class="btn btn-outline-secondary mb-2">
+<div class="mb-4">
+    <!-- Breadcrumb navigation -->
+    <nav aria-label="breadcrumb" class="mb-3 tribunal-breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('tribunal.portal') }}">
+                    <i class="bi bi-house"></i> Portal del Tribunal
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}">
+                    Concurso #{{ concurso.id }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Documentación de Postulantes</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>Documentación de Postulantes - Concurso #{{ concurso.id }}</h2>
+        <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" class="btn btn-tribunal-accent">
             <i class="bi bi-arrow-left"></i> Volver al Concurso
         </a>
-        <h2>Documentación de Postulantes - Concurso #{{ concurso.id }}</h2>
     </div>
-    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
-        <i class="bi bi-box-arrow-right"></i> Salir
-    </a>
 </div>
 
 <div class="row">
@@ -36,29 +50,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Required Documents -->
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <h4 class="mb-0">Documentación Requerida para este Concurso</h4>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <p>Para este concurso, los postulantes deben presentar la siguiente documentación:</p>
-                        <div class="d-flex flex-wrap">
-                            {% for doc in required_docs %}
-                            <span class="badge bg-light text-dark me-2 mb-2 p-2">{{ doc }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        </div>    </div>
 
     <!-- Postulantes Documents -->
     <div class="col-md-12">
@@ -79,8 +71,7 @@
                             </h2>
                             <div id="collapse{{ postulante.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ postulante.id }}" data-bs-parent="#postulanteAccordion">
                                 <div class="accordion-body">
-                                    <div class="row">
-                                        <div class="col-md-4">
+                                    <div class="row">                                        <div class="col-md-4">
                                             <h5>Datos personales</h5>
                                             <ul class="list-unstyled">
                                                 <li><strong>DNI:</strong> {{ postulante.dni }}</li>
@@ -92,6 +83,20 @@
                                                 <li><strong>Domicilio:</strong> {{ postulante.domicilio }}</li>
                                                 {% endif %}
                                             </ul>
+                                            
+                                            <!-- Download button for merged documentation -->
+                                            {% set non_dni_docs = documentos|rejectattr('tipo', 'equalto', 'DNI')|list %}
+                                            {% if non_dni_docs|length > 0 %}
+                                            <div class="mt-3">
+                                                <a href="{{ url_for('tribunal.download_postulante_docs', concurso_id=concurso.id, postulante_id=postulante.id) }}" 
+                                                   class="btn btn-success btn-sm">
+                                                    <i class="bi bi-download"></i> Descargar Documentación Completa
+                                                </a>
+                                                <small class="text-muted d-block mt-1">
+                                                    PDF con carátula e índice ({{ non_dni_docs|length }} documento{{ 's' if non_dni_docs|length != 1 else '' }})
+                                                </small>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-8">
                                             <h5>Documentos presentados</h5>
@@ -103,9 +108,9 @@
                                                             <th>Fecha de carga</th>
                                                             <th class="text-center">Acciones</th>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody>
+                                                    </thead>                                                    <tbody>
                                                         {% for documento in documentos %}
+                                                        {% if documento.tipo != 'DNI' %}
                                                         <tr>
                                                             <td>{{ documento.tipo }}</td>
                                                             <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
@@ -144,12 +149,12 @@
                                                                 </div>
                                                             </td>
                                                         </tr>
-                                                        {% endfor %}
-                                                        
-                                                        <!-- Check for missing required documents -->
+                                                        {% endif %}
+                                                        {% endfor %}                                                        
+                                                        <!-- Check for missing required documents (excluding DNI) -->
                                                         {% set submitted_types = documentos|map(attribute='tipo')|list %}
                                                         {% for req_doc in required_docs %}
-                                                            {% if req_doc not in submitted_types %}
+                                                            {% if req_doc not in submitted_types and req_doc != 'DNI' %}
                                                             <tr class="table-danger">
                                                                 <td>{{ req_doc }}</td>
                                                                 <td colspan="2" class="text-center">

@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 import json
 
-from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso, DocumentTemplateConfig
+from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso, DocumentTemplateConfig, HistorialEstado
 from app.integrations.google_drive import GoogleDriveAPI
 from app.services.placeholder_resolver import get_core_placeholders, replace_text_with_placeholders
 from app.helpers.api_services import get_departamento_heads_data
@@ -441,6 +441,9 @@ def trigger_notification_campaign(concurso_id, campaign_id):
         db.session.commit()        # Update concurso estado and subestado if configured
         if sent_count > 0 and campaign.estado_al_enviar:
             try:
+                old_estado = concurso.estado_actual
+                old_subestado = concurso.subestado
+                
                 concurso.estado_actual = campaign.estado_al_enviar
                 if campaign.subestado_al_enviar:
                     # Handle subestado accumulation
@@ -461,10 +464,28 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                     else:
                         # If subestado is empty, initialize with a single value
                         concurso.subestado = json.dumps([campaign.subestado_al_enviar])
+                
+                # Create history entry for estado change
+                observaciones_parts = [f"Campaña de notificación '{campaign.titulo}' enviada exitosamente a {sent_count} destinatarios"]
+                if old_estado != campaign.estado_al_enviar:
+                    observaciones_parts.append(f"Estado cambiado de '{old_estado}' a '{campaign.estado_al_enviar}'")
+                if campaign.subestado_al_enviar and old_subestado != concurso.subestado:
+                    observaciones_parts.append(f"Subestado actualizado: '{campaign.subestado_al_enviar}' agregado")
+                
+                historial = HistorialEstado(
+                    concurso_id=concurso_id,
+                    estado=campaign.estado_al_enviar,
+                    subestado_snapshot=concurso.subestado,
+                    fecha=datetime.now(),
+                    observaciones=". ".join(observaciones_parts)
+                )
+                db.session.add(historial)
+                
                 db.session.commit()
                 current_app.logger.info(f"Updated concurso {concurso_id} estado_actual to {campaign.estado_al_enviar}")
             except Exception as e:
                 current_app.logger.error(f"Error updating concurso estado: {str(e)}")
+                db.session.rollback()
         
         # Flash summary message
         attachment_count = len(attachment_file_ids) if attachment_file_ids else 0

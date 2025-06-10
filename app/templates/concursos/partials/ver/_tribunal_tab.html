@@ -1,29 +1,31 @@
 <div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
     <h4>Tribunal</h4>
     <div class="table-responsive">
-        <table class="table">
-            <thead>
+        <table class="table">            <thead>
                 <tr>
                     <th>Rol</th>
+                    <th>Claustro</th>
                     <th>Nombre</th>
                     <th>DNI</th>
                     <th>Correo</th>
+                    <th>Teléfono</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
-            </thead>                        
+            </thead>
             <tbody>
-                {% for miembro in concurso.asignaciones_tribunal.all() %}
-                <tr>
+                {% for miembro in concurso.asignaciones_tribunal.all() %}                <tr>
                     <td><span class="badge bg-{{ 'primary' if miembro.rol == 'Presidente' else ('info' if miembro.rol == 'Titular' else 'secondary') }}">{{ miembro.rol }}</span></td>
+                    <td>{{ miembro.claustro or 'No especificado' }}</td>
                     <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
                     <td>{{ miembro.persona.dni }}</td>
-                    <td>{{ miembro.persona.correo }}</td>
+                    <td>{{ miembro.persona.correo or 'No disponible' }}</td>
+                    <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
                     <td>
-                        {% if miembro.notificado_sustanciacion %}
-                        <span class="badge bg-success">Sustanciación Notificada</span>
+                        {% if miembro.persona.password_hash %}
+                        <span class="badge bg-success">Password Configurado</span>
                         {% elif miembro.notificado %}
-                        <span class="badge bg-info">Credenciales Notificadas</span>
+                        <span class="badge bg-info">Credenciales Enviadas</span>
                         {% else %}
                         <span class="badge bg-warning">No notificado</span>
                         {% endif %}
@@ -33,9 +35,8 @@
                         </div>
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center">No hay miembros en el tribunal</td>
+                {% else %}                <tr>
+                    <td colspan="8" class="text-center">No hay miembros en el tribunal</td>
                 </tr>
                 {% endfor %}
             </tbody>

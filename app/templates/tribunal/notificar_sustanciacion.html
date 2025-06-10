@@ -68,23 +68,21 @@ A continuación encontrará sus credenciales de acceso al Portal del Tribunal, d
                             <th>Credenciales</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for miembro in miembros %}
+                    <tbody>                        {% for miembro in miembros %}
                         <tr>
-                            <td>{{ miembro.nombre }} {{ miembro.apellido }}</td>
+                            <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
                             <td>{{ miembro.rol }}</td>
-                            <td>{{ miembro.correo }}</td>
+                            <td>{{ miembro.persona.correo }}</td>
                             <td>
                                 {% if miembro.notificado %}
                                 <span class="badge bg-success">Notificado el {{ miembro.fecha_notificacion.strftime('%d/%m/%Y') }}</span>
                                 {% else %}
                                 <span class="badge bg-warning text-dark">No notificado</span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                {% if miembro.username %}
+                            </td>                            <td>
+                                {% if miembro.persona.username %}
                                 <div class="input-group">
-                                    <span class="input-group-text">{{ miembro.username }}</span>
+                                    <span class="input-group-text">{{ miembro.persona.username }}</span>
                                     <input type="text" class="form-control" name="password_{{ miembro.id }}" placeholder="Nueva contraseña (opcional)">
                                 </div>
                                 {% else %}

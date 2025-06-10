@@ -1,0 +1,90 @@
+<!-- Document Modals Partial -->
+<!-- PDF Viewer Modal -->
+<div class="modal fade" id="pdfViewerModal{{ documento.id }}" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ documento.get_friendly_name() }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe src="{{ url_for('tribunal.ver_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                        style="width: 100%; height: 80vh;" frameborder="0"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ documento.url }}" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firma Modal -->
+{% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
+<div class="modal fade" id="firmarModal{{ documento.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Firmar Documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('tribunal.firmar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                  method="POST" 
+                  id="firmaForm{{ documento.id }}"
+                  onsubmit="startFirmaLoading({{ documento.id }})">
+                <div class="modal-body">
+                    <div id="firmaInfo{{ documento.id }}">
+                        <p>¿Está seguro que desea firmar este documento?</p>
+                        <p>Se agregará una marca digital con sus datos y la fecha y hora actual en cada página.</p>
+                        {% if documento.firma_count > 0 %}
+                        <p>Este documento ya tiene {{ documento.firma_count }} firma(s).</p>
+                        {% endif %}
+                    </div>
+                    <div id="firmaLoading{{ documento.id }}" style="display: none;" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Firmando documento...</span>
+                        </div>
+                        <p class="mt-2">Firmando documento, por favor espere...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="firmaButton{{ documento.id }}">
+                        <i class="bi bi-pen"></i> Firmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Upload Modal -->
+{% if documento.estado != 'FIRMADO' and miembro.can_upload_file %}
+<div class="modal fade" id="uploadModal{{ documento.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subir Documento Firmado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('tribunal.subir_documento_presidente', concurso_id=concurso.id, documento_id=documento.id) }}" 
+                      method="POST" 
+                      enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Seleccione el documento firmado (PDF)</label>
+                        <input type="file" class="form-control" name="documento" accept=".pdf" required>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Subir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

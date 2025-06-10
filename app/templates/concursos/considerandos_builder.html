@@ -25,16 +25,8 @@
                 <div class="card-header bg-light">
                     <h4 class="mb-0">Información de Comisión y Consejo</h4>
                 </div>                <div class="card-body">
-                    <div class="row">  
-                        <div class="col-md-6">
+                    <div class="row">                        <div class="col-md-6">
                             <h5>Comisión Académica</h5>
-                            <div class="mb-3">
-                                <label for="tkd" class="form-label">Número de TKD</label>
-                                <input type="text" class="form-control placeholder-input prevent-enter-submit" id="tkd" name="tkd" 
-                                       value="{{ concurso.tkd or concurso.id_designacion_mocovi or '' }}"
-                                       data-placeholder-key="<<TKD>>">
-                                <small class="text-muted">Se usará como <<TKD>> en la plantilla</small>
-                            </div>
                             <div class="mb-3">
                                 <label for="fecha_comision_academica" class="form-label">Fecha de Comisión Académica</label>
                                 <input type="date" class="form-control placeholder-input prevent-enter-submit" id="fecha_comision_academica" name="fecha_comision_academica" 
@@ -290,17 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("Assigned department head prefix:", "{{ head.prefijo }}");
             {% endif %}
         {% endfor %}
-    {% endif %}
-    
-    // Add event listener for TKD field
-    const tkdInput = document.getElementById('tkd');
-    if (tkdInput) {
-        tkdInput.addEventListener('input', function() {
-            placeholderValues['<<TKD>>'] = this.value;
-            updateConsiderandoTexts();
-        });
-    }
-    
+    {% endif %}    
     // Initialize input placeholder values
     function initPlaceholders() {
         document.querySelectorAll('.placeholder-input').forEach(input => {

@@ -1,0 +1,138 @@
+<!-- Temas de Sorteo Section Partial -->
+{% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion or miembro.can_add_tema %}
+<!-- Only show individual member topics if sorteo hasn't happened yet -->
+{% if not concurso.sustanciacion.tema_sorteado %}
+    {% if mi_propuesta %}
+    <div class="mb-4">
+        <h5>Mis Temas Propuestos:</h5>
+        <div class="temas-list mt-2">
+            {% for tema in mi_propuesta.temas_propuestos.split('|') %}
+                {% if tema.strip() %}
+                <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="mt-2">
+            {% if mi_propuesta.propuesta_cerrada %}
+                <div class="alert alert-info">
+                    <i class="bi bi-lock"></i> Ya ha cerrado su propuesta de temas. Contacte al administrador si necesita realizar cambios.
+                </div>
+            {% else %}
+                <div class="d-flex">
+                    <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
+                        <i class="bi bi-pencil"></i> {% if mi_propuesta.temas_propuestos %}Editar Mis Temas{% else %}Cargar Mis Temas{% endif %}
+                    </a>
+                    
+                    {% if mi_propuesta.temas_propuestos and mi_propuesta.temas_propuestos.split('|')|map('trim')|reject('equalto', '')|list|length == 3 %}
+                    <form action="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" method="POST">
+                        <input type="hidden" name="temas_exposicion" value="{{ mi_propuesta.temas_propuestos }}">
+                        <input type="hidden" name="action" value="save_and_close">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-lock"></i> Guardar y Enviar Temas
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <hr>
+    {% elif miembro.can_add_tema %}
+    <div class="mb-4">
+        <div class="alert alert-info">
+            <p>Aún no ha propuesto temas para el sorteo.</p>
+            <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus"></i> Cargar Mis Temas
+            </a>
+        </div>
+    </div>
+    <hr>
+    {% endif %}
+{% endif %}
+
+<!-- Then show consolidated topics if they exist -->
+{% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion %}
+<div>
+    {% if concurso.sustanciacion.tema_sorteado %}
+    <!-- Show selected topic when drawn -->
+    <h5>Temas Consolidados:</h5>
+    {% if concurso.sustanciacion.temas_exposicion %}
+    <div class="temas-list mt-2">
+        {% set sorteados_array = concurso.sustanciacion.tema_sorteado.split('|') %}
+        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+            {% if tema.strip() %}
+            <div class="badge {% if tema.strip() in sorteados_array %}bg-success{% else %}bg-light text-dark{% endif %} p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="card mt-3 border-0">
+        <div class="card-body">
+            <h5>
+                <i class="bi bi-check-circle text-success"></i> 
+                Tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} Sorteado{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} 
+                <span class="badge bg-primary">{{ concurso.sustanciacion.tema_sorteado.count('|') + 1 }} tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }}</span>:
+            </h5>
+            
+            <div class="row mt-3">
+                {% for tema in concurso.sustanciacion.tema_sorteado.split('|') %}
+                    {% if tema.strip() %}
+                <div class="col-md-6 mb-2">
+                    <div class="card border-success">
+                        <div class="card-body py-2 bg-success bg-opacity-10">
+                            <div class="d-flex align-items-center">
+                                <div class="me-2"><i class="bi bi-check-circle-fill text-success"></i></div>
+                                <div>{{ tema.strip() }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% elif concurso.sustanciacion.temas_cerrados %}
+    <!-- When topics are closed but not yet drawn, only show the closed message -->
+    <h5>Temas Consolidados:</h5>
+    <div class="temas-list mt-2">
+        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+            {% if tema.strip() %}
+            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="alert alert-warning mt-3">
+        <i class="bi bi-lock"></i> Los temas han sido consolidados y cerrados. Pendiente de sorteo.
+    </div>
+    {% else %}
+    <!-- Show topics when not closed -->
+    <h5>Temas Consolidados:</h5>
+    {% if concurso.sustanciacion.temas_exposicion %}
+    <div class="temas-list mt-2">
+        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
+            {% if tema.strip() %}
+            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="alert alert-info mt-3">
+        <i class="bi bi-info-circle"></i> Estos temas están en revisión y pueden cambiar hasta que el administrador los consolide.
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% else %}
+    {% if not mi_propuesta and not miembro.can_add_tema %}
+    <div class="alert alert-info">
+        <p class="mb-0">Aún no se han cargado temas para el sorteo.</p>
+    </div>
+    {% endif %}
+{% endif %}
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No hay información de temas de sorteo disponible para este concurso.
+</div>
+{% endif %}

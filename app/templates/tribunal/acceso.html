@@ -2,34 +2,59 @@
 
 {% block title %}Portal de Tribunal - Acceso - {{ super() }}{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Acceso al Portal de Tribunal</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">DNI (Usuario)</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                        <small class="form-text text-muted">Ingrese su DNI como nombre de usuario</small>
+<div class="tribunal-login-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card tribunal-login-card">
+                    <div class="tribunal-login-header">
+                        <i class="bi bi-person-badge fs-1 mb-3 d-block"></i>
+                        <h4 class="mb-2">Portal del Tribunal</h4>
+                        <p class="mb-0">Acceso para Miembros Evaluadores</p>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Contraseña</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                    <div class="tribunal-login-body">
+                        <form method="POST">
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-semibold">
+                                    <i class="bi bi-person-vcard"></i> DNI (Usuario)
+                                </label>
+                                <input type="text" class="form-control" id="username" name="username" required
+                                       placeholder="Ingrese su DNI">
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Ingrese su DNI como nombre de usuario
+                                </small>
+                            </div>
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold">
+                                    <i class="bi bi-lock"></i> Contraseña
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" required
+                                       placeholder="Ingrese su contraseña">
+                            </div>
+                            <button type="submit" class="btn btn-tribunal-login">
+                                <i class="bi bi-box-arrow-in-right"></i> Ingresar al Portal
+                            </button>
+                        </form>
+                        
+                        <div class="tribunal-links">
+                            <div class="mb-2">
+                                <i class="bi bi-question-circle"></i>
+                                <a href="{{ url_for('tribunal.recuperar_password') }}">¿Olvidó su contraseña?</a>
+                            </div>
+
+                        </div>
+                        
+                        <div class="back-to-main">
+                            <a href="{{ url_for('auth.login') }}">
+                                <i class="bi bi-arrow-left"></i> Ir al inicio de sesión administrativo
+                            </a>
+                        </div>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Ingresar</button>
-                    </div>
-                </form>
-                
-                <hr>
-                
-                <div class="text-center">
-                    <p><a href="{{ url_for('tribunal.recuperar_password') }}">¿Olvidó su contraseña?</a></p>
-                    <p>¿No es miembro del tribunal? <a href="{{ url_for('auth.login') }}">Volver al inicio de sesión principal</a></p>
                 </div>
             </div>
         </div>

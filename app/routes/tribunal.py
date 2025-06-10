@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file, current_app
 from flask_login import login_required, current_user
-from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona, Postulante, Sustanciacion
+from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona, Postulante, Sustanciacion, Categoria, DocumentoPostulante
 from app.integrations.google_drive import GoogleDriveAPI
-from app.helpers.pdf_utils import add_signature_stamp, verify_signed_pdf
+from app.helpers.pdf_utils import add_signature_stamp, verify_signed_pdf, merge_postulante_documents
 from app.helpers.api_services import get_asignaturas_from_external_api
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from functools import wraps
+import string
+import random
 import os
 import json
 import base64
@@ -351,117 +353,7 @@ def subir_documento(miembro_id):
     
     return redirect(url_for('tribunal.index', concurso_id=concurso.id))
 
-@tribunal.route('/notificar-sustanciacion/<int:concurso_id>', methods=['GET', 'POST'])
-@login_required
-def notificar_sustanciacion(concurso_id):
-    """Notify all tribunal members of a concurso about the process and send activation links."""
-    concurso = Concurso.query.get_or_404(concurso_id)
-    miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
-    
-    # Get sustanciacion info if it exists
-    sustanciacion = concurso.sustanciacion
-    
-    if not sustanciacion:
-        flash('Para notificar al tribunal, primero debe cargar la información de sustanciación.', 'warning')
-        return redirect(url_for('concursos.editar', concurso_id=concurso_id))
-    
-    if request.method == 'POST':
-        try:
-            # Process notification message
-            message_template = request.form.get('mensaje', '')
-            
-            # Send email to each member
-            for miembro in miembros:
-                persona = miembro.persona
-                
-                # Skip if no email
-                if not persona.correo:
-                    flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
-                    continue
-                
-                # Ensure username is DNI
-                persona.username = persona.dni
-                  # Generate reset token for password setup
-                reset_token = persona.generate_reset_token()
-                reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-                
-                # Custom message for this member
-                member_message = message_template
-                member_message += f"""
-                <p><strong>Sus credenciales de acceso al sistema:</strong></p>
-                <ul>
-                    <li><strong>Usuario:</strong> {persona.username}</li>
-                    <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
-                        <a href="{reset_url}">Configurar Contraseña</a>
-                    </li>
-                </ul>
-                
-                <p>Este enlace es válido solo por un tiempo limitado y se desactivará después de configurar su contraseña.</p>
-                
-                <p>Una vez configurada su contraseña, puede ingresar al sistema en: 
-                <a href="{request.host_url}tribunal/acceso">Portal de Tribunal</a></p>
-                """
-                
-                # Add details of sustanciacion
-                if sustanciacion:
-                    member_message += f"""
-                    <h4>Información de la sustanciación del concurso:</h4>
-                    <p><strong>Fecha de constitución del tribunal:</strong> {sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if sustanciacion.constitucion_fecha else 'No definida'}</p>
-                    <p><strong>Lugar:</strong> {sustanciacion.constitucion_lugar or 'No definido'}</p>
-                    """
-                    
-                    if sustanciacion.constitucion_virtual_link:
-                        member_message += f'<p><strong>Enlace para reunión virtual:</strong> <a href="{sustanciacion.constitucion_virtual_link}">{sustanciacion.constitucion_virtual_link}</a></p>'
-                    
-                    if sustanciacion.constitucion_observaciones:
-                        member_message += f'<p><strong>Observaciones:</strong> {sustanciacion.constitucion_observaciones}</p>'
-                
-                subject = f"Notificación de Constitución de Tribunal - Concurso {concurso.id}"
-                  # Send email
-                try:
-                    drive_api.send_email(
-                        to_email=persona.correo,
-                        subject=subject,
-                        html_body=member_message,
-                        sender_name='Sistema de Concursos Docentes',
-                        placeholders={
-                            'nombre': persona.nombre,
-                            'apellido': persona.apellido,
-                            'rol': miembro.rol,
-                            'concurso_id': str(concurso.id),
-                            'departamento': concurso.departamento_rel.nombre,
-                            'area': concurso.area,
-                            'categoria': concurso.categoria_nombre or concurso.categoria,
-                            'dedicacion': concurso.dedicacion
-                        }
-                    )
-                    
-                    # Update notification status
-                    miembro.notificado = True
-                    miembro.fecha_notificacion = datetime.utcnow()
-                except Exception as e:
-                    flash(f'Error al enviar correo a {persona.correo}: {str(e)}', 'danger')
-            
-            # Add entry to history
-            historial = HistorialEstado(
-                concurso=concurso,
-                estado="TRIBUNAL_NOTIFICADO",
-                observaciones=f"Tribunal notificado de la sustanciación por {current_user.username}"
-            )
-            db.session.add(historial)
-            
-            db.session.commit()
-            flash('Tribunal notificado exitosamente', 'success')
-            return redirect(url_for('tribunal.index', concurso_id=concurso_id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al notificar al tribunal: {str(e)}', 'danger')
-    
-    return render_template('tribunal/notificar_sustanciacion.html', 
-                          concurso=concurso, 
-                          miembros=miembros,
-                          sustanciacion=sustanciacion)
+
 
 @tribunal.route('/notificar-tribunal/<int:concurso_id>/<int:documento_id>', methods=['POST'])
 @login_required
@@ -546,38 +438,279 @@ def notificar_tribunal(concurso_id, documento_id):
     
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
+@tribunal.route('/concurso/<int:concurso_id>/notificar-todos', methods=['POST'])
+@login_required
+def notificar_todos_miembros(concurso_id):
+    """Notify all tribunal members with their credentials."""
+    try:
+        concurso = Concurso.query.get_or_404(concurso_id)
+        miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
+        
+        notificados = 0
+        errores = []
+        
+        for miembro in miembros:
+            # Skip suplentes
+            if miembro.rol.lower() == 'suplente':
+                continue
+                
+            persona = miembro.persona
+            
+            if not persona.correo:
+                errores.append(f'{persona.nombre} {persona.apellido} no tiene correo registrado')
+                continue
+            
+            # Set username as DNI
+            persona.username = persona.dni
+            
+            # Check if persona already has a password set
+            has_password = persona.password_hash is not None
+            
+            if has_password:
+                # Send login page link for users who already have passwords
+                reset_url = url_for('tribunal.acceso', _external=True)
+                subject = f"Designación en Tribunal - Concurso #{concurso.id} - Acceso al Portal"
+                
+                message = f"""
+                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+                
+                <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
+                    <h4>CONCURSO #{concurso.id}</h4>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
+                        <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
+                        <li><strong>Área:</strong> {concurso.area}</li>
+                        <li><strong>Orientación:</strong> {concurso.orientacion}</li>
+                        <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
+                        <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
+                        <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
+                        {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
+                        {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
+                        {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
+                        {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
+                    </ul>
+                </div>
+                
+                <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
+                <ul>
+                    <li>Consultar toda la documentación del concurso</li>
+                    <li>Acceder a los expedientes de los postulantes</li>
+                    <li>Participar en el proceso de evaluación</li>
+                    <li>Gestionar la documentación del tribunal</li>
+                    <li>Mantenerse informado sobre el cronograma y sustanciación</li>
+                </ul>
+                
+                <p><strong>Para acceder al sistema:</strong></p>
+                <div style="background-color: #e9f7ef; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                    <p><strong>🔗 Portal de Tribunal:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>{reset_url}</strong></a></p>
+                    <p><strong>👤 Su usuario:</strong> {persona.username}</p>
+                    <p><em>Utilice la contraseña que ya tiene configurada</em></p>
+                </div>
+                """
+            else:
+                # Generate reset token for password setup
+                reset_token = persona.generate_reset_token()
+                reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+                subject = f"Designación en Tribunal - Concurso #{concurso.id} - Configuración de Acceso"
+                
+                message = f"""
+                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+                
+                <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
+                    <h4>CONCURSO #{concurso.id}</h4>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
+                        <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
+                        <li><strong>Área:</strong> {concurso.area}</li>
+                        <li><strong>Orientación:</strong> {concurso.orientacion}</li>
+                        <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
+                        <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
+                        <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
+                        {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
+                        {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
+                        {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
+                        {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
+                    </ul>
+                </div>
+                
+                <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
+                <ul>
+                    <li>Consultar toda la documentación del concurso</li>
+                    <li>Acceder a los expedientes de los postulantes</li>
+                    <li>Participar en el proceso de evaluación</li>
+                    <li>Gestionar la documentación del tribunal</li>
+                    <li>Mantenerse informado sobre el cronograma y sustanciación</li>
+                </ul>
+                
+                <p><strong>Para acceder al sistema debe configurar su contraseña:</strong></p>
+                <div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                    <p><strong>👤 Su usuario:</strong> {persona.username}</p>
+                    <p><strong>🔑 Configurar contraseña:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>Hacer clic aquí</strong></a></p>
+                    <p><em>Este enlace es válido por tiempo limitado y se desactivará después de configurar su contraseña.</em></p>
+                </div>
+                
+                <p>Una vez configurada su contraseña, podrá ingresar al sistema en: 
+                <a href="{url_for('tribunal.acceso', _external=True)}" style="color: #007bff;">Portal de Tribunal</a></p>
+                """
+            
+            # Add concurso information
+            message += f"""
+            <p><strong>Información del Concurso #{concurso.id}:</strong></p>
+            <ul>
+                <li>Departamento: {concurso.departamento_rel.nombre}</li>
+                <li>Área: {concurso.area}</li>
+                <li>Orientación: {concurso.orientacion}</li>
+                <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
+                <li>Dedicación: {concurso.dedicacion}</li>
+                <li>Su rol: {miembro.rol}</li>
+            </ul>
+            """
+            
+            # Send email
+            drive_api.send_email(
+                to_email=persona.correo,
+                subject=subject,
+                html_body=message,
+                sender_name='Sistema de Concursos Docentes'
+            )
+            
+            # Update notification status
+            miembro.notificado = True
+            miembro.fecha_notificacion = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Show results
+        if notificados > 0:
+            flash(f'Credenciales enviadas exitosamente a {notificados} miembros del tribunal.', 'success')
+        
+        if errores:
+            for error in errores:
+                flash(error, 'warning')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al enviar credenciales: {str(e)}', 'danger')
+    
+    return redirect(url_for('tribunal.index', concurso_id=concurso_id))
+
 @tribunal.route('/<int:miembro_id>/notificar', methods=['POST'])
 @login_required
 def notificar_miembro(miembro_id):
-    """Notify a single tribunal member with their credentials and sustanciación info."""
+    """Notify a single tribunal member with their credentials."""
     try:
         miembro = TribunalMiembro.query.get_or_404(miembro_id)
         persona = miembro.persona
         concurso = Concurso.query.get_or_404(miembro.concurso_id)
-        sustanciacion = concurso.sustanciacion
 
         if not persona.correo:
             flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
             return redirect(url_for('tribunal.index', concurso_id=concurso.id))
         
-        # Ensure username is DNI
+        # Set username as DNI
         persona.username = persona.dni
+          # Check if persona already has a password set
+        has_password = persona.password_hash is not None
         
-        # Generate reset token for password setup if not already notified
-        if not miembro.notificado:
+        if has_password:
+            # Send login page link for users who already have passwords
+            reset_url = url_for('tribunal.acceso', _external=True)
+            subject = f"Designación en Tribunal - Concurso #{concurso.id} - Acceso al Portal"
+            
+            message = f"""
+            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+            
+            <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
+                <h4>CONCURSO #{concurso.id}</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
+                    <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
+                    <li><strong>Área:</strong> {concurso.area}</li>
+                    <li><strong>Orientación:</strong> {concurso.orientacion}</li>
+                    <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
+                    <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
+                    <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
+                    {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
+                    {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
+                    {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
+                    {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
+                </ul>
+            </div>
+            
+            <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
+            <ul>
+                <li>Consultar toda la documentación del concurso</li>
+                <li>Acceder a los expedientes de los postulantes</li>
+                <li>Participar en el proceso de evaluación</li>
+                <li>Gestionar la documentación del tribunal</li>
+                <li>Mantenerse informado sobre el cronograma y sustanciación</li>
+            </ul>
+            
+            <p><strong>Para acceder al sistema:</strong></p>
+            <div style="background-color: #e9f7ef; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <p><strong>🔗 Portal de Tribunal:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>{reset_url}</strong></a></p>
+                <p><strong>👤 Su usuario:</strong> {persona.username}</p>
+                <p><em>Utilice la contraseña que ya tiene configurada</em></p>
+            </div>
+            """
+        else:
+            # Generate reset token for password setup
             reset_token = persona.generate_reset_token()
             reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-        else:
-            reset_url = url_for('tribunal.acceso', _external=True)
+            subject = f"Designación en Tribunal - Concurso #{concurso.id} - Configuración de Acceso"
+            
+            message = f"""
+            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+            
+            <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
+                <h4>CONCURSO #{concurso.id}</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
+                    <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
+                    <li><strong>Área:</strong> {concurso.area}</li>
+                    <li><strong>Orientación:</strong> {concurso.orientacion}</li>
+                    <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
+                    <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
+                    <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
+                    {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
+                    {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
+                    {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
+                    {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
+                </ul>
+            </div>
+            
+            <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
+            <ul>
+                <li>Consultar toda la documentación del concurso</li>
+                <li>Acceder a los expedientes de los postulantes</li>
+                <li>Participar en el proceso de evaluación</li>
+                <li>Gestionar la documentación del tribunal</li>
+                <li>Mantenerse informado sobre el cronograma y sustanciación</li>
+            </ul>
+            
+            <p><strong>Para acceder al sistema debe configurar su contraseña:</strong></p>
+            <div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <p><strong>👤 Su usuario:</strong> {persona.username}</p>
+                <p><strong>🔑 Configurar contraseña:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>Hacer clic aquí</strong></a></p>
+                <p><em>Este enlace es válido por tiempo limitado y se desactivará después de configurar su contraseña.</em></p>
+            </div>
+            
+            <p>Una vez configurada su contraseña, podrá ingresar al sistema en: 
+            <a href="{url_for('tribunal.acceso', _external=True)}" style="color: #007bff;">Portal de Tribunal</a></p>
+            """
         
-        # Prepare email content
-        message = f"""
-        <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-        
-        <p>Por medio de la presente, le envío información actualizada sobre el concurso donde ha sido designado/a 
-        como {miembro.rol} del tribunal:</p>
-
-        <p><strong>Información del Concurso #</strong>{concurso.id}:</p>        <ul>
+        # Add concurso information
+        message += f"""
+        <p><strong>Información del Concurso #{concurso.id}:</strong></p>
+        <ul>
             <li>Departamento: {concurso.departamento_rel.nombre}</li>
             <li>Área: {concurso.area}</li>
             <li>Orientación: {concurso.orientacion}</li>
@@ -586,70 +719,6 @@ def notificar_miembro(miembro_id):
             <li>Su rol: {miembro.rol}</li>
         </ul>
         """
-
-        if not miembro.notificado:
-            message += f"""
-            <p><strong>Sus credenciales de acceso al sistema:</strong></p>
-            <ul>
-                <li><strong>Usuario:</strong> {persona.username}</li>
-                <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
-                    <a href="{reset_url}">Configurar Contraseña</a>
-                </li>
-            </ul>
-            
-            <p>Este enlace es válido solo por un tiempo limitado y se desactivará después de configurar su contraseña.</p>
-            """
-        else:
-            message += f"""
-            <p>Para acceder al sistema utilice el siguiente enlace con sus credenciales ya configuradas:</p>
-            <p><a href="{reset_url}">Portal de Tribunal</a></p>
-            """
-
-        # Add sustanciación details if available
-        if sustanciacion:
-            message += f"""
-            <h4>Información de la sustanciación del concurso:</h4>
-            """
-            
-            if sustanciacion.constitucion_fecha:
-                message += f"""
-                <p><strong>Constitución del Tribunal:</strong></p>
-                <ul>
-                    <li><strong>Fecha:</strong> {sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M')}</li>
-                    <li><strong>Lugar:</strong> {sustanciacion.constitucion_lugar or 'No definido'}</li>
-                    {f'<li><strong>Enlace virtual:</strong> <a href="{sustanciacion.constitucion_virtual_link}">{sustanciacion.constitucion_virtual_link}</a></li>' if sustanciacion.constitucion_virtual_link else ''}
-                    {f'<li><strong>Observaciones:</strong> {sustanciacion.constitucion_observaciones}</li>' if sustanciacion.constitucion_observaciones else ''}
-                </ul>
-                """
-            
-            if sustanciacion.sorteo_fecha:
-                message += f"""
-                <p><strong>Sorteo de Temas:</strong></p>
-                <ul>
-                    <li><strong>Fecha:</strong> {sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M')}</li>
-                    <li><strong>Lugar:</strong> {sustanciacion.sorteo_lugar or 'No definido'}</li>
-                    {f'<li><strong>Enlace virtual:</strong> <a href="{sustanciacion.sorteo_virtual_link}">{sustanciacion.sorteo_virtual_link}</a></li>' if sustanciacion.sorteo_virtual_link else ''}
-                    {f'<li><strong>Observaciones:</strong> {sustanciacion.sorteo_observaciones}</li>' if sustanciacion.sorteo_observaciones else ''}
-                </ul>
-                """
-            
-            if sustanciacion.exposicion_fecha:
-                message += f"""
-                <p><strong>Exposición:</strong></p>
-                <ul>
-                    <li><strong>Fecha:</strong> {sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M')}</li>
-                    <li><strong>Lugar:</strong> {sustanciacion.exposicion_lugar or 'No definido'}</li>
-                    {f'<li><strong>Enlace virtual:</strong> <a href="{sustanciacion.exposicion_virtual_link}">{sustanciacion.exposicion_virtual_link}</a></li>' if sustanciacion.exposicion_virtual_link else ''}
-                    {f'<li><strong>Observaciones:</strong> {sustanciacion.exposicion_observaciones}</li>' if sustanciacion.exposicion_observaciones else ''}
-                </ul>
-                """
-            
-            if sustanciacion.temas_exposicion:
-                message += f"""
-                <p><strong>Temas para la exposición:</strong></p>
-                <pre>{sustanciacion.temas_exposicion}</pre>
-                """        
-                subject = f"Notificación Sustanciación Concurso #{concurso.id}"
         
         # Send email
         drive_api.send_email(
@@ -660,27 +729,15 @@ def notificar_miembro(miembro_id):
         )
         
         # Update notification status
-        if not miembro.notificado:
-            miembro.notificado = True
-            miembro.fecha_notificacion = datetime.utcnow()
-        
-        miembro.notificado_sustanciacion = True
-        miembro.fecha_notificacion_sustanciacion = datetime.utcnow()
-        
-        # Add entry to history
-        historial = HistorialEstado(
-            concurso=concurso,
-            estado="MIEMBRO_TRIBUNAL_NOTIFICADO_SUSTANCIACION",
-            observaciones=f"Miembro del tribunal {persona.nombre} {persona.apellido} notificado de la sustanciación por {current_user.username}"
-        )
-        db.session.add(historial)
+        miembro.notificado = True
+        miembro.fecha_notificacion = datetime.utcnow()
         
         db.session.commit()
-        flash(f'Notificación de sustanciación enviada exitosamente a {persona.nombre} {persona.apellido}.', 'success')
+        flash(f'Credenciales enviadas exitosamente a {persona.nombre} {persona.apellido}.', 'success')
         
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al enviar notificación: {str(e)}', 'danger')
+        flash(f'Error al enviar credenciales: {str(e)}', 'danger')
     
     return redirect(url_for('tribunal.index', concurso_id=concurso.id))
 
@@ -961,8 +1018,7 @@ def portal_concurso(concurso_id):
             sustanciacion_id=concurso.sustanciacion.id,
             miembro_id=miembro.id
         ).first()
-    
-    # Get asignaturas from external API
+      # Get asignaturas from external API
     asignaturas_externas = []
     if concurso.departamento_rel:
         asignaturas_externas = get_asignaturas_from_external_api(
@@ -970,6 +1026,20 @@ def portal_concurso(concurso_id):
             area=concurso.area,
             orientacion_concurso=concurso.orientacion
         )
+    
+    # Get the categoria to access tribunal instructivos
+    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+    instructivo_tribunal = None
+    
+    if categoria and categoria.instructivo_tribunal:
+        # Build the complete instructivo text for tribunal based on dedicacion
+        base_instructivo = categoria.instructivo_tribunal.get('base', '')
+        dedicacion_instructivo = categoria.instructivo_tribunal.get('porDedicacion', {}).get(concurso.dedicacion, '')
+        
+        instructivo_tribunal = {
+            'base': base_instructivo,
+            'dedicacion': dedicacion_instructivo
+        }
     
     # Ensure role is set properly for template checks
     if 'tribunal_rol' in session:
@@ -982,7 +1052,8 @@ def portal_concurso(concurso_id):
                           template_configs_dict=template_configs_dict,
                           postulantes=postulantes,
                           asignaturas_externas=asignaturas_externas,
-                          mi_propuesta=mi_propuesta)
+                          mi_propuesta=mi_propuesta,
+                          instructivo_tribunal=instructivo_tribunal)
 
 @tribunal.route('/concurso/<int:concurso_id>/documentacion-postulantes')
 @tribunal_login_required
@@ -1623,3 +1694,73 @@ def buscar_persona():
         'telefono': persona.telefono,
         'dni': persona.dni
     })
+
+@tribunal.route('/concurso/<int:concurso_id>/postulante/<int:postulante_id>/download-docs', methods=['GET'])
+@tribunal_login_required
+def download_postulante_docs(concurso_id, postulante_id):
+    """Download merged PDF with all documentation for a specific postulante."""
+    # Check if persona is logged in
+    if 'persona_id' not in session or 'tribunal_miembro_id' not in session:
+        flash('Debe iniciar sesión como miembro del tribunal para acceder.', 'warning')
+        return redirect(url_for('tribunal.acceso'))
+    
+    # Get persona and their assigned tribunal
+    persona_id = session['persona_id']
+    persona = Persona.query.get_or_404(persona_id)
+    miembro_id = session['tribunal_miembro_id']
+    miembro = TribunalMiembro.query.get_or_404(miembro_id)
+    
+    # Get concurso and verify this persona is assigned to it
+    concurso = Concurso.query.get_or_404(concurso_id)
+    assignment = TribunalMiembro.query.filter_by(persona_id=persona_id, concurso_id=concurso_id).first()
+    
+    if not assignment:
+        flash('No tiene permisos para ver este concurso', 'danger')
+        return redirect(url_for('tribunal.portal'))
+    
+    # Check if the tribunal member has permission to view postulante documents
+    if not miembro.can_view_postulante_docs:
+        flash('No tiene permisos para ver la documentación de los postulantes', 'danger')
+        return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
+    
+    # Get postulante
+    postulante = Postulante.query.get_or_404(postulante_id)
+    
+    # Verify postulante belongs to this concurso
+    if postulante.concurso_id != concurso_id:
+        flash('El postulante no pertenece a este concurso', 'danger')
+        return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+      # Get all documents for this postulante (excluding DNI)
+    documentos = DocumentoPostulante.query.filter(
+        DocumentoPostulante.postulante_id == postulante_id,
+        DocumentoPostulante.tipo != 'DNI'  # Exclude DNI documents
+    ).all()
+    
+    if not documentos:
+        flash('No hay documentos disponibles para descargar para este postulante', 'warning')
+        return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+    
+    try:
+        # Generate merged PDF
+        merged_pdf_bytes = merge_postulante_documents(concurso, postulante, documentos, drive_api)
+        
+        if not merged_pdf_bytes:
+            flash('Error al generar el archivo PDF', 'danger')
+            return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+        
+        # Create filename
+        filename = f"documentacion_{postulante.apellido}_{postulante.nombre}_{postulante.dni}_{concurso.id}.pdf"
+        filename = secure_filename(filename)
+        
+        # Return file as download
+        return send_file(
+            io.BytesIO(merged_pdf_bytes),
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating merged PDF for postulante {postulante_id}: {str(e)}")
+        flash('Error al generar el archivo PDF', 'danger')
+        return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))

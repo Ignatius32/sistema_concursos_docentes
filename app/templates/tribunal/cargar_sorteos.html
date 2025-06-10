@@ -3,11 +3,28 @@
 {% block title %}Cargar Temas de Sorteo - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
+<!-- Breadcrumb navigation -->
+<nav aria-label="breadcrumb" class="mb-3 tribunal-breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('tribunal.portal') }}">
+                <i class="bi bi-house"></i> Portal del Tribunal
+            </a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}">
+                Concurso #{{ concurso.id }}
+            </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Cargar Temas de Sorteo</li>
+    </ol>
+</nav>
+
 <div class="card">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
             <h2 class="mb-0">Cargar Temas de Sorteo - Concurso #{{ concurso.id }}</h2>
-            <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" class="btn btn-secondary">
+            <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" class="btn btn-tribunal-accent">
                 <i class="bi bi-arrow-left"></i> Volver al Concurso
             </a>
         </div>

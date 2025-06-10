@@ -4,487 +4,180 @@
 {% block title %}Concurso #{{ concurso.id }} - Portal del Tribunal - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <a href="{{ url_for('tribunal.portal') }}" class="btn btn-outline-secondary mb-2">
-            <i class="bi bi-arrow-left"></i> Volver al Portal
-        </a>
-        <h2>Concurso #{{ concurso.id }}</h2>
-    </div>
-    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
-        <i class="bi bi-box-arrow-right"></i> Salir
-    </a>
+<div class="mb-4">
+    <!-- Breadcrumb navigation -->
+    <nav aria-label="breadcrumb" class="mb-3 tribunal-breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('tribunal.portal') }}">
+                    <i class="bi bi-house"></i> Portal del Tribunal
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Concurso #{{ concurso.id }}</li>
+        </ol>
+    </nav>
 </div>
 
-<div class="row">
-    <!-- Concurso information -->
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Información del Concurso</h4>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
-                        <p><strong>Área:</strong> {{ concurso.area }}</p>
-                        <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
-                        <p><strong>Tipo:</strong> {{ concurso.tipo }}</p>
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs tribunal-tabs mb-4" id="concursoTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" 
+                type="button" role="tab" aria-controls="general" aria-selected="true">
+            <i class="bi bi-info-circle"></i> General
+        </button>
+    </li>
+    {% if concurso.sustanciacion %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="sustanciacion-tab" data-bs-toggle="tab" data-bs-target="#sustanciacion" 
+                type="button" role="tab" aria-controls="sustanciacion" aria-selected="false">
+            <i class="bi bi-calendar-event"></i> Sustanciación
+        </button>
+    </li>
+    {% endif %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" 
+                type="button" role="tab" aria-controls="documentos" aria-selected="false">
+            <i class="bi bi-file-earmark-text"></i> Documentos
+        </button>
+    </li>    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="postulantes-tab" data-bs-toggle="tab" data-bs-target="#postulantes" 
+                type="button" role="tab" aria-controls="postulantes" aria-selected="false">
+            <i class="bi bi-person-check"></i> Postulantes
+        </button>
+    </li>
+    {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion or miembro.can_add_tema %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="temas-tab" data-bs-toggle="tab" data-bs-target="#temas" 
+                type="button" role="tab" aria-controls="temas" aria-selected="false">
+            <i class="bi bi-list-task"></i> Temas de Sorteo
+        </button>
+    </li>
+    {% endif %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="asignaturas-tab" data-bs-toggle="tab" data-bs-target="#asignaturas" 
+                type="button" role="tab" aria-controls="asignaturas" aria-selected="false">
+            <i class="bi bi-book"></i> Asignaturas
+        </button>
+    </li>
+</ul>
+
+<!-- Tabs Content -->
+<div class="tab-content tribunal-tab-content" id="concursoTabsContent">    <!-- General Tab -->
+    <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
+        <!-- Concurso Information Section -->
+        <div class="row">
+            <div class="col-md-8">                <div class="card">
+                    <div class="card-header header-primary">
+                        <h4 class="mb-0"><i class="bi bi-info-circle"></i> Información del Concurso</h4>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
-                        <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
-                        <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
-                        <p><strong>Estado:</strong> {{ concurso.estado_actual }}</p>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
+                                <p><strong>Área:</strong> {{ concurso.area }}</p>
+                                <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
+                                <p><strong>Tipo:</strong> {{ concurso.tipo }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
+                                <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
+                                <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
+                                <p><strong>Estado:</strong> 
+                                    <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'activo' else 'secondary' }}"
+                                          style="background-color: {{ '#059669' if concurso.estado_actual == 'activo' else '#6b7280' }} !important; color: white !important;">
+                                        {{ concurso.estado_actual | upper }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">                <div class="card">
+                    <div class="card-header header-primary">
+                        <h4 class="mb-0"><i class="bi bi-people"></i> Miembros del Tribunal</h4>
+                    </div>
+                    <div class="card-body">
+                        {% include 'tribunal/partials/_tribunal_members.html' %}
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Instructivo Section -->
+        {% if instructivo_tribunal %}
+        <div class="row mt-4">
+            <div class="col-12">                <div class="card">
+                    <div class="card-header header-primary">
+                        <h4 class="mb-0"><i class="bi bi-info-circle-fill"></i> Instructivo para el Tribunal</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if instructivo_tribunal.base %}
+                        <div class="mb-3">
+                            <h6><i class="bi bi-check2-circle"></i> Criterios Generales de Evaluación</h6>
+                            <p class="text-muted">{{ instructivo_tribunal.base }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if instructivo_tribunal.dedicacion %}
+                        <div>
+                            <h6><i class="bi bi-star"></i> Criterios Específicos para {{ concurso.dedicacion }}</h6>
+                            <p class="text-muted">{{ instructivo_tribunal.dedicacion }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
-    
-    <!-- Sustanciación information -->
+    <!-- Sustanciación Tab -->
     {% if concurso.sustanciacion %}
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-success text-white">
+    <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">        <div class="card">
+            <div class="card-header header-primary">
                 <h4 class="mb-0">Información de Sustanciación</h4>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <!-- Constitución del jurado -->
-                    <div class="col-md-4">
-                        <h5>Constitución del Jurado</h5>
-                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else 'No definida' }}</p>
-                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.constitucion_lugar or 'No definido' }}</p>
-                        {% if concurso.sustanciacion.constitucion_virtual_link %}
-                        <p>
-                            <strong>Enlace virtual:</strong> 
-                            <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-link-45deg"></i> Abrir enlace
-                            </a>
-                        </p>
-                        {% endif %}
-                        {% if concurso.sustanciacion.constitucion_observaciones %}
-                        <p><strong>Observaciones:</strong> {{ concurso.sustanciacion.constitucion_observaciones }}</p>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Sorteo de tema -->
-                    <div class="col-md-4">
-                        <h5>Sorteo de Tema</h5>
-                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'No definida' }}</p>
-                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.sorteo_lugar or 'No definido' }}</p>
-                        {% if concurso.sustanciacion.sorteo_virtual_link %}
-                        <p>
-                            <strong>Enlace virtual:</strong> 
-                            <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-link-45deg"></i> Abrir enlace
-                            </a>
-                        </p>
-                        {% endif %}
-                        {% if concurso.sustanciacion.temas_exposicion %}
-                        <div>
-                            <strong>Temas de exposición:</strong>
-                            <div class="temas-list mt-2">
-                                {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                                    {% if tema.strip() %}
-                                    <span class="badge bg-light text-dark me-2 mb-2 p-2">{{ tema.strip() }}</span>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>                        {% endif %}
-                    </div>
-                    
-                    <!-- Exposición -->
-                    <div class="col-md-4">
-                        <h5>Exposición</h5>
-                        <p><strong>Fecha:</strong> {{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'No definida' }}</p>
-                        <p><strong>Lugar:</strong> {{ concurso.sustanciacion.exposicion_lugar or 'No definido' }}</p>
-                        {% if concurso.sustanciacion.exposicion_virtual_link %}
-                        <p>
-                            <strong>Enlace virtual:</strong> 
-                            <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-link-45deg"></i> Abrir enlace
-                            </a>
-                        </p>
-                        {% endif %}
-                    </div>
-                </div>
+                {% include 'tribunal/partials/_sustanciacion_info.html' %}
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- Documents section -->
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-info text-white">
+    {% endif %}    <!-- Documentos Tab -->
+    <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">        <div class="card">
+            <div class="card-header header-primary">
                 <h4 class="mb-0">Documentos del Concurso</h4>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for documento in concurso.documentos %}
-                            {% if documento.is_visible_to_tribunal(miembro) %}
-                            <tr>
-                                <td>
-                                    {{ documento.get_friendly_name() }}
-                                </td>
-                                <td>
-                                    {% if documento.estado == 'FIRMADO' %}
-                                        {% if "resolucion" in documento.tipo.lower() %}
-                                        <span class="badge bg-success">
-                                            FIRMADO
-                                        </span>
-                                        {% else %}
-                                        <span class="badge bg-success">
-                                            FIRMADO POR {{ documento.firma_count }} MIEMBRO{% if documento.firma_count > 1 %}S{% endif %} DEL TRIBUNAL
-                                        </span>
-                                        {% endif %}
-                                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
-                                    <span class="badge bg-info">
-                                        PENDIENTE DE FIRMA {% if documento.firma_count > 0 %}({{ documento.firma_count }} firma{% if documento.firma_count > 1 %}s{% endif %}){% endif %}
-                                    </span>
-                                    {% else %}
-                                    <span class="badge bg-warning">
-                                        {{ documento.estado }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group">                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#pdfViewerModal{{ documento.id }}">
-                                            <i class="bi bi-file-earmark-text"></i> Ver Documento
-                                        </button>
-                                        
-                                        {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
-                                        <button type="button" class="btn btn-sm btn-outline-success" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#firmarModal{{ documento.id }}">
-                                            <i class="bi bi-pen"></i> Firmar
-                                        </button>
-                                        {% endif %}
-                                        
-                                        {% if documento.estado != 'FIRMADO' and miembro.can_upload_file and template_configs_dict.get(documento.tipo, {}).tribunal_can_upload_signed %}                                        <button type="button" class="btn btn-sm btn-outline-success" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#uploadModal{{ documento.id }}">
-                                            <i class="bi bi-upload"></i> Subir Firmado
-                                        </button>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- PDF Viewer Modal -->
-                                    <div class="modal fade" id="pdfViewerModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">{{ documento.get_friendly_name() }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body p-0">
-                                                    <iframe src="{{ url_for('tribunal.ver_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
-                                                            style="width: 100%; height: 80vh;" frameborder="0"></iframe>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <a href="{{ documento.url }}" target="_blank" class="btn btn-primary">
-                                                        <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
-                                                    </a>
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>                                    <!-- Firma Modal -->
-                                    {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
-                                    <div class="modal fade" id="firmarModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Firmar Documento</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <form action="{{ url_for('tribunal.firmar_documento', concurso_id=concurso.id, documento_id=documento.id) }}" 
-                                                      method="POST" 
-                                                      id="firmaForm{{ documento.id }}"
-                                                      onsubmit="startFirmaLoading({{ documento.id }})">
-                                                    <div class="modal-body">
-                                                        <div id="firmaInfo{{ documento.id }}">
-                                                            <p>¿Está seguro que desea firmar este documento?</p>
-                                                            <p>Se agregará una marca digital con sus datos y la fecha y hora actual en cada página.</p>
-                                                            {% if documento.firma_count > 0 %}
-                                                            <p>Este documento ya tiene {{ documento.firma_count }} firma(s).</p>
-                                                            {% endif %}
-                                                        </div>
-                                                        <div id="firmaLoading{{ documento.id }}" style="display: none;" class="text-center">
-                                                            <div class="spinner-border text-primary" role="status">
-                                                                <span class="visually-hidden">Firmando documento...</span>
-                                                            </div>
-                                                            <p class="mt-2">Firmando documento, por favor espere...</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-success" id="firmaButton{{ documento.id }}">
-                                                            <i class="bi bi-pen"></i> Firmar
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-
-                                    <!-- Upload Modal -->
-                                    {% if documento.estado != 'FIRMADO' and miembro.can_upload_file %}
-                                    <div class="modal fade" id="uploadModal{{ documento.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Subir Documento Firmado</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <form action="{{ url_for('tribunal.subir_documento_presidente', concurso_id=concurso.id, documento_id=documento.id) }}" 
-                                                          method="POST" 
-                                                          enctype="multipart/form-data">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Seleccione el documento firmado (PDF)</label>
-                                                            <input type="file" class="form-control" name="documento" accept=".pdf" required>
-                                                        </div>
-                                                        <div class="text-end">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                            <button type="submit" class="btn btn-success">Subir</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                {% include 'tribunal/partials/_documentos_table.html' %}
             </div>
         </div>
-    </div>
-      <!-- Tribunal information -->
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header bg-info text-white">
-                <h4 class="mb-0">Miembros del Tribunal</h4>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    {% for miembro_tribunal in miembros %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ miembro_tribunal.persona.nombre }} {{ miembro_tribunal.persona.apellido }}</h5>
-                            <span class="badge bg-{{ 'primary' if miembro_tribunal.id == miembro.id else 'secondary' }}">
-                                {{ miembro_tribunal.rol }}
-                            </span>
-                        </div>
-                        <p class="mb-1"><small>DNI: {{ miembro_tribunal.persona.dni }}</small></p>
-                        {% if miembro_tribunal.persona.correo %}
-                        <p class="mb-1"><small>Correo: {{ miembro_tribunal.persona.correo }}</small></p>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Postulantes information -->
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header bg-warning text-dark">
+    </div>    <!-- Postulantes Tab -->
+    <div class="tab-pane fade" id="postulantes" role="tabpanel" aria-labelledby="postulantes-tab">        <div class="card">
+            <div class="card-header header-primary">
                 <h4 class="mb-0">Postulantes Inscriptos</h4>
             </div>
             <div class="card-body">
-                {% if postulantes %}                <div class="list-group">
-                    {% for postulante in postulantes %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ postulante.nombre }} {{ postulante.apellido }}</h5>
-                        </div>
-                        <p class="mb-1"><small>DNI: {{ postulante.dni }}</small></p>
-                        <p class="mb-1"><small>Estado: <span class="badge bg-{{ 'success' if postulante.estado == 'activo' else 'secondary' }}">{{ postulante.estado | upper }}</span></small></p>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% if miembro.can_view_postulante_docs and postulantes|length > 0 %}
-                <div class="text-center mt-3">
-                    <a href="{{ url_for('tribunal.documentacion_postulantes', concurso_id=concurso.id) }}" class="btn btn-primary">
-                        <i class="bi bi-file-earmark-text"></i> Ver la documentación de los postulantes
-                    </a>
-                </div>
-                {% endif %}
-                {% else %}
-                <div class="alert alert-info">
-                    No hay postulantes inscriptos en este concurso.
-                </div>
-                {% endif %}
+                {% include 'tribunal/partials/_postulantes_list.html' %}
             </div>
         </div>
-    </div>    <!-- Temas de Sorteo section -->
+    </div><!-- Temas de Sorteo Tab -->
     {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion or miembro.can_add_tema %}
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-warning text-dark">
+    <div class="tab-pane fade" id="temas" role="tabpanel" aria-labelledby="temas-tab">        <div class="card">
+            <div class="card-header header-primary">
                 <h4 class="mb-0">Temas de Sorteo</h4>
             </div>
-            <div class="card-body">                <!-- Only show individual member topics if sorteo hasn't happened yet -->
-                {% if not concurso.sustanciacion.tema_sorteado %}
-                    {% if mi_propuesta %}
-                    <div class="mb-4">
-                        <h5>Mis Temas Propuestos:</h5>
-                        <div class="temas-list mt-2">
-                            {% for tema in mi_propuesta.temas_propuestos.split('|') %}
-                                {% if tema.strip() %}
-                                <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mt-2">
-                            {% if mi_propuesta.propuesta_cerrada %}
-                                <div class="alert alert-info">
-                                    <i class="bi bi-lock"></i> Ya ha cerrado su propuesta de temas. Contacte al administrador si necesita realizar cambios.
-                                </div>
-                            {% else %}
-                                <div class="d-flex">
-                                    <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
-                                        <i class="bi bi-pencil"></i> {% if mi_propuesta.temas_propuestos %}Editar Mis Temas{% else %}Cargar Mis Temas{% endif %}
-                                    </a>
-                                    
-                                    {% if mi_propuesta.temas_propuestos and mi_propuesta.temas_propuestos.split('|')|map('trim')|reject('equalto', '')|list|length == 3 %}
-                                    <form action="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" method="POST">
-                                        <input type="hidden" name="temas_exposicion" value="{{ mi_propuesta.temas_propuestos }}">
-                                        <input type="hidden" name="action" value="save_and_close">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="bi bi-lock"></i> Guardar y Enviar Temas
-                                        </button>
-                                    </form>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <hr>
-                    {% elif miembro.can_add_tema %}
-                    <div class="mb-4">
-                        <div class="alert alert-info">
-                            <p>Aún no ha propuesto temas para el sorteo.</p>
-                            <a href="{{ url_for('tribunal.cargar_sorteos', concurso_id=concurso.id) }}" class="btn btn-primary mt-2">
-                                <i class="bi bi-plus"></i> Cargar Mis Temas
-                            </a>
-                        </div>
-                    </div>
-                    <hr>
-                    {% endif %}
-                {% endif %}
-                
-                <!-- Then show consolidated topics if they exist -->
-                {% if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion %}
-                <div>                    {% if concurso.sustanciacion.tema_sorteado %}
-                    <!-- Show selected topic when drawn -->
-                    <h5>Temas Consolidados:</h5>
-                    {% if concurso.sustanciacion.temas_exposicion %}
-                    <div class="temas-list mt-2">
-                        {% set sorteados_array = concurso.sustanciacion.tema_sorteado.split('|') %}
-                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                            {% if tema.strip() %}
-                            <div class="badge {% if tema.strip() in sorteados_array %}bg-success{% else %}bg-light text-dark{% endif %} p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    {% endif %}                    <div class="card mt-3 border-0">
-                        <div class="card-body">
-                            <h5>
-                                <i class="bi bi-check-circle text-success"></i> 
-                                Tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} Sorteado{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }} 
-                                <span class="badge bg-primary">{{ concurso.sustanciacion.tema_sorteado.count('|') + 1 }} tema{{ 's' if concurso.sustanciacion.tema_sorteado.count('|') > 0 else '' }}</span>:
-                            </h5>
-                            
-                            <div class="row mt-3">
-                                {% for tema in concurso.sustanciacion.tema_sorteado.split('|') %}
-                                    {% if tema.strip() %}                                <div class="col-md-6 mb-2">
-                                        <div class="card border-success">
-                                            <div class="card-body py-2 bg-success bg-opacity-10">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="me-2"><i class="bi bi-check-circle-fill text-success"></i></div>
-                                                    <div>{{ tema.strip() }}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% elif concurso.sustanciacion.temas_cerrados %}
-                    <!-- When topics are closed but not yet drawn, only show the closed message -->
-                    <h5>Temas Consolidados:</h5>
-                    <div class="temas-list mt-2">
-                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                            {% if tema.strip() %}
-                            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    <div class="alert alert-warning mt-3">
-                        <i class="bi bi-lock"></i> Los temas han sido consolidados y cerrados. Pendiente de sorteo.
-                    </div>
-                    {% else %}
-                    <!-- Show topics when not closed -->
-                    <h5>Temas Consolidados:</h5>
-                    {% if concurso.sustanciacion.temas_exposicion %}
-                    <div class="temas-list mt-2">
-                        {% for tema in concurso.sustanciacion.temas_exposicion.split('|') %}
-                            {% if tema.strip() %}
-                            <div class="badge bg-light text-dark p-2 me-2 mb-2">{{ loop.index }}) {{ tema.strip() }}</div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle"></i> Estos temas están en revisión y pueden cambiar hasta que el administrador los consolide.
-                    </div>
-                    {% endif %}
-                    {% endif %}
-                </div>
-                {% else %}
-                    {% if not mi_propuesta and not miembro.can_add_tema %}
-                    <div class="alert alert-info">
-                        <p class="mb-0">Aún no se han cargado temas para el sorteo.</p>
-                    </div>
-                    {% endif %}
-                {% endif %}
+            <div class="card-body">
+                {% include 'tribunal/partials/_temas_sorteo.html' %}
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- Asignaturas information -->
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header bg-light">
-                <h4 class="mb-0">Asignaturas Relacionadas (Información Externa)</h4>
+    {% endif %}    <!-- Asignaturas Tab -->
+    <div class="tab-pane fade" id="asignaturas" role="tabpanel" aria-labelledby="asignaturas-tab">        <div class="card">
+            <div class="card-header header-primary">
+                <h4 class="mb-0">Asignaturas Relacionadas</h4>
             </div>
             <div class="card-body">
-                <p class="text-muted small">Información obtenida de <a href="https://huayca.crub.uncoma.edu.ar/catedras/1.0/rest/materias" target="_blank">API Huayra Cátedras</a>. Se muestran asignaturas no optativas que coinciden con el departamento, área y orientación (si aplica) del concurso.</p>
-                {% include 'shared/tarjetas_asignaturas.html' %}
+                {% include 'tribunal/partials/_asignaturas_info.html' %}
             </div>
         </div>
     </div>
@@ -492,14 +185,15 @@
 {% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=2.0">
 <style>
-.temas-list {
-    display: flex;
-    flex-wrap: wrap;
-}
-.temas-list .badge {
-    border: 1px solid #dee2e6;
-}
+/* Additional inline styles to ensure badge colors work */
+.badge-tribunal-primary { background-color: #2563eb !important; color: white !important; }
+.badge-tribunal-secondary { background-color: #6b7280 !important; color: white !important; }
+.badge-tribunal-accent { background-color: #0891b2 !important; color: white !important; }
+.badge-tribunal-success { background-color: #059669 !important; color: white !important; }
+.badge-tribunal-warning { background-color: #d97706 !important; color: white !important; }
+.badge-tribunal-info { background-color: #0891b2 !important; color: white !important; }
 </style>
 {% endblock %}
 
@@ -515,6 +209,60 @@ function startFirmaLoading(documentoId) {
     
     // Return true to allow form submission
     return true;
+}
+
+// Tab persistence and enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    // Store the active tab in localStorage
+    const tabTriggerList = [].slice.call(document.querySelectorAll('#concursoTabs button[data-bs-toggle="tab"]'));
+    
+    // Restore active tab from localStorage
+    const savedTab = localStorage.getItem('portal-concurso-active-tab');
+    if (savedTab) {
+        const savedTabElement = document.querySelector(`button[data-bs-target="${savedTab}"]`);
+        if (savedTabElement) {
+            const tab = new bootstrap.Tab(savedTabElement);
+            tab.show();
+        }
+    }
+    
+    // Save active tab to localStorage when tab changes
+    tabTriggerList.forEach(function(tabTrigger) {
+        tabTrigger.addEventListener('shown.bs.tab', function(event) {
+            localStorage.setItem('portal-concurso-active-tab', event.target.getAttribute('data-bs-target'));
+        });
+    });
+    
+    // Add notification badges to tabs if there are important items
+    updateTabNotifications();
+});
+
+function updateTabNotifications() {
+    // Add notification badge to documents tab if there are pending signatures
+    const pendingSignatures = document.querySelectorAll('.badge.bg-info');
+    if (pendingSignatures.length > 0) {
+        const documentosTab = document.getElementById('documentos-tab');
+        if (documentosTab && !documentosTab.querySelector('.notification-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-danger ms-2 notification-badge';
+            badge.textContent = pendingSignatures.length;
+            badge.title = `${pendingSignatures.length} documento(s) pendiente(s) de firma`;
+            documentosTab.appendChild(badge);
+        }
+    }
+    
+    // Add notification badge to temas tab if user needs to add topics
+    const needsTopics = document.querySelector('.btn-primary[href*="cargar_sorteos"]');
+    if (needsTopics) {
+        const temasTab = document.getElementById('temas-tab');
+        if (temasTab && !temasTab.querySelector('.notification-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-warning ms-2 notification-badge';
+            badge.textContent = '!';
+            badge.title = 'Necesita cargar temas para el sorteo';
+            temasTab.appendChild(badge);
+        }
+    }
 }
 </script>
 <script src="{{ url_for('static', filename='js/programas-auto.js') }}"></script>

@@ -3,35 +3,16 @@
 {% block title %}Portal del Tribunal - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mb-4">
     <h2>Portal del Tribunal - {{ persona.nombre }} {{ persona.apellido }}</h2>
-    <a href="{{ url_for('tribunal.salir_tribunal') }}" class="btn btn-outline-secondary">
-        <i class="bi bi-box-arrow-right"></i> Salir
-    </a>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <h4 class="mb-0">Información Personal</h4>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <p><strong>Nombre:</strong> {{ persona.nombre }} {{ persona.apellido }}</p>
-                <p><strong>DNI:</strong> {{ persona.dni }}</p>
-            </div>
-            <div class="col-md-6">
-                <p><strong>Correo:</strong> {{ persona.correo }}</p>
-                <p><strong>Último acceso:</strong> {{ miembro.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if miembro.ultimo_acceso else 'Primer acceso' }}</p>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <h3 class="mb-3">Concursos Asignados</h3>
 
 {% if concursos %}
-<div class="table-responsive">
+<div class="table-responsive tribunal-table">
     <table class="table table-striped table-hover">
         <thead class="table-light">
             <tr>
@@ -51,19 +32,24 @@
                 <td>{{ concurso.id }}</td>
                 <td>{{ concurso.departamento_rel.nombre }}</td>
                 <td>{{ concurso.area }}</td>
-                <td>{{ concurso.categoria }}</td>
-                <td>{{ concurso.dedicacion }}</td>                <td>
-                    <span class="badge bg-primary">{{ concurso_roles[concurso.id] }}</span>
+                <td>{{ concurso.categoria }}</td>                <td>{{ concurso.dedicacion }}</td>                <td>
+                    <span class="badge badge-tribunal-primary" style="background-color: #2563eb !important; color: white !important;">{{ concurso_roles[concurso.id] }}</span>
                 </td>
                 <td>
-                    <span class="badge bg-{{ 'success' if concurso.estado_actual == 'CREADO' else 'info' }}">
-                        {{ concurso.estado_actual }}
-                    </span>
+                    {% if concurso.estado_actual == 'CREADO' %}
+                        <span class="badge badge-tribunal-success" style="background-color: #059669 !important; color: white !important;">{{ concurso.estado_actual }}</span>
+                    {% elif concurso.estado_actual == 'EN_PROCESO' %}
+                        <span class="badge badge-tribunal-warning" style="background-color: #d97706 !important; color: white !important;">{{ concurso.estado_actual }}</span>
+                    {% elif concurso.estado_actual == 'FINALIZADO' %}
+                        <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;">{{ concurso.estado_actual }}</span>
+                    {% else %}
+                        <span class="badge badge-tribunal-secondary" style="background-color: #6b7280 !important; color: white !important;">{{ concurso.estado_actual }}</span>
+                    {% endif %}
                 </td>
                 <td>
                     <a href="{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}" 
-                       class="btn btn-sm btn-primary">
-                        Ver Detalles
+                       class="btn btn-sm btn-tribunal-accent">
+                        <i class="bi bi-eye"></i> Ver Detalles
                     </a>
                 </td>
             </tr>
@@ -72,8 +58,21 @@
     </table>
 </div>
 {% else %}
-<div class="alert alert-info">
+<div class="alert alert-tribunal-info">
     No tiene concursos asignados actualmente.
 </div>
 {% endif %}
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=2.0">
+<style>
+/* Additional inline styles to ensure badge colors work */
+.badge-tribunal-primary { background-color: #2563eb !important; color: white !important; }
+.badge-tribunal-secondary { background-color: #6b7280 !important; color: white !important; }
+.badge-tribunal-accent { background-color: #f97316 !important; color: white !important; }
+.badge-tribunal-success { background-color: #059669 !important; color: white !important; }
+.badge-tribunal-warning { background-color: #d97706 !important; color: white !important; }
+.badge-tribunal-info { background-color: #0891b2 !important; color: white !important; }
+</style>
 {% endblock %}

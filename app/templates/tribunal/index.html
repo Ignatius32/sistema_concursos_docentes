@@ -5,9 +5,16 @@
 {% block content %}
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="mb-0">Tribunal - Concurso #{{ concurso.id }}</h2>
-        <div>
+        <h2 class="mb-0">Tribunal - Concurso #{{ concurso.id }}</h2>        <div>
             <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Volver al Concurso</a>
+            {% if miembros %}
+            <form action="{{ url_for('tribunal.notificar_todos_miembros', concurso_id=concurso.id) }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-success" 
+                        onclick="return confirm('¿Está seguro que desea notificar a todos los miembros del tribunal con sus credenciales de acceso?')">
+                    <i class="fas fa-envelope"></i> Notificar Todos
+                </button>
+            </form>
+            {% endif %}
             <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary">Agregar Miembro</a>
         </div>
     </div>
@@ -15,43 +22,33 @@
     <div class="card-body">
         {% if miembros %}
         <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
+            <table class="table table-striped">                <thead>
                     <tr>
                         <th>Rol</th>
+                        <th>Claustro</th>
                         <th>Nombre</th>
                         <th>Apellido</th>
                         <th>DNI</th>
                         <th>Correo</th>
-                        <th>Estado</th>
-                        <th>Documentos</th>
-                        <th>Acciones</th>
+                        <th>Teléfono</th>
+                        <th>Estado</th>                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for miembro in miembros %}                    <tr>
-                        <td>{{ miembro.rol }}</td>
+                    {% for miembro in miembros %}                    <tr>                        <td>{{ miembro.rol }}</td>
+                        <td>{{ miembro.claustro or 'No especificado' }}</td>
                         <td>{{ miembro.persona.nombre }}</td>
                         <td>{{ miembro.persona.apellido }}</td>
                         <td>{{ miembro.persona.dni }}</td>
                         <td>{{ miembro.persona.correo }}</td>
+                        <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
                         <td>
-                            {% if miembro.notificado_sustanciacion %}
-                            <span class="badge bg-success">Sustanciación Notificada {{ miembro.fecha_notificacion_sustanciacion.strftime('%d/%m/%Y') if miembro.fecha_notificacion_sustanciacion }}</span>
+                            {% if miembro.persona.password_hash %}
+                            <span class="badge bg-success">Password Configurado</span>
                             {% elif miembro.notificado %}
-                            <span class="badge bg-info">Credenciales Notificadas {{ miembro.fecha_notificacion.strftime('%d/%m/%Y') if miembro.fecha_notificacion }}</span>
+                            <span class="badge bg-info">Credenciales Enviadas {{ miembro.fecha_notificacion.strftime('%d/%m/%Y') if miembro.fecha_notificacion }}</span>
                             {% else %}
                             <span class="badge bg-warning">No notificado</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if miembro.drive_folder_id %}
-                            <a href="https://drive.google.com/drive/folders/{{ miembro.drive_folder_id }}" 
-                               target="_blank" class="btn btn-sm btn-success">
-                                <i class="fas fa-folder-open"></i> Ver Documentos
-                            </a>
-                            {% else %}
-                            <span class="badge bg-warning">Sin carpeta</span>
                             {% endif %}
                         </td>
                         <td>
@@ -59,17 +56,17 @@
                                 <a href="{{ url_for('tribunal.editar', miembro_id=miembro.id) }}" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
+                                
+                                {% if miembro.persona.correo %}
+                                <form action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-info" title="Enviar credenciales">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
                                 <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ miembro.id }}">
                                     <i class="fas fa-trash"></i> Eliminar
-                                </button>
-                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal{{ miembro.id }}">
-                                    <i class="fas fa-upload"></i> Subir Documentos
-                                </button>
-                                <a href="{{ url_for('tribunal.recusar', miembro_id=miembro.id) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-gavel"></i> Recusar
-                                </a>
-                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#notificarModal{{ miembro.id }}">
-                                    <i class="fas fa-envelope"></i> Notificar Sustanciación
                                 </button>
                             </div>
 
@@ -80,9 +77,8 @@
                                         <div class="modal-header">
                                             <h5 class="modal-title">Confirmar Eliminación</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            ¿Está seguro que desea eliminar a {{ miembro.nombre }} {{ miembro.apellido }} del tribunal?
+                                        </div>                                        <div class="modal-body">
+                                            ¿Está seguro que desea eliminar a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }} del tribunal?
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -91,77 +87,8 @@
                                             </form>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
+                                </div>                            </div>
 
-                            <!-- Modal de notificación -->
-                            <div class="modal fade" id="notificarModal{{ miembro.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirmar Notificación de Sustanciación</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>                                        <div class="modal-body">
-                                            <p>¿Está seguro que desea enviar una notificación de sustanciación a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?</p>
-                                            <p>Se enviará un correo con:</p>
-                                            <ul>
-                                                <li>Información del concurso</li>
-                                                <li>Credenciales de acceso al sistema</li>
-                                                {% if concurso.sustanciacion %}
-                                                <li>Información detallada de la sustanciación del concurso</li>
-                                                <ul>
-                                                    <li>Fecha y lugar de constitución del tribunal</li>
-                                                    <li>Fecha y lugar del sorteo de temas</li>
-                                                    <li>Fecha y lugar de la exposición</li>
-                                                </ul>
-                                                {% else %}
-                                                <li class="text-warning">No hay información de sustanciación cargada</li>
-                                                {% endif %}
-                                            </ul>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                            <form action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" method="POST" style="display: inline;">
-                                                <button type="submit" class="btn btn-success">Enviar Notificación</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Modal de subida de documentos -->
-                            <div class="modal fade" id="uploadModal{{ miembro.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Subir Documentos - {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <form action="{{ url_for('tribunal.subir_documento', miembro_id=miembro.id) }}" method="POST" enctype="multipart/form-data">
-                                                <div class="mb-3">
-                                                    <label for="tipo_{{ miembro.id }}" class="form-label">Tipo de Documento</label>
-                                                    <select class="form-select" id="tipo_{{ miembro.id }}" name="tipo" required>
-                                                        <option value="">Seleccione...</option>
-                                                        <option value="CV">Curriculum Vitae</option>
-                                                        <option value="DNI">DNI</option>
-                                                    </select>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="documento_{{ miembro.id }}" class="form-label">Archivo</label>
-                                                    <input type="file" class="form-control" id="documento_{{ miembro.id }}" name="documento" 
-                                                           accept=".doc,.docx,.pdf,.odt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/vnd.oasis.opendocument.text" required>
-                                                    <div class="form-text">Formatos aceptados: DOC, DOCX, PDF, ODT</div>
-                                                </div>
-                                                <div class="text-end">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-primary">Subir</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </td>
                     </tr>
                     {% endfor %}

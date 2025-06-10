@@ -260,6 +260,13 @@ def editar(concurso_id):
     
     if request.method == 'POST':
         try:
+            # Store original values to detect changes
+            original_departamento_id = concurso.departamento_id
+            original_categoria = concurso.categoria
+            original_dedicacion = concurso.dedicacion
+            original_area = concurso.area
+            original_orientacion = concurso.orientacion
+            
             # Extract data from form
             tipo = request.form.get('tipo')
             
@@ -274,6 +281,32 @@ def editar(concurso_id):
                 nro_res_llamado_regular = request.form.get('nro_res_llamado_regular')
                 nro_res_tribunal_regular = request.form.get('nro_res_tribunal_regular')
             
+            # Extract new values
+            new_departamento_id = int(request.form.get('departamento_id'))
+            new_categoria = request.form.get('categoria')
+            new_dedicacion = request.form.get('dedicacion')
+            new_area = request.form.get('area')
+            new_orientacion = request.form.get('orientacion')
+            
+            # Get categoria name from roles_categorias.json
+            import json
+            import os
+            
+            # Load roles_categorias.json data
+            json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'roles_categorias.json')
+            with open(json_path, 'r', encoding='utf-8') as f:
+                roles_data = json.load(f)
+            
+            # Find categoria name by codigo
+            categoria_nombre = None
+            for rol in roles_data:
+                for cat in rol['categorias']:
+                    if cat['codigo'] == new_categoria:
+                        categoria_nombre = cat['nombre']
+                        break
+                if categoria_nombre:
+                    break
+            
             # Update concurso
             concurso.tipo = tipo
             concurso.nro_res_llamado_interino = nro_res_llamado_interino
@@ -281,12 +314,12 @@ def editar(concurso_id):
             concurso.nro_res_tribunal_regular = nro_res_tribunal_regular
             concurso.cerrado_abierto = request.form.get('cerrado_abierto')
             concurso.cant_cargos = int(request.form.get('cant_cargos'))
-            concurso.departamento_id = int(request.form.get('departamento_id'))
-            concurso.area = request.form.get('area')
-            concurso.orientacion = request.form.get('orientacion')
-            concurso.categoria = request.form.get('categoria')
-            concurso.categoria_nombre = request.form.get('categoria_nombre')
-            concurso.dedicacion = request.form.get('dedicacion')
+            concurso.departamento_id = new_departamento_id
+            concurso.area = new_area
+            concurso.orientacion = new_orientacion
+            concurso.categoria = new_categoria
+            concurso.categoria_nombre = categoria_nombre
+            concurso.dedicacion = new_dedicacion
             concurso.localizacion = request.form.get('localizacion')              
             concurso.asignaturas = request.form.get('asignaturas')            
             concurso.expediente = request.form.get('expediente')
@@ -296,22 +329,17 @@ def editar(concurso_id):
             concurso.docente_vacante = request.form.get('docente_vacante')
             concurso.categoria_vacante = request.form.get('categoria_vacante')
             concurso.dedicacion_vacante = request.form.get('dedicacion_vacante')
-            concurso.id_designacion_mocovi = request.form.get('id_designacion_mocovi')
-
-            # Handle cierre_inscripcion
+            concurso.id_designacion_mocovi = request.form.get('id_designacion_mocovi')            # Handle cierre_inscripcion
             cierre_inscripcion_str = request.form.get('cierre_inscripcion')
             if cierre_inscripcion_str:
-                # Implementation logic for date parsing
-                pass
+                concurso.cierre_inscripcion = datetime.strptime(cierre_inscripcion_str, '%Y-%m-%d').date()
             else:
-                # Implementation for null date
-                pass
+                concurso.cierre_inscripcion = None
 
             # Handle vencimiento
             vencimiento_str = request.form.get('vencimiento')
             if vencimiento_str:
-                # Implementation logic for date parsing
-                pass
+                concurso.vencimiento = datetime.strptime(vencimiento_str, '%Y-%m-%d').date()
             else:
                 concurso.vencimiento = None
             
@@ -342,6 +370,70 @@ def editar(concurso_id):
             concurso.sustanciacion.exposicion_lugar = request.form.get('exposicion_lugar')
             concurso.sustanciacion.exposicion_virtual_link = request.form.get('exposicion_virtual_link')
             concurso.sustanciacion.exposicion_observaciones = request.form.get('exposicion_observaciones')
+            
+            # Check if folder names need to be updated due to changes in key fields
+            folder_fields_changed = (
+                original_departamento_id != new_departamento_id or
+                original_categoria != new_categoria or
+                original_dedicacion != new_dedicacion or
+                original_area != new_area or
+                original_orientacion != new_orientacion
+            )
+            
+            if folder_fields_changed and concurso.drive_folder_id:
+                try:
+                    # Get new department name for folder naming
+                    new_departamento_nombre = concurso.departamento_rel.nombre
+                    
+                    # Update main concurso folder name
+                    # Extract timestamp from current folder name or use current time
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    new_main_folder_name = f"{concurso.id}_{new_departamento_nombre}_{new_area}_{new_orientacion}_{new_categoria}_{new_dedicacion}_{timestamp}"
+                    drive_api.update_folder_name(concurso.drive_folder_id, new_main_folder_name)
+                    
+                    # Update subfolder names if they exist
+                    subfolders_to_update = {
+                        'borradores_folder_id': f"borradores_{new_departamento_nombre}_{new_categoria}_{new_dedicacion}_{concurso.id}",
+                        'postulantes_folder_id': f"postulantes_{new_departamento_nombre}_{new_categoria}_{new_dedicacion}_{concurso.id}",
+                        'documentos_firmados_folder_id': f"documentos_firmados_{new_departamento_nombre}_{new_categoria}_{new_dedicacion}_{concurso.id}",
+                        'tribunal_folder_id': f"tribunal_{new_departamento_nombre}_{new_categoria}_{new_dedicacion}_{concurso.id}"
+                    }
+                    
+                    for folder_attr, new_name in subfolders_to_update.items():
+                        folder_id = getattr(concurso, folder_attr)
+                        if folder_id:
+                            try:
+                                drive_api.update_folder_name(folder_id, new_name)
+                            except Exception as e:
+                                flash(f'Warning: Could not update {folder_attr.replace("_", " ")}: {str(e)}', 'warning')
+                    
+                    # Update postulante folder names if categoria or dedicacion changed
+                    if original_categoria != new_categoria or original_dedicacion != new_dedicacion:
+                        from app.models.models import Postulante
+                        postulantes = Postulante.query.filter_by(concurso_id=concurso.id).all()
+                        
+                        for postulante in postulantes:
+                            if postulante.drive_folder_id:
+                                try:
+                                    new_postulante_folder_name = f"{postulante.apellido}_{postulante.nombre}_{postulante.dni}_{new_categoria}_{new_dedicacion}"
+                                    drive_api.update_folder_name(postulante.drive_folder_id, new_postulante_folder_name)
+                                except Exception as e:
+                                    flash(f'Warning: Could not update folder for postulante {postulante.apellido}, {postulante.nombre}: {str(e)}', 'warning')
+                    
+                    flash('Folder names synchronized with updated concurso information.', 'info')
+                    
+                except Exception as e:
+                    flash(f'Warning: Error synchronizing folder names: {str(e)}', 'warning')
+                    # Continue with the operation even if folder sync fails
+              # Create history entry for concurso edit
+            historial = HistorialEstado(
+                concurso_id=concurso.id,
+                estado=concurso.estado_actual,
+                subestado_snapshot=concurso.subestado,
+                fecha=datetime.now(),
+                observaciones=f"Concurso editado por {current_user.username}"
+            )
+            db.session.add(historial)
             
             db.session.commit()
             flash('Concurso actualizado exitosamente.', 'success')

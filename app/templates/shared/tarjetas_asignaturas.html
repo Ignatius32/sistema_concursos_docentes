@@ -2,15 +2,19 @@
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for asignatura in asignaturas_externas %}
     <div class="col">
-        <div class="card h-100">            <div class="card-header">
+        <div class="card h-100">            
+            <div class="card-header">
+
                 <h5 class="card-title mb-0">
                     {{ asignatura.nombre_materia }}
                     {% if asignatura.optativa == "SI" %}
                     <span class="badge rounded-pill bg-primary text-white small ms-2" style="font-size: 0.7rem; vertical-align: middle;">Optativa</span>
                     {% endif %}
                 </h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ asignatura.nombre_carrera }}</h6>
             </div>
-            <div class="card-body">                <h6 class="card-subtitle mb-2 text-muted">{{ asignatura.nombre_carrera }}</h6>
+            <div class="card-body">                
+                
                 
                 {% if asignatura.depto or asignatura.area or asignatura.orientacion %}
                 <div class="mb-3">

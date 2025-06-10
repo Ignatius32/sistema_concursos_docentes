@@ -2,31 +2,150 @@
 
 {% block title %}Activar Cuenta de Tribunal - {{ super() }}{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}">
+{% endblock %}
+.activation-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+}
+
+.activation-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15);
+    overflow: hidden;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.activation-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.activation-body {
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(96, 165, 250, 0.02) 100%);
+}
+
+.form-control {
+    border: 2px solid rgba(59, 130, 246, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.btn-activation {
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-activation:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    color: white;
+}
+
+.btn-back {
+    background: rgba(107, 114, 128, 0.1);
+    border: 2px solid rgba(107, 114, 128, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: rgba(107, 114, 128, 0.2);
+    border-color: rgba(107, 114, 128, 0.3);
+    color: #374151;
+}
+
+.info-section {
+    background: rgba(59, 130, 246, 0.05);
+    border-left: 4px solid #3b82f6;
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.info-section p {
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.info-section p:last-child {
+    margin-bottom: 0;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Activar Cuenta de Tribunal</h4>
-            </div>
-            <div class="card-body">
-                <p class="mb-3">Ingrese su DNI y correo electrónico para activar su cuenta.</p>
-                
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="dni" class="form-label">DNI</label>
-                        <input type="text" class="form-control" id="dni" name="dni" required 
-                               pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
+<div class="activation-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-7">
+                <div class="card activation-card">
+                    <div class="activation-header">
+                        <i class="bi bi-person-plus fs-1 mb-3 d-block"></i>
+                        <h4 class="mb-2">Activar Cuenta de Tribunal</h4>
+                        <p class="mb-0">Primer acceso al sistema</p>
                     </div>
-                    <div class="mb-3">
-                        <label for="correo" class="form-label">Correo Electrónico</label>
-                        <input type="email" class="form-control" id="correo" name="correo" required>
+                    <div class="activation-body">
+                        <div class="info-section">
+                            <p><i class="bi bi-info-circle text-primary"></i> <strong>¿Es su primera vez en el sistema?</strong></p>
+                            <p>Si ha sido designado como miembro de un tribunal evaluador, ingrese su DNI y correo electrónico para activar su cuenta.</p>
+                            <p><small class="text-muted">Recibirá un enlace de activación en su correo electrónico.</small></p>
+                        </div>
+                        
+                        <form method="POST">
+                            <div class="mb-4">
+                                <label for="dni" class="form-label fw-semibold">
+                                    <i class="bi bi-person-vcard"></i> DNI
+                                </label>
+                                <input type="text" class="form-control" id="dni" name="dni" required 
+                                       pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números"
+                                       placeholder="Ejemplo: 12345678">
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Ingrese su DNI sin puntos ni espacios
+                                </small>
+                            </div>
+                            <div class="mb-4">
+                                <label for="correo" class="form-label fw-semibold">
+                                    <i class="bi bi-envelope"></i> Correo Electrónico
+                                </label>
+                                <input type="email" class="form-control" id="correo" name="correo" required
+                                       placeholder="ejemplo@email.com">
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Use el mismo correo registrado en el sistema
+                                </small>
+                            </div>
+                            <div class="d-flex justify-content-between gap-3">
+                                <a href="{{ url_for('tribunal.acceso') }}" class="btn btn-back flex-grow-1">
+                                    <i class="bi bi-arrow-left"></i> Volver
+                                </a>
+                                <button type="submit" class="btn btn-activation flex-grow-1">
+                                    <i class="bi bi-send"></i> Enviar Enlace de Activación
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('tribunal.acceso') }}" class="btn btn-secondary">Volver</a>
-                        <button type="submit" class="btn btn-primary">Enviar Enlace de Activación</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>

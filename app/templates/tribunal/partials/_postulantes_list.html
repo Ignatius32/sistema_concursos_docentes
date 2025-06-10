@@ -1,0 +1,95 @@
+<!-- Postulantes Section Partial -->
+{% if postulantes %}
+<div class="accordion" id="postulanteAccordion">
+    {% for postulante in postulantes %}
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="heading{{ postulante.id }}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ postulante.id }}" aria-expanded="false" aria-controls="collapse{{ postulante.id }}">
+                {{ postulante.apellido }}, {{ postulante.nombre }}
+                <span class="badge badge-tribunal-{{ 'success' if postulante.estado == 'activo' else 'secondary' }} ms-3"
+                      style="background-color: {{ '#059669' if postulante.estado == 'activo' else '#6b7280' }} !important; color: white !important;">
+                    {{ postulante.estado | upper }}
+                </span>
+            </button>
+        </h2>
+        <div id="collapse{{ postulante.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ postulante.id }}" data-bs-parent="#postulanteAccordion">            <div class="accordion-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h5>Documentación</h5>                        {% set docs_list = postulante.documentos|list %}
+                        {% set docs_count = docs_list|length %}
+                        {% if docs_count > 0 %}
+                        <!-- Documents table -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Fecha</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for documento in docs_list %}
+                                    {% if documento.tipo != 'DNI' %}
+                                    <tr>
+                                        <td>{{ documento.tipo }}</td>
+                                        <td><small>{{ documento.creado.strftime('%d/%m/%Y') }}</small></td>                                        <td>
+                                            <button type="button" class="btn btn-outline-primary btn-xs" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#pdfViewerModal{{ postulante.id }}_{{ documento.id }}">
+                                                <i class="bi bi-file-earmark-text"></i> Ver
+                                            </button>
+                                            
+                                            <!-- PDF Viewer Modal -->
+                                            <div class="modal fade" id="pdfViewerModal{{ postulante.id }}_{{ documento.id }}" tabindex="-1">
+                                                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">{{ documento.tipo }} - {{ postulante.apellido }}, {{ postulante.nombre }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body p-0">
+                                                            <iframe src="{{ url_for('tribunal.ver_documento_postulante', concurso_id=concurso.id, postulante_id=postulante.id, documento_id=documento.id) }}" 
+                                                                    style="width: 100%; height: 80vh;" frameborder="0"></iframe>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <a href="{{ documento.url }}" target="_blank" class="btn btn-tribunal-primary">
+                                                                <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
+                                                            </a>
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                          <!-- Download complete documentation button -->
+                        {% if miembro.can_view_postulante_docs %}                        <div class="mt-3 text-center">
+                            <a href="{{ url_for('tribunal.download_postulante_docs', concurso_id=concurso.id, postulante_id=postulante.id) }}" 
+                               class="btn btn-tribunal-accent btn-md"
+                               style="background-color: #f97316 !important; border-color: #f97316 !important; color: white !important; font-weight: 600;">
+                                <i class="bi bi-download"></i> Descargar toda la documentación de {{ postulante.apellido }}, {{ postulante.nombre }}
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <div class="alert alert-warning alert-sm">
+                            <small>No ha presentado documentación</small>
+                        </div>
+                        {% endif %}                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-tribunal-info">
+    No hay postulantes inscriptos en este concurso.
+</div>
+{% endif %}

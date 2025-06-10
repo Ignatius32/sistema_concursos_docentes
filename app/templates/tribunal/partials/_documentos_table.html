@@ -1,0 +1,71 @@
+<!-- Documentos Section Partial -->
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for documento in concurso.documentos %}
+            {% if documento.is_visible_to_tribunal(miembro) %}
+            <tr>
+                <td>
+                    {{ documento.get_friendly_name() }}
+                </td>
+                <td>
+                    {% if documento.estado == 'FIRMADO' %}
+                        {% if "resolucion" in documento.tipo.lower() %}
+                        <span class="badge bg-success">
+                            FIRMADO
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success">
+                            FIRMADO POR {{ documento.firma_count }} MIEMBRO{% if documento.firma_count > 1 %}S{% endif %} DEL TRIBUNAL
+                        </span>
+                        {% endif %}
+                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                    <span class="badge bg-info">
+                        PENDIENTE DE FIRMA {% if documento.firma_count > 0 %}({{ documento.firma_count }} firma{% if documento.firma_count > 1 %}s{% endif %}){% endif %}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning">
+                        {{ documento.estado }}
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#pdfViewerModal{{ documento.id }}">
+                            <i class="bi bi-file-earmark-text"></i> Ver Documento
+                        </button>
+                        
+                        {% if not documento.ya_firmado_por(miembro.id) and miembro.can_sign_file and documento.estado == 'PENDIENTE DE FIRMA' and template_configs_dict.get(documento.tipo, {}).tribunal_can_sign %}
+                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#firmarModal{{ documento.id }}">
+                            <i class="bi bi-pen"></i> Firmar
+                        </button>
+                        {% endif %}
+                        
+                        {% if documento.estado != 'FIRMADO' and miembro.can_upload_file and template_configs_dict.get(documento.tipo, {}).tribunal_can_upload_signed %}
+                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#uploadModal{{ documento.id }}">
+                            <i class="bi bi-upload"></i> Subir Firmado
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    {% include 'tribunal/partials/_documento_modals.html' %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
