@@ -39,8 +39,9 @@
                 type="button" role="tab" aria-controls="documentos" aria-selected="false">
             <i class="bi bi-file-earmark-text"></i> Documentos
         </button>
-    </li>    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="postulantes-tab" data-bs-toggle="tab" data-bs-target="#postulantes" 
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="postulantes-tab" data-bs-toggle="tab" data-bs-target="#postulantes"
                 type="button" role="tab" aria-controls="postulantes" aria-selected="false">
             <i class="bi bi-person-check"></i> Postulantes
         </button>
@@ -56,17 +57,19 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="asignaturas-tab" data-bs-toggle="tab" data-bs-target="#asignaturas" 
                 type="button" role="tab" aria-controls="asignaturas" aria-selected="false">
-            <i class="bi bi-book"></i> Asignaturas
+            <i class="bi bi-book"></i> Asignaturas Relacionadas
         </button>
     </li>
 </ul>
 
 <!-- Tabs Content -->
-<div class="tab-content tribunal-tab-content" id="concursoTabsContent">    <!-- General Tab -->
+<div class="tab-content tribunal-tab-content" id="concursoTabsContent">
+    <!-- General Tab -->
     <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
         <!-- Concurso Information Section -->
         <div class="row">
-            <div class="col-md-8">                <div class="card">
+            <div class="col-md-8">
+                <div class="card">
                     <div class="card-header header-primary">
                         <h4 class="mb-0"><i class="bi bi-info-circle"></i> Información del Concurso</h4>
                     </div>
@@ -91,9 +94,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-4">                <div class="card">
+                </div>            </div>
+            <div class="col-md-4">
+                <div class="card">
                     <div class="card-header header-primary">
                         <h4 class="mb-0"><i class="bi bi-people"></i> Miembros del Tribunal</h4>
                     </div>
@@ -107,7 +110,8 @@
         <!-- Instructivo Section -->
         {% if instructivo_tribunal %}
         <div class="row mt-4">
-            <div class="col-12">                <div class="card">
+            <div class="col-12">
+                <div class="card">
                     <div class="card-header header-primary">
                         <h4 class="mb-0"><i class="bi bi-info-circle-fill"></i> Instructivo para el Tribunal</h4>
                     </div>
@@ -133,17 +137,19 @@
     </div>
     <!-- Sustanciación Tab -->
     {% if concurso.sustanciacion %}
-    <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">        <div class="card">
+    <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">
+        <div class="card">
             <div class="card-header header-primary">
                 <h4 class="mb-0">Información de Sustanciación</h4>
             </div>
             <div class="card-body">
                 {% include 'tribunal/partials/_sustanciacion_info.html' %}
             </div>
-        </div>
-    </div>
-    {% endif %}    <!-- Documentos Tab -->
-    <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">        <div class="card">
+        </div>    </div>
+    {% endif %}
+    <!-- Documentos Tab -->
+    <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
+        <div class="card">
             <div class="card-header header-primary">
                 <h4 class="mb-0">Documentos del Concurso</h4>
             </div>

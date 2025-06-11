@@ -3,46 +3,50 @@
 {% block title %}Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h2 class="mb-0">Concurso #{{ concurso.id }}</h2>
-                <div class="mt-2">
-                    <span class="badge bg-primary">Estado: {{ concurso.estado_actual }}</span>                    {% if concurso.subestado %}
-                        {% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}
-                        {% if subestado_values is iterable and (subestado_values is not string) %}
-                            {% for subestado in subestado_values %}
-                                {% if subestado.startswith('firmado:') %}
-                                    <span class="badge bg-success">{{ subestado[8:] }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ subestado }}</span>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            {% if subestado_values.startswith('firmado:') %}
-                                <span class="badge bg-success">{{ subestado_values[8:] }}</span>
+<div class="mb-4">
+    <!-- Breadcrumb navigation -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('concursos.index') }}">
+                        <i class="bi bi-house"></i> Concursos
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Concurso #{{ concurso.id }}</li>
+            </ol>            <div class="d-flex align-items-center">
+                <span class="badge badge-tribunal-primary me-2" style="background-color: #2563eb !important; color: white !important;">Estado: {{ concurso.estado_actual }}</span>
+                {% if concurso.subestado %}
+                    {% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}
+                    {% if subestado_values is iterable and (subestado_values is not string) %}
+                        {% for subestado in subestado_values %}
+                            {% if subestado.startswith('firmado:') %}
+                                <span class="badge badge-tribunal-success me-1" style="background-color: #059669 !important; color: white !important;">{{ subestado[8:] }}</span>
                             {% else %}
-                                <span class="badge bg-secondary">{{ concurso.subestado }}</span>
+                                <span class="badge badge-tribunal-secondary me-1" style="background-color: #6b7280 !important; color: white !important;">{{ subestado }}</span>
                             {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% if subestado_values.startswith('firmado:') %}
+                            <span class="badge badge-tribunal-success me-1" style="background-color: #059669 !important; color: white !important;">{{ subestado_values[8:] }}</span>
+                        {% else %}
+                            <span class="badge badge-tribunal-secondary me-1" style="background-color: #6b7280 !important; color: white !important;">{{ concurso.subestado }}</span>
                         {% endif %}
                     {% endif %}
-                </div>
-            </div>
-            <div class="col-md-6 text-end">
-                <!-- Three-dot vertical menu for Edit/Delete -->
-                <div class="dropdown">
-                    <button class="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                {% endif %}
+                <!-- Actions menu -->
+                <div class="dropdown ms-2">
+                    <button class="btn btn-tribunal-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item text-warning" href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}">
+                            <a class="dropdown-item" href="{{ url_for('concursos.editar', concurso_id=concurso.id) }}">
                                 <i class="bi bi-pencil"></i> Editar
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#eliminarModal">
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#eliminarModal">
                                 <i class="bi bi-trash"></i> Eliminar
                             </a>
                         </li>
@@ -50,10 +54,13 @@
                 </div>
             </div>
         </div>
-    </div>
+    </nav>
+</div>
+
+<div class="card tribunal-card">    
     <div class="card-body">
         <!-- Nav tabs -->
-        <ul class="nav nav-tabs mb-4" id="concursoTabs" role="tablist">
+        <ul class="nav nav-tabs tribunal-tabs mb-4" id="concursoTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">
                     <i class="bi bi-info-circle"></i> Información del Concurso
@@ -93,13 +100,12 @@
             {% endif %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="asignaturas-externas-tab" data-bs-toggle="tab" data-bs-target="#asignaturas-externas-content" type="button" role="tab" aria-controls="asignaturas-externas-content" aria-selected="false">
-                    <i class="bi bi-book"></i> Asignaturas Externas
+                    <i class="bi bi-book"></i> Asignaturas Relacionadas
                 </button>
             </li>
-        </ul>
-        
+        </ul>        
         <!-- Tab content -->
-        <div class="tab-content">
+        <div class="tab-content tribunal-tab-content" id="concursoTabsContent">
             <!-- Tab 1: Información y Detalles -->            
             {% include 'concursos/partials/ver/_info_tab.html' %}
               
@@ -159,13 +165,23 @@
 {% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=2.0">
 <style>
+/* Additional inline styles to ensure badge colors work */
+.badge-tribunal-primary { background-color: #2563eb !important; color: white !important; }
+.badge-tribunal-secondary { background-color: #6b7280 !important; color: white !important; }
+.badge-tribunal-accent { background-color: #0891b2 !important; color: white !important; }
+.badge-tribunal-success { background-color: #059669 !important; color: white !important; }
+.badge-tribunal-warning { background-color: #d97706 !important; color: white !important; }
+.badge-tribunal-info { background-color: #0891b2 !important; color: white !important; }
+
 .temas-list {
     display: flex;
     flex-wrap: wrap;
 }
 .temas-list .badge {
     border: 1px solid #dee2e6;
+    margin: 0.25rem;
 }
 </style>
 {% endblock %}

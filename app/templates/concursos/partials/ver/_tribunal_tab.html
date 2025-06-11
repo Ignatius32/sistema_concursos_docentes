@@ -1,53 +1,69 @@
 <div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
-    <h4>Tribunal</h4>
-    <div class="table-responsive">
-        <table class="table">            <thead>
-                <tr>
-                    <th>Rol</th>
-                    <th>Claustro</th>
-                    <th>Nombre</th>
-                    <th>DNI</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for miembro in concurso.asignaciones_tribunal.all() %}                <tr>
-                    <td><span class="badge bg-{{ 'primary' if miembro.rol == 'Presidente' else ('info' if miembro.rol == 'Titular' else 'secondary') }}">{{ miembro.rol }}</span></td>
-                    <td>{{ miembro.claustro or 'No especificado' }}</td>
-                    <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
-                    <td>{{ miembro.persona.dni }}</td>
-                    <td>{{ miembro.persona.correo or 'No disponible' }}</td>
-                    <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
-                    <td>
-                        {% if miembro.persona.password_hash %}
-                        <span class="badge bg-success">Password Configurado</span>
-                        {% elif miembro.notificado %}
-                        <span class="badge bg-info">Credenciales Enviadas</span>
+    <div class="card">
+        <div class="card-header header-primary">
+            <h4 class="mb-0"><i class="bi bi-people"></i> Tribunal</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive tribunal-table">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rol</th>
+                            <th>Claustro</th>
+                            <th>Nombre</th>
+                            <th>DNI</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for miembro in concurso.asignaciones_tribunal.all() %}
+                        <tr>
+                            <td>
+                                {% if miembro.rol == 'Presidente' %}
+                                <span class="badge badge-tribunal-primary" style="background-color: #2563eb !important; color: white !important;">{{ miembro.rol }}</span>
+                                {% elif miembro.rol == 'Titular' %}
+                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;">{{ miembro.rol }}</span>
+                                {% else %}
+                                <span class="badge badge-tribunal-secondary" style="background-color: #6b7280 !important; color: white !important;">{{ miembro.rol }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ miembro.claustro or 'No especificado' }}</td>
+                            <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
+                            <td>{{ miembro.persona.dni }}</td>
+                            <td>{{ miembro.persona.correo or 'No disponible' }}</td>
+                            <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
+                            <td>
+                                {% if miembro.persona.password_hash %}
+                                <span class="badge badge-tribunal-success" style="background-color: #059669 !important; color: white !important;">Password Configurado</span>
+                                {% elif miembro.notificado %}
+                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;">Credenciales Enviadas</span>
+                                {% else %}
+                                <span class="badge badge-tribunal-warning" style="background-color: #d97706 !important; color: white !important;">No notificado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                </div>
+                            </td>
+                        </tr>
                         {% else %}
-                        <span class="badge bg-warning">No notificado</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="btn-group">
-                        </div>
-                    </td>
-                </tr>
-                {% else %}                <tr>
-                    <td colspan="8" class="text-center">No hay miembros en el tribunal</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="text-end mt-2">
-        <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-primary me-2">
-            <i class="bi bi-plus-circle"></i> Agregar Miembro
-        </a>
-        <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">
-            Ver Tribunal Completo
-        </a>
+                        <tr>
+                            <td colspan="8" class="text-center">No hay miembros en el tribunal</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-end mt-3">
+                <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-tribunal-primary me-2">
+                    <i class="bi bi-plus-circle"></i> Agregar Miembro
+                </a>                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-tribunal-secondary">
+                    Ver Tribunal Completo
+                </a>
+            </div>
+        </div>
     </div>
 </div>

@@ -1,31 +1,52 @@
 {% extends "base.html" %}
 
-{% block title %}Concursos Docentes - Listado Público{% endblock %}
+{% block title %}Concursos Docentes - Portal Público{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=2.0">
+{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Hero Section -->
+<div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Listado de Concursos Docentes</h2>
+        <div class="card tribunal-card">
+            <div class="card-header header-primary">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-mortarboard-fill me-2"></i>
+                    <h3 class="mb-0">Portal de Concursos Docentes</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="mb-0 text-muted">Explore los concursos docentes disponibles. Utilice los filtros para encontrar las oportunidades que mejor se adapten a su perfil académico.</p>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Filtros -->
+<!-- Modern Filter Section -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-filter"></i> Filtros
-                </h5>
+        <div class="card tribunal-card">
+            <div class="card-header header-blue-light">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-funnel me-2"></i>
+                        <h5 class="mb-0">Filtros de Búsqueda</h5>
+                    </div>
+                    <button class="btn btn-sm btn-outline-light d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
             </div>
-            <div class="card-body">
-                <form method="GET" action="{{ url_for('public.index') }}">
-                    <div class="row g-3">
+            <div class="card-body collapse show" id="filterSection">
+                <form method="GET" action="{{ url_for('public.index') }}" id="filterForm">
+                    <div class="row g-3 align-items-end">
                         <div class="col-12 col-md-4">
-                            <label for="departamento" class="form-label">Departamento:</label>
-                            <select name="departamento" id="departamento" class="form-select">
+                            <label for="departamento" class="form-label fw-semibold text-primary">
+                                <i class="bi bi-building me-1"></i>Departamento
+                            </label>
+                            <select name="departamento" id="departamento" class="form-select form-select-lg">
                                 <option value="">Todos los departamentos</option>
                                 {% for depto in departamentos %}
                                 <option value="{{ depto.id }}" {% if departamento_filter == depto.id|string %}selected{% endif %}>
@@ -34,139 +55,350 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label for="estado" class="form-label">Estado:</label>
-                            <select name="estado" id="estado" class="form-select">
+                        <div class="col-12 col-md-3">
+                            <label for="estado" class="form-label fw-semibold text-primary">
+                                <i class="bi bi-circle-fill me-1"></i>Estado
+                            </label>
+                            <select name="estado" id="estado" class="form-select form-select-lg">
                                 <option value="">Todos los estados</option>
                                 {% for estado in estados_disponibles %}
                                 <option value="{{ estado }}" {% if estado_filter == estado %}selected{% endif %}>
-                                    {{ estado }}
+                                    {% if estado == 'ABIERTO' %}
+                                        🟢 {{ estado }}
+                                    {% elif estado == 'CERRADO' %}
+                                        🔴 {{ estado }}
+                                    {% else %}
+                                        {{ estado }}
+                                    {% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label d-block">&nbsp;</label>
-                            <div class="d-grid d-md-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Filtrar
+                        <div class="col-12 col-md-5">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-tribunal-primary btn-lg flex-fill">
+                                    <i class="bi bi-search me-2"></i>Buscar Concursos
                                 </button>
-                                <a href="{{ url_for('public.index') }}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Limpiar
-                                </a>
+                                <button type="button" class="btn btn-tribunal-secondary btn-lg" onclick="clearFilters()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Limpiar
+                                </button>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Active Filters Display -->
+                    {% if departamento_filter or estado_filter %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="text-muted small">Filtros activos:</span>
+                                {% if departamento_filter %}
+                                    {% for depto in departamentos %}
+                                        {% if depto.id|string == departamento_filter %}
+                                        <span class="badge badge-tribunal-info">
+                                            <i class="bi bi-building me-1"></i>{{ depto.nombre }}
+                                            <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" onclick="removeFilter('departamento')"></button>
+                                        </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                {% if estado_filter %}
+                                <span class="badge badge-tribunal-info">
+                                    <i class="bi bi-circle-fill me-1"></i>{{ estado_filter }}
+                                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" onclick="removeFilter('estado')"></button>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </form>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Results Section -->
 {% if concursos %}
-<div class="row">
-    <div class="col-12 mb-3">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> 
-            Se encontraron <strong>{{ concursos|length }}</strong> concurso(s) 
-            {% if departamento_filter or estado_filter %}
-                con los filtros aplicados
-            {% else %}
-                disponibles
-            {% endif %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-tribunal-info">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <span>
+                    Se encontraron <strong>{{ concursos|length }}</strong> concurso(s) 
+                    {% if departamento_filter or estado_filter %}
+                        que coinciden con los filtros aplicados
+                    {% else %}
+                        disponibles para postulación
+                    {% endif %}
+                </span>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Desktop table view -->
+<!-- Enhanced Desktop Table View -->
 <div class="d-none d-lg-block">
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead class="thead-dark bg-dark text-white">
-                <tr>
-                    <th>Departamento</th>
-                    <th>Área</th>
-                    <th>Categoría</th>
-                    <th>Dedicación</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Cierre Inscripción</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for concurso in concursos %}
-                <tr>
-                    <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
-                    <td>{{ concurso.area }}</td>
-                    <td>{{ concurso.categoria_nombre }}</td>
-                    <td>{{ concurso.dedicacion }}</td>
-                    <td><span class="badge bg-{{ 'primary' if concurso.tipo == 'Regular' else 'secondary' }}">{{ concurso.tipo }}</span></td>
-                    <td>
-                        <span class="badge bg-{{ 'success' if concurso.estado_actual == 'ABIERTO' else 'danger' }}">
-                            {{ concurso.estado_actual }}
-                        </span>
-                    </td>
-                    <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</td>
-                    <td>
-                        <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-eye"></i> Ver Detalles
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card tribunal-card">
+        <div class="card-header header-grey-light">
+            <h5 class="mb-0">
+                <i class="bi bi-table me-2"></i>Listado de Concursos
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive tribunal-table">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-semibold">
+                                <i class="bi bi-building me-1"></i>Departamento
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-compass me-1"></i>Área
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-award me-1"></i>Categoría
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-clock me-1"></i>Dedicación
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-tag me-1"></i>Tipo
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-circle-fill me-1"></i>Estado
+                            </th>
+                            <th class="fw-semibold">
+                                <i class="bi bi-calendar-x me-1"></i>Cierre
+                            </th>
+                            <th class="fw-semibold text-center">
+                                <i class="bi bi-gear me-1"></i>Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for concurso in concursos %}
+                        <tr>
+                            <td class="align-middle">
+                                <strong class="text-primary">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</strong>
+                            </td>
+                            <td class="align-middle">{{ concurso.area }}</td>
+                            <td class="align-middle">
+                                <span class="fw-medium">{{ concurso.categoria_nombre }}</span>
+                            </td>
+                            <td class="align-middle">{{ concurso.dedicacion }}</td>
+                            <td class="align-middle">
+                                <span class="badge badge-tribunal-{{ 'primary' if concurso.tipo == 'Regular' else 'secondary' }}">
+                                    {{ concurso.tipo }}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'ABIERTO' else 'warning' }}">
+                                    {% if concurso.estado_actual == 'ABIERTO' %}
+                                        <i class="bi bi-unlock me-1"></i>{{ concurso.estado_actual }}
+                                    {% else %}
+                                        <i class="bi bi-lock me-1"></i>{{ concurso.estado_actual }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                {% if concurso.cierre_inscripcion %}
+                                    <span class="fw-medium">{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}</span>
+                                {% else %}
+                                    <span class="text-muted">No definido</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center">
+                                <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
+                                   class="btn btn-tribunal-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>Ver Detalles
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Mobile card view -->
+<!-- Enhanced Mobile Card View -->
 <div class="d-lg-none">
-    {% for concurso in concursos %}
-    <div class="card mb-3 concurso-card">
-        <div class="card-header d-flex justify-content-between align-items-start">
-            <div>
-                <h6 class="mb-1 fw-bold">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</h6>
-                <small class="text-muted">{{ concurso.area }}</small>
+    <div class="row">
+        {% for concurso in concursos %}
+        <div class="col-12 col-md-6 mb-3">
+            <div class="card tribunal-card h-100">
+                <div class="card-header header-blue-light">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 fw-bold">
+                                <i class="bi bi-building me-2"></i>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}
+                            </h6>
+                            <small class="opacity-75">
+                                <i class="bi bi-compass me-1"></i>{{ concurso.area }}
+                            </small>
+                        </div>
+                        <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'ABIERTO' else 'warning' }} ms-2">
+                            {% if concurso.estado_actual == 'ABIERTO' %}
+                                <i class="bi bi-unlock me-1"></i>{{ concurso.estado_actual }}
+                            {% else %}
+                                <i class="bi bi-lock me-1"></i>{{ concurso.estado_actual }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center text-muted mb-1">
+                                <i class="bi bi-award me-1"></i>
+                                <small>Categoría</small>
+                            </div>
+                            <span class="fw-semibold">{{ concurso.categoria_nombre }}</span>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center text-muted mb-1">
+                                <i class="bi bi-clock me-1"></i>
+                                <small>Dedicación</small>
+                            </div>
+                            <span class="fw-semibold">{{ concurso.dedicacion }}</span>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center text-muted mb-1">
+                                <i class="bi bi-tag me-1"></i>
+                                <small>Tipo</small>
+                            </div>
+                            <span class="badge badge-tribunal-{{ 'primary' if concurso.tipo == 'Regular' else 'secondary' }}">
+                                {{ concurso.tipo }}
+                            </span>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center text-muted mb-1">
+                                <i class="bi bi-calendar-x me-1"></i>
+                                <small>Cierre</small>
+                            </div>
+                            <span class="fw-semibold">
+                                {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid">
+                        <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
+                           class="btn btn-tribunal-primary">
+                            <i class="bi bi-eye me-2"></i>Ver Detalles del Concurso
+                        </a>
+                    </div>
+                </div>
             </div>
-            <span class="badge bg-{{ 'success' if concurso.estado_actual == 'ABIERTO' else 'danger' }} ms-2">
-                {{ concurso.estado_actual }}
-            </span>
         </div>
-        <div class="card-body">
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <small class="text-muted d-block">Categoría</small>
-                    <span class="fw-medium">{{ concurso.categoria_nombre }}</span>
-                </div>
-                <div class="col-6">
-                    <small class="text-muted d-block">Dedicación</small>
-                    <span class="fw-medium">{{ concurso.dedicacion }}</span>
-                </div>
-            </div>
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <small class="text-muted d-block">Tipo</small>
-                    <span class="badge bg-{{ 'primary' if concurso.tipo == 'Regular' else 'secondary' }}">{{ concurso.tipo }}</span>
-                </div>
-                <div class="col-6">
-                    <small class="text-muted d-block">Cierre Inscripción</small>
-                    <span class="fw-medium">{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</span>
-                </div>
-            </div>
-            <div class="d-grid">
-                <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" class="btn btn-primary">
-                    <i class="fas fa-eye"></i> Ver Detalles
-                </a>
-            </div>
-        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
 {% else %}
-<div class="alert alert-info text-center">
-    <h4 class="alert-heading">No hay concursos disponibles</h4>
-    <p>Actualmente no hay concursos docentes disponibles.</p>
+<!-- No Results State -->
+<div class="row">
+    <div class="col-12">
+        <div class="card tribunal-card text-center">
+            <div class="card-body py-5">
+                <div class="mb-4">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                </div>
+                <h4 class="text-muted mb-3">No se encontraron concursos</h4>
+                <p class="text-muted mb-4">
+                    {% if departamento_filter or estado_filter %}
+                        No hay concursos que coincidan con los filtros seleccionados.
+                        <br>Intente modificar los criterios de búsqueda.
+                    {% else %}
+                        Actualmente no hay concursos docentes disponibles para postulación.
+                    {% endif %}
+                </p>
+                {% if departamento_filter or estado_filter %}
+                <button type="button" class="btn btn-tribunal-primary" onclick="clearFilters()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Limpiar Filtros
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form when filters change
+    const filterForm = document.getElementById('filterForm');
+    const selects = filterForm.querySelectorAll('select');
+    
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            // Add a small delay to show the change visually
+            this.style.opacity = '0.7';
+            setTimeout(() => {
+                filterForm.submit();
+            }, 200);
+        });
+    });
+    
+    // Mobile filter collapse behavior
+    const filterToggle = document.querySelector('[data-bs-toggle="collapse"]');
+    const filterSection = document.getElementById('filterSection');
+    
+    if (filterToggle && filterSection) {
+        filterSection.addEventListener('show.bs.collapse', function() {
+            filterToggle.innerHTML = '<i class="bi bi-chevron-up"></i>';
+        });
+        
+        filterSection.addEventListener('hide.bs.collapse', function() {
+            filterToggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+        });
+    }
+});
+
+function clearFilters() {
+    window.location.href = "{{ url_for('public.index') }}";
+}
+
+function removeFilter(filterName) {
+    const form = document.getElementById('filterForm');
+    const input = form.querySelector(`[name="${filterName}"]`);
+    if (input) {
+        input.value = '';
+        form.submit();
+    }
+}
+
+// Add loading state to buttons
+document.addEventListener('submit', function(e) {
+    if (e.target.id === 'filterForm') {
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Buscando...';
+            submitBtn.disabled = true;
+        }
+    }
+});
+
+// Add smooth hover effects
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.tribunal-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
 {% endblock %}
