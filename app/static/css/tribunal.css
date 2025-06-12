@@ -27,13 +27,13 @@
 }
 
 .header-orange { 
-    background-color: #0891b2; 
+    background-color: #2563eb; 
     color: white; 
 }
 
 .header-orange-light { 
-    background-color: #cff7fe; 
-    color: #0e7490; 
+    background-color: #dbeafe; 
+    color: #1e40af; 
 }
 
 /* Button styles for tribunal */
@@ -76,22 +76,22 @@
 }
 
 .btn-tribunal-accent { 
-    background-color: #0891b2; 
-    border-color: #0891b2; 
+    background-color: #2563eb; 
+    border-color: #2563eb; 
     color: white; 
 }
 
 .btn-tribunal-accent:hover { 
-    background-color: #0e7490; 
-    border-color: #0e7490; 
+    background-color: #1e40af; 
+    border-color: #1e40af; 
     color: white;
 }
 
 .btn-tribunal-accent:focus {
-    background-color: #0e7490; 
-    border-color: #0e7490; 
+    background-color: #1e40af; 
+    border-color: #1e40af; 
     color: white;
-    box-shadow: 0 0 0 0.2rem rgba(8, 145, 178, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
 /* Small button enhancements */
@@ -209,9 +209,9 @@ span.badge.badge-tribunal-info,
 .badge.badge-tribunal-info,
 table .badge.badge-tribunal-info,
 .tribunal-table .badge.badge-tribunal-info { 
-    background-color: #0891b2 !important; 
+    background-color: #2563eb !important; 
     color: white !important;
-    border: 1px solid #0e7490 !important;
+    border: 1px solid #1e40af !important;
     background-image: none !important;
 }
 
@@ -522,7 +522,7 @@ table .badge.badge-tribunal-info,
 }
 
 .tribunal-access {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     border: none;
     border-radius: 0.75rem;
     padding: 1.5rem;
@@ -553,7 +553,7 @@ table .badge.badge-tribunal-info,
 }
 
 .btn-tribunal-primary {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     border: none;
     border-radius: 0.5rem;
     padding: 0.75rem 2rem;
@@ -601,14 +601,14 @@ table .badge.badge-tribunal-info,
 .tribunal-login-card {
     border: none;
     border-radius: 1rem;
-    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.15);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15);
     overflow: hidden;
     max-width: 450px;
     margin: 0 auto;
 }
 
 .tribunal-login-header {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
     padding: 2rem;
     text-align: center;
@@ -616,22 +616,22 @@ table .badge.badge-tribunal-info,
 
 .tribunal-login-body {
     padding: 2rem;
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(251, 146, 60, 0.02) 100%);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.02) 0%, rgba(59, 130, 246, 0.02) 100%);
 }
 
 .form-control {
-    border: 2px solid rgba(249, 115, 22, 0.1);
+    border: 2px solid rgba(37, 99, 235, 0.1);
     border-radius: 0.5rem;
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
 }
 
-.form-control:focus {    border-color: #0891b2;
-    box-shadow: 0 0 0 0.2rem rgba(8, 145, 178, 0.25);
+.form-control:focus {    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
 .btn-tribunal-login {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     border: none;
     border-radius: 0.5rem;
     padding: 0.75rem 2rem;
@@ -643,12 +643,12 @@ table .badge.badge-tribunal-info,
 
 .btn-tribunal-login:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
     color: white;
 }
 
 .tribunal-links {
-    background: rgba(8, 145, 178, 0.05);
+    background: rgba(37, 99, 235, 0.05);
     border-radius: 0.75rem;
     padding: 1.5rem;
     margin-top: 1.5rem;
@@ -656,14 +656,14 @@ table .badge.badge-tribunal-info,
 }
 
 .tribunal-links a {
-    color: #0891b2;
+    color: #2563eb;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .tribunal-links a:hover {
-    color: #ea580c;
+    color: #1e40af;
     text-decoration: underline;
 }
 
