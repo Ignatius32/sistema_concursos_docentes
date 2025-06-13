@@ -75,30 +75,59 @@
                     </div>
                 </div>
             </div>
-            
-            {# Add a section for Admin specific fields like is_admin and cargo #}
+              {# Keycloak Account Management Section #}
             <div class="row mb-3">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0">Credenciales y Rol de Administrador</h5>
+                            <h5 class="mb-0">
+                                <i class="bi bi-shield-check"></i> 
+                                Configuración de Cuenta
+                            </h5>
                         </div>
                         <div class="card-body">
-                            {# Assuming username/password are not directly editable here for simplicity, focus on is_admin and cargo #}
-                            {# If you allow editing username/password, add those fields too #}
-                             <div class="form-check mb-3">
+                            {% if persona.keycloak_user_id %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i>
+                                <strong>Cuenta Keycloak:</strong> 
+                                Esta persona tiene una cuenta vinculada en Keycloak.
+                                <br>
+                                <small>ID: {{ persona.keycloak_user_id }}</small>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Sin cuenta Keycloak:</strong> 
+                                Esta persona no tiene una cuenta vinculada en Keycloak. 
+                                Considere crear una cuenta si necesita acceso al sistema.
+                            </div>
+                            {% endif %}
+                            
+                            <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" {% if persona.is_admin %}checked{% endif %}>
                                 <label class="form-check-label" for="is_admin">
-                                    Es Administrador
+                                    <i class="bi bi-person-gear"></i> Es Administrador
                                 </label>
+                                <div class="form-text">
+                                    Los administradores tendrán acceso completo al sistema de gestión.
+                                </div>
                             </div>
+                            
                             <div id="cargo_field_container_edit" class="mb-3" {% if not persona.is_admin %}style="display: none;"{% endif %}>
                                 <label for="cargo" class="form-label">Cargo</label>
-                                <input type="text" class="form-control" id="cargo" name="cargo" value="{{ persona.cargo or '' }}">
+                                <input type="text" class="form-control" id="cargo" name="cargo" value="{{ persona.cargo or '' }}" placeholder="Ej: Director de Departamento, Secretario Académico">
                                 <div class="form-text">
                                     Especifique el cargo o rol del administrador.
                                 </div>
                             </div>
+                            
+                            {% if persona.keycloak_user_id %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Nota:</strong> 
+                                Los cambios en el rol de administrador se sincronizarán automáticamente con Keycloak.
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

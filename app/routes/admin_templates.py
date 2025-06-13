@@ -2,8 +2,8 @@
 Routes for template management in the admin area.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app.models.models import db, DocumentTemplateConfig, User
+from app.models.models import db, DocumentTemplateConfig
+from app.utils.keycloak_auth import keycloak_login_required, admin_required
 from werkzeug.exceptions import Forbidden
 import json
 from datetime import datetime
@@ -53,19 +53,12 @@ class TemplateForm(FlaskForm):
                                              render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})
     submit = SubmitField('Guardar')
 
-# Access control decorator
-def admin_required(f):
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('No tienes permiso para acceder a esta área.', 'danger')
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
+# Access control decorator - now using Keycloak auth directly in routes
+# The admin_required decorator from keycloak_auth handles both authentication and authorization
 
 # Routes
 @admin_templates_bp.route('/')
-@login_required
+@keycloak_login_required
 @admin_required
 def index():
     """List all templates"""
@@ -73,7 +66,7 @@ def index():
     return render_template('admin_templates/index.html', templates=templates)
 
 @admin_templates_bp.route('/nuevo', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
 @admin_required
 def nuevo():
     """Add a new template"""
@@ -112,7 +105,7 @@ def nuevo():
     return render_template('admin_templates/form.html', form=form, action='nuevo')
 
 @admin_templates_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
 @admin_required
 def editar(id):
     """Edit an existing template"""
@@ -134,7 +127,7 @@ def editar(id):
     return render_template('admin_templates/form.html', form=form, template=template, action='editar')
 
 @admin_templates_bp.route('/eliminar/<int:id>', methods=['POST'])
-@login_required
+@keycloak_login_required
 @admin_required
 def eliminar(id):
     """Delete a template"""

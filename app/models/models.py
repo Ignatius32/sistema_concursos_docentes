@@ -66,38 +66,25 @@ class Persona(db.Model, UserMixin):
     apellido = db.Column(db.String(100), nullable=False)
     correo = db.Column(db.String(100))
     telefono = db.Column(db.String(20), nullable=True)
-    username = db.Column(db.String(50), nullable=True, unique=True)
-    password_hash = db.Column(db.String(128), nullable=True)
-    reset_token = db.Column(db.String(100), nullable=True)
+    username = db.Column(db.String(50), nullable=True, unique=True)    # Password fields removed - authentication handled by Keycloak
+    # password_hash = db.Column(db.String(128), nullable=True)  # DEPRECATED - Removed for Keycloak
+    # reset_token = db.Column(db.String(100), nullable=True)   # DEPRECATED - Removed for Keycloak
     ultimo_acceso = db.Column(db.DateTime, nullable=True)
     cv_drive_file_id = db.Column(db.String(100), nullable=True)
     cv_drive_web_link = db.Column(db.String(255), nullable=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     cargo = db.Column(db.String(100), nullable=True) 
     
+    # Keycloak integration
+    keycloak_user_id = db.Column(db.String(36), unique=True, nullable=True, index=True)
+    
     # Relationships
     asignaciones = db.relationship('TribunalMiembro', back_populates='persona', lazy='dynamic')
-    
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        if self.password_hash is None: # Ensure password_hash exists
-            return False
-        return check_password_hash(self.password_hash, password)
-    
-    def generate_reset_token(self):
-        """Generate a unique token for password setup."""
-        from secrets import token_urlsafe
-        self.reset_token = token_urlsafe(32)
-        return self.reset_token
-    
-    def check_reset_token(self, token):
-        """Check if a reset token is valid."""
-        if not self.reset_token or self.reset_token != token:
-            return False
-        # Could add expiration check here if needed
-        return True
+      # Password-related methods removed - authentication handled by Keycloak
+    # def set_password(self, password): - DEPRECATED
+    # def check_password(self, password): - DEPRECATED  
+    # def generate_reset_token(self): - DEPRECATED
+    # def check_reset_token(self, token): - DEPRECATED
     def get_concursos(self):
         """Get all concursos this person is assigned to."""
         # This joins with TribunalMiembro and returns the Concurso objects

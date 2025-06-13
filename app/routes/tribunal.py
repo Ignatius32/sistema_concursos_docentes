@@ -1,9 +1,19 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, send_file, current_app, g
 from app.models.models import db, Concurso, TribunalMiembro, Recusacion, DocumentoTribunal, HistorialEstado, DocumentoConcurso, FirmaDocumento, Persona, Postulante, Sustanciacion, Categoria, DocumentoPostulante
 from app.integrations.google_drive import GoogleDriveAPI
+from app.integrations.keycloak_admin_client import KeycloakAdminClient
 from app.helpers.pdf_utils import add_signature_stamp, verify_signed_pdf, merge_postulante_documents
 from app.helpers.api_services import get_asignaturas_from_external_api
+from app.utils.keycloak_auth import (
+    keycloak_login_required, 
+    admin_required, 
+    tribunal_required,
+    get_current_user_info,
+    get_current_user_email,
+    get_current_user_name,
+    get_current_username
+)
+from app.config.keycloak_config import KeycloakConfig
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -13,40 +23,9 @@ import os
 import json
 import base64
 import io
-import random
-import string
-import string
-import random
-import io
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
 drive_api = GoogleDriveAPI()
-
-# Helper function to generate a random password
-def generate_random_password(length=10):
-    characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for i in range(length))
-
-# Helper function to generate a username from name and last name
-def generate_username(nombre, apellido, dni=None):
-    # Remove special characters and spaces
-    nombre = ''.join(e for e in nombre if e.isalnum()).lower()
-    apellido = ''.join(e for e in apellido if e.isalnum()).lower()
-    
-    # Create base username
-    base_username = f"{nombre[0]}{apellido}"[:15]  # First letter of name + last name, max 15 chars
-    
-    # Check if username exists in Persona table instead of TribunalMiembro
-    existing = Persona.query.filter(Persona.username.like(f"{base_username}%")).all()
-    
-    if not existing:
-        return base_username
-    
-    # If username exists, add last digits of DNI or a random number
-    if dni and len(dni) >= 3:
-        return f"{base_username}{dni[-3:]}"
-    else:
-        return f"{base_username}{random.randint(100, 999)}"
 
 def tribunal_login_required(f):
     @wraps(f)
@@ -58,7 +37,7 @@ def tribunal_login_required(f):
     return decorated_function
 
 @tribunal.route('/concurso/<int:concurso_id>')
-@login_required
+@admin_required
 def index(concurso_id):
     """Display tribunal members for a specific concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -66,42 +45,36 @@ def index(concurso_id):
     return render_template('tribunal/index.html', concurso=concurso, miembros=miembros)
 
 @tribunal.route('/concurso/<int:concurso_id>/agregar', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def agregar(concurso_id):
-    """Add a new member to the tribunal of a concurso."""
+    """Add an existing member to the tribunal of a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if request.method == 'POST':
-        try:              # Extract form data
+        try:
+            # Extract form data
             rol = request.form.get('rol')
             claustro = request.form.get('claustro')
-            nombre = request.form.get('nombre')
-            apellido = request.form.get('apellido')
-            dni = request.form.get('dni')
-            correo = request.form.get('correo')
-            telefono = request.form.get('telefono')
+            persona_id = request.form.get('persona_id')
             
-            # First, find or create a Persona based on DNI
-            persona = Persona.query.filter_by(dni=dni).first()
-            
-            if persona:
-                # Update persona details if they've changed
-                if persona.nombre != nombre or persona.apellido != apellido or persona.correo != correo or persona.telefono != telefono:
-                    persona.nombre = nombre
-                    persona.apellido = apellido
-                    persona.correo = correo
-                    persona.telefono = telefono
-            else:                # Create new persona
-                persona = Persona(
-                    dni=dni,
-                    nombre=nombre,
-                    apellido=apellido,
-                    correo=correo,
-                    telefono=telefono,
-                    username=dni  # Use DNI as username by default
-                )
-                db.session.add(persona)
-                db.session.flush()  # To get the persona ID
+            if not persona_id:
+                flash('Debe seleccionar una persona existente.', 'danger')
+                return render_template('tribunal/agregar.html', concurso=concurso)
+              # Find the existing persona
+            persona = Persona.query.get_or_404(persona_id)
+              # Ensure user has tribunal role in Keycloak
+            if persona.keycloak_user_id:
+                try:
+                    # Assign tribunal role if not already assigned
+                    keycloak_admin = KeycloakAdminClient()
+                    # Check if user already has the tribunal role
+                    if not keycloak_admin.has_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE):
+                        keycloak_admin.assign_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE)
+                        current_app.logger.info(f"Assigned tribunal role to user {persona.keycloak_user_id}")
+                    else:
+                        current_app.logger.info(f"User {persona.keycloak_user_id} already has tribunal role")
+                except Exception as e:
+                    current_app.logger.warning(f"Could not assign tribunal role to user {persona.keycloak_user_id}: {e}")
             
             # Check if this persona is already assigned to this concurso
             existing_assignment = TribunalMiembro.query.filter_by(
@@ -110,16 +83,16 @@ def agregar(concurso_id):
             ).first()
             
             if existing_assignment:
-                flash(f'La persona {nombre} {apellido} ya está asignada a este concurso como {existing_assignment.rol}.', 'warning')
+                flash(f'La persona {persona.nombre} {persona.apellido} ya está asignada a este concurso como {existing_assignment.rol}.', 'warning')
                 return redirect(url_for('tribunal.index', concurso_id=concurso_id))
             
             # Create Google Drive folder for tribunal member
-            folder_name = f"{rol}_{apellido}_{nombre}_{dni}"
+            folder_name = f"{rol}_{persona.apellido}_{persona.nombre}_{persona.dni}"
             folder_id = drive_api.create_tribunal_folder(
                 parent_folder_id=concurso.tribunal_folder_id,
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
+                nombre=persona.nombre,
+                apellido=persona.apellido,
+                dni=persona.dni,
                 rol=rol
             )
             
@@ -150,21 +123,24 @@ def agregar(concurso_id):
                 miembro.can_view_postulante_docs = False
             
             db.session.add(miembro)
-            db.session.commit()
-            
-            flash('Miembro del tribunal agregado exitosamente. Use el botón "Notificar Tribunal" para enviarle el enlace de activación.', 'success')
+            db.session.commit()            
+            flash('Miembro del tribunal asignado exitosamente.', 'success')
             return redirect(url_for('tribunal.index', concurso_id=concurso_id))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al agregar miembro del tribunal: {str(e)}', 'danger')
+            flash(f'Error al asignar miembro del tribunal: {str(e)}', 'danger')
     
-    return render_template('tribunal/agregar.html', concurso=concurso)
+    # Get available personas for the dropdown (exclude those already assigned to this concurso)
+    assigned_persona_ids = db.session.query(TribunalMiembro.persona_id).filter_by(concurso_id=concurso_id).subquery()
+    available_personas = Persona.query.filter(~Persona.id.in_(assigned_persona_ids)).order_by(Persona.apellido, Persona.nombre).all()
+    
+    return render_template('tribunal/agregar.html', concurso=concurso, available_personas=available_personas)
 
 @tribunal.route('/<int:miembro_id>/editar', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def editar(miembro_id):
-    """Edit an existing tribunal member."""
+    """Edit tribunal member assignment (rol, claustro, and permissions only)."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
     concurso = Concurso.query.get_or_404(miembro.concurso_id)
     persona = miembro.persona
@@ -172,84 +148,35 @@ def editar(miembro_id):
     if request.method == 'POST':
         try:            
             old_rol = miembro.rol
-              # Update persona data
-            persona.nombre = request.form.get('nombre')
-            persona.apellido = request.form.get('apellido')
-            persona.dni = request.form.get('dni')
-            persona.correo = request.form.get('correo')
-            persona.telefono = request.form.get('telefono')
-            persona.username = persona.dni  # Keep username as DNI
             
-            # Update assignment data
+            # Update ONLY tribunal assignment data (not personal information)
+            # Personal info (name, surname, DNI, email, phone) should be edited through admin_personas
             miembro.rol = request.form.get('rol')
             miembro.claustro = request.form.get('claustro')
-              # Handle permission checkboxes
+            
+            # Handle permission checkboxes
             miembro.can_add_tema = 'can_add_tema' in request.form
             miembro.can_upload_file = 'can_upload_file' in request.form
             miembro.can_sign_file = 'can_sign_file' in request.form
             miembro.can_view_postulante_docs = 'can_view_postulante_docs' in request.form
             
-            # Update Drive folder name if needed
-            if miembro.drive_folder_id:
+            # Update Drive folder name if role changed
+            if miembro.drive_folder_id and old_rol != miembro.rol:
                 new_folder_name = f"{miembro.rol}_{persona.apellido}_{persona.nombre}_{persona.dni}"
                 drive_api.update_folder_name(miembro.drive_folder_id, new_folder_name)
-            
-            # Handle password reset if requested
-            if 'regenerate_password' in request.form:
-                # Generate reset token
-                reset_token = persona.generate_reset_token()
-                reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-                
-                # Send password reset email
-                subject = f"Configuración de Nueva Contraseña - Portal de Tribunal"
-                message = f"""
-                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-                
-                <p>Se solicita establecer una nueva contraseña para su cuenta en el sistema de concursos docentes.</p>    
-
-                <p>Para configurar su nueva contraseña, haga clic en el siguiente enlace:</p>
-                
-                <p><a href="{reset_url}">Configurar Nueva Contraseña</a></p>
-                
-                <p>Este enlace es válido solo por un tiempo limitado y se desactivará después de configurar su contraseña.</p>
-                
-                <p>Si no solicitó este cambio, puede ignorar este correo.</p>
-                
-                <p>Saludos cordiales,<br>
-                Sistema de Concursos Docentes</p>
-                """
-                
-                try:
-                    drive_api.send_email(
-                        to_email=persona.correo,
-                        subject=subject,
-                        html_body=message,
-                        sender_name='Sistema de Concursos Docentes'
-                    )
-                    flash('Se ha enviado un enlace de configuración de contraseña al correo del miembro.', 'success')
-                except Exception as e:
-                    flash(f'Error al enviar el correo: {str(e)}', 'warning')
 
             db.session.commit()
-
-            # If this person is currently logged in, update their session data
-            if 'persona_id' in session and session['persona_id'] == persona.id:
-                session['tribunal_nombre'] = f"{persona.nombre} {persona.apellido}"
-                # Update the role in session if it changed
-                if 'tribunal_rol' not in session or old_rol != miembro.rol:
-                    session['tribunal_rol'] = miembro.rol
-
-            flash('Miembro del tribunal actualizado exitosamente.', 'success')
+            flash('Asignación de tribunal actualizada exitosamente. Para modificar datos personales, use la sección Administrar Personas.', 'success')
             return redirect(url_for('tribunal.index', concurso_id=miembro.concurso_id))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar miembro del tribunal: {str(e)}', 'danger')
+            flash(f'Error al actualizar la asignación de tribunal: {str(e)}', 'danger')
     
     return render_template('tribunal/editar.html', miembro=miembro, persona=persona, concurso=concurso)
 
 @tribunal.route('/<int:miembro_id>/eliminar', methods=['POST'])
-@login_required
+@admin_required
 def eliminar(miembro_id):
     """Delete a tribunal member assignment (but not the Persona record)."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
@@ -273,7 +200,7 @@ def eliminar(miembro_id):
     return redirect(url_for('tribunal.index', concurso_id=concurso_id))
 
 @tribunal.route('/<int:miembro_id>/recusar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
 def recusar(miembro_id):
     """Submit a recusation against a tribunal member."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
@@ -302,7 +229,7 @@ def recusar(miembro_id):
     return render_template('tribunal/recusar.html', miembro=miembro, concurso=concurso)
 
 @tribunal.route('/<int:miembro_id>/subir-documento', methods=['POST'])
-@login_required
+@tribunal_required
 def subir_documento(miembro_id):
     """Upload a document for a tribunal member."""
     miembro = TribunalMiembro.query.get_or_404(miembro_id)
@@ -356,7 +283,7 @@ def subir_documento(miembro_id):
 
 
 @tribunal.route('/notificar-tribunal/<int:concurso_id>/<int:documento_id>', methods=['POST'])
-@login_required
+@admin_required
 def notificar_tribunal(concurso_id, documento_id):
     """Notify tribunal members with their credentials after acta constitución is generated."""
     try:
@@ -367,70 +294,58 @@ def notificar_tribunal(concurso_id, documento_id):
         if documento.tipo != 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR':
             flash('Este documento no es un Acta de Constitución de Tribunal Regular.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-          # Get only non-suplente members
+            
+        # Initialize Keycloak admin client
+        keycloak_admin = KeycloakAdminClient()
+        
+        # Get only non-suplente members
         miembros = TribunalMiembro.query.filter(
             TribunalMiembro.concurso_id == concurso_id,
             TribunalMiembro.rol != 'Suplente'
         ).join(Persona).all()
         
+        notificados = 0
+        errores = []
+        
         for miembro in miembros:
             persona = miembro.persona
             if not persona.correo:
-                flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
+                errores.append(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.')
                 continue
+            
+            try:
+                # Find user in Keycloak by email
+                keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+                if not keycloak_user:
+                    errores.append(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.')
+                    continue
                 
-            # Ensure username is DNI
-            persona.username = persona.dni
-              # Generate reset token for password setup
-            reset_token = persona.generate_reset_token()
-            reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-            
-            # Prepare email content
-            subject = f"Credenciales de Acceso - Tribunal Concurso #{concurso.id}"
-            message = f"""
-            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-            
-            <p>Por medio de la presente, le informo que ha sido designado/a como miembro del tribunal para el 
-            Concurso #{concurso.id} del Departamento de {concurso.departamento_rel.nombre}, Área {concurso.area}, 
-            cargo {concurso.categoria} {concurso.dedicacion}.</p>
-            
-            <p><strong>Sus credenciales de acceso:</strong></p>
-            <ul>
-                <li><strong>Usuario:</strong> {persona.username}</li>
-                <li>Para configurar su contraseña, haga clic en el siguiente enlace: 
-                    <a href="{reset_url}">Configurar Contraseña</a>
-                </li>
-            </ul>
-            
-            <p>Este enlace es válido solo por un tiempo limitado y se desactivará después de configurar su contraseña.</p>
-            
-            <p>Una vez configurada su contraseña, puede ingresar al sistema en: 
-            <a href="{request.host_url}tribunal/acceso">Portal de Tribunal</a></p>
-            
-            <p><strong>Información del Concurso:</strong></p>
-            <ul>
-                <li>Departamento: {concurso.departamento_rel.nombre}</li>
-                <li>Área: {concurso.area}</li>
-                <li>Orientación: {concurso.orientacion}</li>                <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
-                <li>Dedicación: {concurso.dedicacion}</li>
-                <li>Su rol: {miembro.rol}</li>
-            </ul>
-            """
-            
-            # Send email
-            drive_api.send_email(
-                to_email=persona.correo,
-                subject=subject,
-                html_body=message,
-                sender_name='Sistema de Concursos Docentes'
-            )
-            
-            # Update notification status
-            miembro.notificado = True
-            miembro.fecha_notificacion = datetime.utcnow()
+                # Send password reset email via Keycloak
+                success = keycloak_admin.send_execute_actions_email_with_redirect(
+                    user_id=keycloak_user['id'],
+                    actions=['UPDATE_PASSWORD']
+                )
+                
+                if success:
+                    # Update notification status
+                    miembro.notificado = True
+                    miembro.fecha_notificacion = datetime.utcnow()
+                    notificados += 1
+                else:
+                    errores.append(f'Error al enviar email a {persona.nombre} {persona.apellido}.')
+                    
+            except Exception as e:
+                errores.append(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}')
         
         db.session.commit()
-        flash('Correos de configuración de contraseña enviados exitosamente a todos los miembros del tribunal (excepto suplentes).', 'success')
+        
+        # Show results
+        if notificados > 0:
+            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal (excepto suplentes) via Keycloak.', 'success')
+        
+        if errores:
+            for error in errores:
+                flash(error, 'warning')
         
     except Exception as e:
         db.session.rollback()
@@ -439,12 +354,15 @@ def notificar_tribunal(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @tribunal.route('/concurso/<int:concurso_id>/notificar-todos', methods=['POST'])
-@login_required
+@admin_required
 def notificar_todos_miembros(concurso_id):
     """Notify all tribunal members with their credentials."""
     try:
         concurso = Concurso.query.get_or_404(concurso_id)
         miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
+        
+        # Initialize Keycloak admin client
+        keycloak_admin = KeycloakAdminClient()
         
         notificados = 0
         errores = []
@@ -460,133 +378,34 @@ def notificar_todos_miembros(concurso_id):
                 errores.append(f'{persona.nombre} {persona.apellido} no tiene correo registrado')
                 continue
             
-            # Set username as DNI
-            persona.username = persona.dni
-            
-            # Check if persona already has a password set
-            has_password = persona.password_hash is not None
-            
-            if has_password:
-                # Send login page link for users who already have passwords
-                reset_url = url_for('tribunal.acceso', _external=True)
-                subject = f"Designación en Tribunal - Concurso #{concurso.id} - Acceso al Portal"
+            try:                # Find user in Keycloak by email
+                keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+                if not keycloak_user:
+                    errores.append(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.')
+                    continue
                 
-                message = f"""
-                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+                # Send password reset email via Keycloak
+                success = keycloak_admin.send_execute_actions_email_with_redirect(
+                    user_id=keycloak_user['id'],
+                    actions=['UPDATE_PASSWORD']
+                )
                 
-                <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
-                
-                <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
-                    <h4>CONCURSO #{concurso.id}</h4>
-                    <ul style="margin: 0; padding-left: 20px;">
-                        <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
-                        <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
-                        <li><strong>Área:</strong> {concurso.area}</li>
-                        <li><strong>Orientación:</strong> {concurso.orientacion}</li>
-                        <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
-                        <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
-                        <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
-                        {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
-                        {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
-                        {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
-                        {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
-                    </ul>
-                </div>
-                
-                <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
-                <ul>
-                    <li>Consultar toda la documentación del concurso</li>
-                    <li>Acceder a los expedientes de los postulantes</li>
-                    <li>Participar en el proceso de evaluación</li>
-                    <li>Gestionar la documentación del tribunal</li>
-                    <li>Mantenerse informado sobre el cronograma y sustanciación</li>
-                </ul>
-                
-                <p><strong>Para acceder al sistema:</strong></p>
-                <div style="background-color: #e9f7ef; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                    <p><strong>🔗 Portal de Tribunal:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>{reset_url}</strong></a></p>
-                    <p><strong>👤 Su usuario:</strong> {persona.username}</p>
-                    <p><em>Utilice la contraseña que ya tiene configurada</em></p>
-                </div>
-                """
-            else:
-                # Generate reset token for password setup
-                reset_token = persona.generate_reset_token()
-                reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-                subject = f"Designación en Tribunal - Concurso #{concurso.id} - Configuración de Acceso"
-                
-                message = f"""
-                <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-                
-                <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
-                
-                <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
-                    <h4>CONCURSO #{concurso.id}</h4>
-                    <ul style="margin: 0; padding-left: 20px;">
-                        <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
-                        <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
-                        <li><strong>Área:</strong> {concurso.area}</li>
-                        <li><strong>Orientación:</strong> {concurso.orientacion}</li>
-                        <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
-                        <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
-                        <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
-                        {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
-                        {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
-                        {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
-                        {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
-                    </ul>
-                </div>
-                
-                <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
-                <ul>
-                    <li>Consultar toda la documentación del concurso</li>
-                    <li>Acceder a los expedientes de los postulantes</li>
-                    <li>Participar en el proceso de evaluación</li>
-                    <li>Gestionar la documentación del tribunal</li>
-                    <li>Mantenerse informado sobre el cronograma y sustanciación</li>
-                </ul>
-                
-                <p><strong>Para acceder al sistema debe configurar su contraseña:</strong></p>
-                <div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                    <p><strong>👤 Su usuario:</strong> {persona.username}</p>
-                    <p><strong>🔑 Configurar contraseña:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>Hacer clic aquí</strong></a></p>
-                    <p><em>Este enlace es válido por tiempo limitado y se desactivará después de configurar su contraseña.</em></p>
-                </div>
-                
-                <p>Una vez configurada su contraseña, podrá ingresar al sistema en: 
-                <a href="{url_for('tribunal.acceso', _external=True)}" style="color: #007bff;">Portal de Tribunal</a></p>
-                """
-            
-            # Add concurso information
-            message += f"""
-            <p><strong>Información del Concurso #{concurso.id}:</strong></p>
-            <ul>
-                <li>Departamento: {concurso.departamento_rel.nombre}</li>
-                <li>Área: {concurso.area}</li>
-                <li>Orientación: {concurso.orientacion}</li>
-                <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
-                <li>Dedicación: {concurso.dedicacion}</li>
-                <li>Su rol: {miembro.rol}</li>
-            </ul>
-            """
-            
-            # Send email
-            drive_api.send_email(
-                to_email=persona.correo,
-                subject=subject,
-                html_body=message,
-                sender_name='Sistema de Concursos Docentes'
-            )
-            
-            # Update notification status
-            miembro.notificado = True
-            miembro.fecha_notificacion = datetime.utcnow()
+                if success:
+                    # Update notification status
+                    miembro.notificado = True
+                    miembro.fecha_notificacion = datetime.utcnow()
+                    notificados += 1
+                else:
+                    errores.append(f'Error al enviar email a {persona.nombre} {persona.apellido}.')
+                    
+            except Exception as e:
+                errores.append(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}')
         
         db.session.commit()
         
         # Show results
         if notificados > 0:
-            flash(f'Credenciales enviadas exitosamente a {notificados} miembros del tribunal.', 'success')
+            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal via Keycloak.', 'success')
         
         if errores:
             for error in errores:
@@ -599,7 +418,7 @@ def notificar_todos_miembros(concurso_id):
     return redirect(url_for('tribunal.index', concurso_id=concurso_id))
 
 @tribunal.route('/<int:miembro_id>/notificar', methods=['POST'])
-@login_required
+@admin_required
 def notificar_miembro(miembro_id):
     """Notify a single tribunal member with their credentials."""
     try:
@@ -611,129 +430,33 @@ def notificar_miembro(miembro_id):
             flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
             return redirect(url_for('tribunal.index', concurso_id=concurso.id))
         
-        # Set username as DNI
-        persona.username = persona.dni
-          # Check if persona already has a password set
-        has_password = persona.password_hash is not None
+        # Initialize Keycloak admin client
+        keycloak_admin = KeycloakAdminClient()
         
-        if has_password:
-            # Send login page link for users who already have passwords
-            reset_url = url_for('tribunal.acceso', _external=True)
-            subject = f"Designación en Tribunal - Concurso #{concurso.id} - Acceso al Portal"
+        try:
+            # Find user in Keycloak by email
+            keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+            if not keycloak_user:
+                flash(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.', 'warning')
+                return redirect(url_for('tribunal.index', concurso_id=concurso.id))
             
-            message = f"""
-            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+            # Send password reset email via Keycloak
+            success = keycloak_admin.send_execute_actions_email_with_redirect(
+                user_id=keycloak_user['id'],
+                actions=['UPDATE_PASSWORD']
+            )
             
-            <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
-                <h4>CONCURSO #{concurso.id}</h4>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
-                    <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
-                    <li><strong>Área:</strong> {concurso.area}</li>
-                    <li><strong>Orientación:</strong> {concurso.orientacion}</li>
-                    <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
-                    <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
-                    <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
-                    {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
-                    {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
-                    {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
-                    {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
-                </ul>
-            </div>
-            
-            <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
-            <ul>
-                <li>Consultar toda la documentación del concurso</li>
-                <li>Acceder a los expedientes de los postulantes</li>
-                <li>Participar en el proceso de evaluación</li>
-                <li>Gestionar la documentación del tribunal</li>
-                <li>Mantenerse informado sobre el cronograma y sustanciación</li>
-            </ul>
-            
-            <p><strong>Para acceder al sistema:</strong></p>
-            <div style="background-color: #e9f7ef; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                <p><strong>🔗 Portal de Tribunal:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>{reset_url}</strong></a></p>
-                <p><strong>👤 Su usuario:</strong> {persona.username}</p>
-                <p><em>Utilice la contraseña que ya tiene configurada</em></p>
-            </div>
-            """
-        else:
-            # Generate reset token for password setup
-            reset_token = persona.generate_reset_token()
-            reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-            subject = f"Designación en Tribunal - Concurso #{concurso.id} - Configuración de Acceso"
-            
-            message = f"""
-            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-            
-            <p><strong>Ha sido designado/a como {miembro.rol.upper()} del Tribunal Evaluador</strong> para el siguiente concurso docente:</p>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff;">
-                <h4>CONCURSO #{concurso.id}</h4>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <li><strong>Tipo:</strong> {concurso.tipo} - {concurso.cerrado_abierto}</li>
-                    <li><strong>Departamento:</strong> {concurso.departamento_rel.nombre}</li>
-                    <li><strong>Área:</strong> {concurso.area}</li>
-                    <li><strong>Orientación:</strong> {concurso.orientacion}</li>
-                    <li><strong>Categoría:</strong> {concurso.categoria_nombre} ({concurso.categoria})</li>
-                    <li><strong>Dedicación:</strong> {concurso.dedicacion}</li>
-                    <li><strong>Cantidad de cargos:</strong> {concurso.cant_cargos}</li>
-                    {f'<li><strong>Expediente:</strong> {concurso.expediente}</li>' if concurso.expediente else ''}
-                    {f'<li><strong>Resolución Llamado (Interino):</strong> {concurso.nro_res_llamado_interino}</li>' if concurso.nro_res_llamado_interino else ''}
-                    {f'<li><strong>Resolución Llamado (Regular):</strong> {concurso.nro_res_llamado_regular}</li>' if concurso.nro_res_llamado_regular else ''}
-                    {f'<li><strong>Resolución Tribunal:</strong> {concurso.nro_res_tribunal_regular}</li>' if concurso.nro_res_tribunal_regular else ''}
-                </ul>
-            </div>
-            
-            <p><strong>Su designación como {miembro.rol.upper()}</strong> le otorga acceso al Portal de Tribunal donde podrá:</p>
-            <ul>
-                <li>Consultar toda la documentación del concurso</li>
-                <li>Acceder a los expedientes de los postulantes</li>
-                <li>Participar en el proceso de evaluación</li>
-                <li>Gestionar la documentación del tribunal</li>
-                <li>Mantenerse informado sobre el cronograma y sustanciación</li>
-            </ul>
-            
-            <p><strong>Para acceder al sistema debe configurar su contraseña:</strong></p>
-            <div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                <p><strong>👤 Su usuario:</strong> {persona.username}</p>
-                <p><strong>🔑 Configurar contraseña:</strong> <a href="{reset_url}" style="color: #007bff; text-decoration: none;"><strong>Hacer clic aquí</strong></a></p>
-                <p><em>Este enlace es válido por tiempo limitado y se desactivará después de configurar su contraseña.</em></p>
-            </div>
-            
-            <p>Una vez configurada su contraseña, podrá ingresar al sistema en: 
-            <a href="{url_for('tribunal.acceso', _external=True)}" style="color: #007bff;">Portal de Tribunal</a></p>
-            """
-        
-        # Add concurso information
-        message += f"""
-        <p><strong>Información del Concurso #{concurso.id}:</strong></p>
-        <ul>
-            <li>Departamento: {concurso.departamento_rel.nombre}</li>
-            <li>Área: {concurso.area}</li>
-            <li>Orientación: {concurso.orientacion}</li>
-            <li>Categoría: {concurso.categoria_nombre} ({concurso.categoria})</li>
-            <li>Dedicación: {concurso.dedicacion}</li>
-            <li>Su rol: {miembro.rol}</li>
-        </ul>
-        """
-        
-        # Send email
-        drive_api.send_email(
-            to_email=persona.correo,
-            subject=subject,
-            html_body=message,
-            sender_name='Sistema de Concursos Docentes'
-        )
-        
-        # Update notification status
-        miembro.notificado = True
-        miembro.fecha_notificacion = datetime.utcnow()
-        
-        db.session.commit()
-        flash(f'Credenciales enviadas exitosamente a {persona.nombre} {persona.apellido}.', 'success')
+            if success:
+                # Update notification status
+                miembro.notificado = True
+                miembro.fecha_notificacion = datetime.utcnow()
+                db.session.commit()
+                flash(f'Email de configuración de contraseña enviado exitosamente a {persona.nombre} {persona.apellido} via Keycloak.', 'success')
+            else:
+                flash(f'Error al enviar email a {persona.nombre} {persona.apellido}.', 'danger')
+                
+        except Exception as e:
+            flash(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}', 'danger')
         
     except Exception as e:
         db.session.rollback()
@@ -742,76 +465,17 @@ def notificar_miembro(miembro_id):
     return redirect(url_for('tribunal.index', concurso_id=concurso.id))
 
 # Routes for tribunal member portal
-@tribunal.route('/acceso', methods=['GET', 'POST'])
+@tribunal.route('/acceso')
 def acceso():
-    """Login portal for tribunal members."""
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Find the persona by username
-        persona = Persona.query.filter_by(username=username).first()
-        
-        if persona and persona.check_password(password):
-            # Find an active tribunal assignment for this persona
-            miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).order_by(TribunalMiembro.id.desc()).first()
-            
-            if not miembro:
-                flash('Su usuario no está asignado a ningún tribunal actualmente', 'danger')
-                return render_template('tribunal/acceso.html')
-            
-            # Store persona id and tribunal member id in session
-            session['persona_id'] = persona.id
-            session['tribunal_miembro_id'] = miembro.id
-            session['tribunal_nombre'] = f"{persona.nombre} {persona.apellido}"
-            session['tribunal_rol'] = miembro.rol
-            
-            # Update last access time
-            miembro.ultimo_acceso = datetime.utcnow()
-            db.session.commit()
-            
-            flash(f'Bienvenido/a, {persona.nombre} {persona.apellido}', 'success')
-            return redirect(url_for('tribunal.portal'))
-        
-        flash('Usuario o contraseña incorrectos', 'danger')
-    
-    return render_template('tribunal/acceso.html')
+    """Redirect to main Keycloak login - legacy route for backward compatibility."""
+    flash('Para acceder al portal de tribunal, utilice el inicio de sesión principal del sistema.', 'info')
+    return redirect(url_for('auth.login'))
 
-@tribunal.route('/reset/<token>', methods=['GET', 'POST'])
+@tribunal.route('/reset/<token>')
 def reset_password(token):
-    """Handle password reset/setup using a token."""
-    # Find persona with this token
-    persona = Persona.query.filter_by(reset_token=token).first()
-    
-    if not persona or not persona.check_reset_token(token):
-        flash('El enlace de configuración de contraseña es inválido o ha expirado.', 'danger')
-        return redirect(url_for('tribunal.acceso'))
-    
-    if request.method == 'POST':
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        if not password or len(password) < 6:
-            flash('La contraseña debe tener al menos 6 caracteres.', 'danger')
-            return render_template('tribunal/reset_password.html', token=token)
-        
-        if password != confirm_password:
-            flash('Las contraseñas no coinciden.', 'danger')
-            return render_template('tribunal/reset_password.html', token=token)
-        
-        try:
-            # Set the new password
-            persona.set_password(password)
-            db.session.commit()
-            
-            flash('Contraseña configurada exitosamente. Ya puede iniciar sesión.', 'success')
-            return redirect(url_for('tribunal.acceso'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al configurar la contraseña: {str(e)}', 'danger')
-            return render_template('tribunal/reset_password.html', token=token)
-    
-    return render_template('tribunal/reset_password.html', token=token)
+    """Legacy password reset route - redirect to main login."""
+    flash('El sistema de contraseñas ha sido migrado. Por favor, contacte al administrador para restablecer su acceso.', 'info')
+    return redirect(url_for('auth.login'))
 
 @tribunal.route('/activar', methods=['GET', 'POST'])
 def activar_cuenta():
@@ -834,37 +498,30 @@ def activar_cuenta():
             return render_template('tribunal/activar_cuenta.html')
             
         try:
-            # Generate reset token for password setup
-            reset_token = persona.generate_reset_token()
-            reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+            # Initialize Keycloak admin client
+            keycloak_admin = KeycloakAdminClient()
             
-            subject = f"Activación de Cuenta - Portal de Tribunal"
-            message = f"""
-            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
+            # Find user in Keycloak by email
+            keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+            if not keycloak_user:
+                flash('Usuario no encontrado en Keycloak. Contacte al administrador.', 'danger')
+                return render_template('tribunal/activar_cuenta.html')
             
-            <p>Para activar su cuenta y configurar su contraseña, haga clic en el siguiente enlace:</p>
-            <p><a href="{reset_url}">Activar Cuenta y Configurar Contraseña</a></p>
-            
-            <p>Su nombre de usuario es: <strong>{persona.dni}</strong></p>
-            
-            <p>Este enlace es válido solo por un tiempo limitado.</p>
-            
-            <p>Una vez configurada su contraseña, podrá ingresar al sistema desde: 
-            <a href="{request.host_url}tribunal/acceso">Portal de Tribunal</a></p>
-            """
-            
-            drive_api.send_email(
-                to_email=persona.correo,
-                subject=subject,
-                html_body=message,
-                sender_name='Sistema de Concursos Docentes'
+            # Send password reset email via Keycloak
+            portal_url = url_for('tribunal.acceso', _external=True)
+            success = keycloak_admin.send_execute_actions_email_with_redirect(
+                user_id=keycloak_user['id'],
+                actions=['UPDATE_PASSWORD'],
+                redirect_uri=portal_url
             )
             
-            flash('Se ha enviado un enlace de activación a su correo electrónico.', 'success')
-            return redirect(url_for('tribunal.acceso'))
+            if success:
+                flash('Se ha enviado un enlace de activación a su correo electrónico via Keycloak.', 'success')
+                return redirect(url_for('tribunal.acceso'))
+            else:
+                flash('Error al enviar el enlace de activación. Contacte al administrador.', 'danger')
             
         except Exception as e:
-            db.session.rollback()
             flash(f'Error al procesar la solicitud: {str(e)}', 'danger')
             
     return render_template('tribunal/activar_cuenta.html')
@@ -890,45 +547,32 @@ def recuperar_password():
             return render_template('tribunal/recuperar_password.html')
         
         try:
-            # Generate reset token for password setup
-            reset_token = persona.generate_reset_token()
-            reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+            # Initialize Keycloak admin client
+            keycloak_admin = KeycloakAdminClient()
             
-            # Save the token to the database
-            db.session.commit()
+            # Find user in Keycloak by email
+            keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+            if not keycloak_user:
+                flash('Usuario no encontrado en Keycloak. Contacte al administrador.', 'danger')
+                return render_template('tribunal/recuperar_password.html')
             
-            # Prepare email content
-            subject = f"Recuperación de Contraseña - Portal de Tribunal"
-            message = f"""
-            <p>Estimado/a {persona.nombre} {persona.apellido}:</p>
-            
-            <p>Recibimos una solicitud para restablecer su contraseña para el Portal de Tribunal.</p>
-            
-            <p>Para configurar una nueva contraseña, haga clic en el siguiente enlace:</p>
-            <p><a href="{reset_url}">Configurar Nueva Contraseña</a></p>
-            
-            <p>Este enlace es válido solo por un tiempo limitado y se desactivará después de configurar su contraseña.</p>
-            
-            <p>Si no solicitó este cambio, puede ignorar este correo y su contraseña no será modificada.</p>
-            
-            <p>Saludos cordiales,<br>
-            Sistema de Concursos Docentes</p>
-            """
-              # Send email
-            drive_api.send_email(
-                to_email=persona.correo,
-                subject=subject,
-                html_body=message,
-                sender_name='Sistema de Concursos Docentes'
+            # Send password reset email via Keycloak
+            portal_url = url_for('tribunal.acceso', _external=True)
+            success = keycloak_admin.send_execute_actions_email_with_redirect(
+                user_id=keycloak_user['id'],
+                actions=['UPDATE_PASSWORD'],
+                redirect_uri=portal_url
             )
             
-            flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico.', 'success')
-            return redirect(url_for('tribunal.acceso'))
+            if success:
+                flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico via Keycloak.', 'success')
+                return redirect(url_for('tribunal.acceso'))
+            else:
+                flash('Error al enviar el enlace de restablecimiento. Contacte al administrador.', 'danger')
             
         except Exception as e:
-            db.session.rollback()
             flash(f'Error al procesar la solicitud: {str(e)}', 'danger')
-    
+            
     return render_template('tribunal/recuperar_password.html')
 
 @tribunal.route('/salir')
@@ -943,23 +587,55 @@ def salir_tribunal():
     return redirect(url_for('tribunal.acceso'))
 
 @tribunal.route('/portal')
+@keycloak_login_required
+@tribunal_required
 def portal():
     """Main portal for tribunal members."""
-    # Check if persona is logged in
-    if 'persona_id' not in session:
-        flash('Debe iniciar sesión para acceder al portal', 'warning')
-        return redirect(url_for('tribunal.acceso'))
+    # Get current user info from Keycloak
+    user_info = get_current_user_info()
+    if not user_info:
+        flash('Error al obtener información del usuario', 'danger')
+        return redirect(url_for('auth.login'))
     
-    # Get persona
-    persona_id = session['persona_id']
-    persona = Persona.query.get_or_404(persona_id)
+    # Get persona based on Keycloak user info
+    persona = None
+    
+    # Try to find persona by email first
+    email = user_info.get('email')
+    if email:
+        persona = Persona.query.filter_by(correo=email).first()
+    
+    # If not found by email, try by username (might be DNI)
+    if not persona:
+        username = user_info.get('preferred_username')
+        if username:
+            persona = Persona.query.filter_by(dni=username).first()
+    
+    if not persona:
+        flash('No se encontró su perfil en el sistema. Contacte al administrador.', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    # Set up session for compatibility with existing tribunal system
+    session['persona_id'] = persona.id
     
     # Get active tribunal memberships
-    miembro = TribunalMiembro.query.filter_by(persona_id=persona_id).order_by(TribunalMiembro.id.desc()).first()
+    miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).order_by(TribunalMiembro.id.desc()).first()
     if not miembro:
         flash('No está asignado a ningún tribunal actualmente', 'warning')
-        session.pop('persona_id', None)
-        return redirect(url_for('tribunal.acceso'))
+        return redirect(url_for('auth.login'))
+    
+    # Set tribunal session data for compatibility
+    session['tribunal_miembro_id'] = miembro.id
+    session['tribunal_rol'] = miembro.rol    
+    # Get active tribunal memberships
+    miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).order_by(TribunalMiembro.id.desc()).first()
+    if not miembro:
+        flash('No está asignado a ningún tribunal actualmente', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    # Set tribunal session data for compatibility
+    session['tribunal_miembro_id'] = miembro.id
+    session['tribunal_rol'] = miembro.rol
       # Get all concursos this persona is part of and their roles
     concursos = persona.get_concursos()
     
@@ -967,7 +643,7 @@ def portal():
     concurso_roles = {}
     for concurso in concursos:
         tribunal_miembro = TribunalMiembro.query.filter_by(
-            persona_id=persona_id, 
+            persona_id=persona.id, 
             concurso_id=concurso.id
         ).first()
         if tribunal_miembro:
@@ -980,22 +656,45 @@ def portal():
                           concurso_roles=concurso_roles)
 
 @tribunal.route('/portal/concurso/<int:concurso_id>')
+@keycloak_login_required
+@tribunal_required
 def portal_concurso(concurso_id):
     """View for a tribunal member to see details of a specific concurso."""
-    # Check if persona is logged in
-    if 'persona_id' not in session or 'tribunal_miembro_id' not in session:
-        flash('Debe iniciar sesión para acceder al portal', 'warning')
-        return redirect(url_for('tribunal.acceso'))
+    # Get current user info from Keycloak
+    user_info = get_current_user_info()
+    if not user_info:
+        flash('Error al obtener información del usuario', 'danger')
+        return redirect(url_for('auth.login'))
     
-    # Get persona and their assigned tribunal
-    persona_id = session['persona_id']
-    persona = Persona.query.get_or_404(persona_id)
-    miembro_id = session['tribunal_miembro_id']
-    miembro = TribunalMiembro.query.get_or_404(miembro_id)
+    # Get persona based on Keycloak user info
+    persona = None
+    email = user_info.get('email')
+    if email:
+        persona = Persona.query.filter_by(correo=email).first()
+    
+    if not persona:
+        username = user_info.get('preferred_username')
+        if username:
+            persona = Persona.query.filter_by(dni=username).first()
+    
+    if not persona:
+        flash('No se encontró su perfil en el sistema. Contacte al administrador.', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    # Set up session for compatibility
+    session['persona_id'] = persona.id
+      # Get tribunal member record
+    miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).order_by(TribunalMiembro.id.desc()).first()
+    if not miembro:
+        flash('No está asignado a ningún tribunal', 'danger')
+        return redirect(url_for('tribunal.portal'))
+    
+    session['tribunal_miembro_id'] = miembro.id
+    session['tribunal_rol'] = miembro.rol
     
     # Get concurso and verify this persona is assigned to it
     concurso = Concurso.query.get_or_404(concurso_id)
-    assignment = TribunalMiembro.query.filter_by(persona_id=persona_id, concurso_id=concurso_id).first()
+    assignment = TribunalMiembro.query.filter_by(persona_id=persona.id, concurso_id=concurso_id).first()
     
     if not assignment:
         flash('No tiene permisos para ver este concurso', 'danger')
@@ -1568,7 +1267,7 @@ def cargar_sorteos(concurso_id):
     )
 
 @tribunal.route('/<int:concurso_id>/reset-temas', methods=['POST'])
-@login_required
+@admin_required
 def reset_temas(concurso_id):
     """Reset sorteo temas for a concurso. Only accessible by admin."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -1588,7 +1287,7 @@ def reset_temas(concurso_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMAS_SORTEO_REINICIADOS",
-            observaciones=f"Temas de sorteo eliminados y proceso reabierto para el tribunal por administrador {current_user.username}"
+            observaciones=f"Temas de sorteo eliminados y proceso reabierto para el tribunal por administrador {get_current_username()}"
         )
         db.session.add(historial)
         db.session.commit()
@@ -1602,7 +1301,7 @@ def reset_temas(concurso_id):
     return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
 
 @tribunal.route('/<int:concurso_id>/reset-temas-miembro/<int:miembro_id>', methods=['POST'])
-@login_required
+@admin_required
 def reset_temas_miembro(concurso_id, miembro_id):
     """Unlock sorteo temas for a specific tribunal member to allow editing. Only accessible by admin."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -1646,12 +1345,12 @@ def reset_temas_miembro(concurso_id, miembro_id):
             
             # Add entry to history with details about un-consolidation
             estado = "TEMAS_SORTEO_MIEMBRO_Y_CONSOLIDACION_DESBLOQUEADOS"
-            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {current_user.username}. La consolidación de temas y el tema sorteado (si existía) han sido reiniciados. El miembro puede editar sus temas propuestos. Se requerirá nueva consolidación."
+            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {get_current_username()}. La consolidación de temas y el tema sorteado (si existía) han sido reiniciados. El miembro puede editar sus temas propuestos. Se requerirá nueva consolidación."
             flash_message = f'Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada exitosamente. La consolidación general y el tema sorteado (si existía) han sido reiniciados. El miembro puede editar sus temas propuestos. Por favor, vuelva a consolidar los temas una vez que el miembro haya actualizado y enviado su propuesta.'
         else:
             # Standard unlock without un-consolidation
             estado = "TEMAS_SORTEO_MIEMBRO_DESBLOQUEADOS"
-            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {current_user.username}"
+            observaciones = f"Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada por administrador {get_current_username()}"
             flash_message = f'Propuesta de temas del miembro {miembro_target.persona.nombre} {miembro_target.persona.apellido} desbloqueada exitosamente.'
         
         # Add entry to history
@@ -1672,7 +1371,7 @@ def reset_temas_miembro(concurso_id, miembro_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id, _anchor='sustanciacion'))
 
 @tribunal.route('/api/buscar-persona', methods=['GET'])
-@login_required
+@admin_required
 def buscar_persona():
     """API endpoint to search for a persona by DNI"""
     dni = request.args.get('dni')

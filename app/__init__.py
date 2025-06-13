@@ -8,6 +8,9 @@ from werkzeug.security import generate_password_hash
 from pathlib import Path
 
 from app.models.models import db, User, init_db_from_json, init_categories_from_json
+from app.integrations.keycloak_oidc import keycloak_oidc
+from app.integrations.keycloak_admin_client import get_keycloak_admin
+from app.config.keycloak_config import KeycloakConfig
 
 login_manager = LoginManager()
 migrate = Migrate()
@@ -91,8 +94,7 @@ def create_app():
             app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     else:
         db_path = os.path.join(app.instance_path, 'concursos.db')
-        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions
@@ -100,6 +102,27 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     migrate.init_app(app, db)
+      # Initialize Keycloak OIDC
+    try:
+        keycloak_oidc.init_app(app)
+        app.logger.info("Keycloak OIDC initialized successfully")
+    except Exception as e:
+        app.logger.error(f"Failed to initialize Keycloak OIDC: {e}")
+        # You can choose to raise the exception to prevent app startup
+        # or continue without Keycloak (for development/testing)
+        # raise e    # Initialize Keycloak Admin Client - temporarily disabled
+    # TODO: Re-enable after configuring service account in Keycloak
+    # try:
+    #     # Test if we can get a keycloak admin client
+    #     keycloak_admin = get_keycloak_admin()
+    #     app.keycloak_admin = keycloak_admin
+    #     app.logger.info("Keycloak Admin Client initialized successfully")
+    # except Exception as e:
+    #     app.logger.error(f"Failed to initialize Keycloak Admin Client: {e}")
+    #     # Continue without admin client for now
+    app.keycloak_admin = None
+    app.logger.info("Keycloak Admin Client disabled - enable after configuring service account")
+      
       # Register blueprints
     from app.routes.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
@@ -129,14 +152,41 @@ def create_app():
     
     # Register public blueprint
     from app.routes.public import public as public_blueprint
-    app.register_blueprint(public_blueprint)
-      # Add context processor for template functions
+    app.register_blueprint(public_blueprint)    # Add context processor for template functions
     from app.helpers.api_services import get_programa_download_url
+    from app.utils.keycloak_auth import get_current_user_info, get_current_user_roles, is_admin, is_tribunal_member
+    from flask import g
+    
     @app.context_processor
     def utility_processor():
-        return {
-            'get_programa_download_url': get_programa_download_url
-        }
+        try:
+            user_info = get_current_user_info()
+            user_roles = get_current_user_roles()
+            is_authenticated = g.get('is_authenticated', False)
+            admin_status = is_admin()
+            tribunal_status = is_tribunal_member()
+            
+            return {
+                'get_programa_download_url': get_programa_download_url,
+                'keycloak_user_info': user_info,
+                'keycloak_user_roles': user_roles,
+                'keycloak_is_admin': admin_status,
+                'keycloak_is_tribunal': tribunal_status,
+                'keycloak_is_authenticated': is_authenticated,
+                'debug_g_authenticated': g.get('is_authenticated', 'NOT_SET'),
+                'debug_g_roles': g.get('user_roles', 'NOT_SET')
+            }
+        except Exception as e:
+            # Fallback in case of errors
+            return {
+                'get_programa_download_url': get_programa_download_url,
+                'keycloak_user_info': {},
+                'keycloak_user_roles': [],
+                'keycloak_is_admin': False,
+                'keycloak_is_tribunal': False,
+                'keycloak_is_authenticated': False,
+                'debug_error': str(e)
+            }
     
     # Add custom filters for templates
     @app.template_filter('format_datetime')

@@ -1,5 +1,5 @@
 from flask import render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion, TribunalMiembro, Persona
 from app.services.placeholder_resolver import get_core_placeholders
@@ -7,7 +7,8 @@ from app.helpers.api_services import get_considerandos_data, get_asignaturas_fro
 from . import concursos, drive_api
 
 @concursos.route('/')
-@login_required
+@keycloak_login_required
+@admin_required
 def index():
     """Display list of all concursos."""
     # Simply load all concursos, can't use joinedload with dynamic relationship
@@ -15,7 +16,8 @@ def index():
     return render_template('concursos/index.html', concursos=concursos_list)
 
 @concursos.route('/nuevo', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def nuevo():
     """Create a new concurso."""
     if request.method == 'POST':
@@ -133,7 +135,7 @@ def nuevo():
             historial = HistorialEstado(
                 concurso=concurso,
                 estado="CREADO",
-                observaciones=f"Concurso creado por {current_user.username}"
+                observaciones=f"Concurso creado por {get_current_username()}"
             )
             db.session.add(historial)
             db.session.commit()
@@ -154,7 +156,7 @@ def nuevo():
                            categorias=categorias)
 
 @concursos.route('/<int:concurso_id>')
-@login_required
+@keycloak_login_required
 def ver(concurso_id):
     """View details of a specific concurso."""
     from app.models.models import DocumentTemplateConfig, NotificationCampaign, NotificationLog, TemaSetTribunal
@@ -253,7 +255,7 @@ def ver(concurso_id):
                       temas_por_miembro=temas_por_miembro)
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
 def editar(concurso_id):
     """Edit an existing concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -431,7 +433,7 @@ def editar(concurso_id):
                 estado=concurso.estado_actual,
                 subestado_snapshot=concurso.subestado,
                 fecha=datetime.now(),
-                observaciones=f"Concurso editado por {current_user.username}"
+                observaciones=f"Concurso editado por {get_current_username()}"
             )
             db.session.add(historial)
             
@@ -453,7 +455,7 @@ def editar(concurso_id):
                            categorias=categorias)
 
 @concursos.route('/<int:concurso_id>/eliminar', methods=['POST'])
-@login_required
+@keycloak_login_required
 def eliminar(concurso_id):
     """Delete a concurso and all its related data."""
     concurso = Concurso.query.get_or_404(concurso_id)

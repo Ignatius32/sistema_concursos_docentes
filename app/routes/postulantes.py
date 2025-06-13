@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
-from flask_login import login_required
+from app.utils.keycloak_auth import keycloak_login_required, admin_required
 from app.models.models import db, Concurso, Postulante, DocumentoPostulante, Impugnacion, Categoria
 from app.integrations.google_drive import GoogleDriveAPI
 import os
@@ -40,7 +40,8 @@ def generate_document_filename(tipo, postulante, concurso):
     return f"{tipo}_{apellido}_{nombre}_{postulante.dni}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}.pdf"
 
 @postulantes.route('/concurso/<int:concurso_id>')
-@login_required
+@keycloak_login_required
+@admin_required
 def index(concurso_id):
     """Display applicants for a specific concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -48,7 +49,8 @@ def index(concurso_id):
     return render_template('postulantes/index.html', concurso=concurso, postulantes=postulantes_list)
 
 @postulantes.route('/concurso/<int:concurso_id>/agregar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def agregar(concurso_id):
     """Add a new applicant to a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -110,7 +112,8 @@ def agregar(concurso_id):
     return render_template('postulantes/agregar.html', concurso=concurso)
 
 @postulantes.route('/<int:postulante_id>')
-@login_required
+@keycloak_login_required
+@admin_required
 def ver(postulante_id):
     """View details of a specific applicant."""
     postulante = Postulante.query.get_or_404(postulante_id)
@@ -151,7 +154,8 @@ def ver(postulante_id):
     )
 
 @postulantes.route('/<int:postulante_id>/editar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def editar(postulante_id):
     """Edit an existing applicant."""
     postulante = Postulante.query.get_or_404(postulante_id)
@@ -194,7 +198,8 @@ def editar(postulante_id):
     return render_template('postulantes/editar.html', postulante=postulante, concurso=concurso)
 
 @postulantes.route('/<int:postulante_id>/eliminar', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar(postulante_id):
     """Delete an applicant."""
     postulante = Postulante.query.get_or_404(postulante_id)
@@ -223,7 +228,8 @@ def eliminar(postulante_id):
     return redirect(url_for('postulantes.index', concurso_id=concurso_id))
 
 @postulantes.route('/<int:postulante_id>/documentos/agregar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def agregar_documento(postulante_id):
     """Add a document for an applicant."""
     postulante = Postulante.query.get_or_404(postulante_id)
@@ -330,7 +336,8 @@ def agregar_documento(postulante_id):
     )
 
 @postulantes.route('/documentos/<int:documento_id>/eliminar', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_documento(documento_id):
     """Delete a document."""
     documento = DocumentoPostulante.query.get_or_404(documento_id)
@@ -358,7 +365,8 @@ def eliminar_documento(documento_id):
     return redirect(url_for('postulantes.ver', postulante_id=postulante_id))
 
 @postulantes.route('/<int:postulante_id>/impugnar', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def impugnar(postulante_id):
     """Submit an impugnation against an applicant."""
     postulante = Postulante.query.get_or_404(postulante_id)

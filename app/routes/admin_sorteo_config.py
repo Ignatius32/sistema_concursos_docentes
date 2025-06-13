@@ -2,24 +2,16 @@
 Routes for sorteo configuration management in the admin area.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, admin_required
 from app.models.models import db, SorteoConfig, Categoria
 
 # Create Blueprint
 admin_sorteo_config_bp = Blueprint('admin_sorteo_config', __name__, url_prefix='/admin/sorteo-config')
 
-# Access control decorator
-def admin_required(f):
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('No tienes permiso para acceder a esta área.', 'danger')
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
+# Access control is now handled by keycloak_auth decorators
 
 @admin_sorteo_config_bp.route('/', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
 @admin_required
 def index():
     """Configure the number of temas to draw for each categoria and concurso tipo"""

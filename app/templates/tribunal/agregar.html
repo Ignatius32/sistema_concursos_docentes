@@ -7,12 +7,13 @@
     <div class="card-header">
         <h2 class="mb-0">Agregar Miembro al Tribunal - Concurso #{{ concurso.id }}</h2>
     </div>
-    <div class="card-body">
-        <form method="POST">            <div class="row">
+    <div class="card-body">        <form method="POST">
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="rol" class="form-label">Rol en el Tribunal</label>
                     <select class="form-select" id="rol" name="rol" required>
-                        <option value="">Seleccione...</option>                        <option value="Presidente">Presidente</option>
+                        <option value="">Seleccione...</option>
+                        <option value="Presidente">Presidente</option>
                         <option value="Titular">Titular</option>
                         <option value="Suplente">Suplente</option>
                         <option value="Veedor">Veedor</option>
@@ -26,42 +27,26 @@
                         <option value="Estudiante">Estudiante</option>
                     </select>
                 </div>
-            </div>            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Ingrese el nombre o busque por DNI" required>
-                </div>
-                
-                <div class="col-md-6 mb-3">
-                    <label for="apellido" class="form-label">Apellido</label>
-                    <input type="text" class="form-control" id="apellido" name="apellido" placeholder="Ingrese el apellido o busque por DNI" required>
-                </div>
-            </div><div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="dni" class="form-label">DNI</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="dni" name="dni" required 
-                               pattern="[0-9]{7,8}" title="DNI debe contener 7 u 8 números">
-                        <button class="btn btn-outline-secondary" type="button" id="btnBuscarDNI">
-                            <i class="bi bi-search"></i> Buscar
-                        </button>
-                    </div>
-                    <small class="form-text text-muted">Si el DNI ya existe, se autocompletarán los datos.</small>
-                </div>
-                
-                <div class="col-md-6 mb-3">
-                    <label for="correo" class="form-label">Correo Electrónico</label>
-                    <input type="email" class="form-control" id="correo" name="correo" required>
-                </div>
             </div>
 
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="telefono" class="form-label">Teléfono</label>
-                    <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ej: +54 11 1234-5678">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <!-- Reserved for future fields -->
+                <div class="col-md-12 mb-3">
+                    <label for="persona_id" class="form-label">Seleccionar Persona</label>
+                    <select class="form-select" id="persona_id" name="persona_id" required>
+                        <option value="">Seleccione una persona...</option>
+                        {% for persona in available_personas %}
+                        <option value="{{ persona.id }}">
+                            {{ persona.apellido }}, {{ persona.nombre }} - DNI: {{ persona.dni }}
+                            {% if persona.correo %} - {{ persona.correo }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        Solo se muestran las personas que no están asignadas a este concurso. 
+                        {% if not available_personas %}
+                        <br><strong>No hay personas disponibles. <a href="{{ url_for('admin_personas.nueva_persona') }}" target="_blank">Crear nueva persona</a></strong>
+                        {% endif %}
+                    </small>
                 </div>
             </div>
 
@@ -74,72 +59,9 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {    const dniInput = document.getElementById('dni');
-    const btnBuscarDNI = document.getElementById('btnBuscarDNI');
-    const nombreInput = document.getElementById('nombre');
-    const apellidoInput = document.getElementById('apellido');
-    const correoInput = document.getElementById('correo');
-    const telefonoInput = document.getElementById('telefono');
-    
-    // Function to search for a persona by DNI
-    function buscarPersonaPorDNI() {
-        const dni = dniInput.value.trim();
-        if (!dni) {
-            alert('Por favor, ingrese un DNI');
-            return;
-        }
-        
-        // Show loading state
-        btnBuscarDNI.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Buscando...';
-        btnBuscarDNI.disabled = true;
-        
-        // Make AJAX request to search for persona
-        const buscarPersonaUrl = "{{ url_for('tribunal.buscar_persona') }}"; // Define URL using url_for
-        fetch(`${buscarPersonaUrl}?dni=${dni}`) // Use the generated URL
-            .then(response => {
-                if (!response.ok) {
-                    // Log the full response for more details on the 404
-                    console.error('Fetch error response status:', response.status);
-                    response.text().then(text => console.error('Fetch error response body:', text));
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
-                btnBuscarDNI.disabled = false;
-                
-                if (data.encontrado) {                    // Autocomplete form fields
-                    nombreInput.value = data.nombre;
-                    apellidoInput.value = data.apellido;
-                    correoInput.value = data.correo;
-                    telefonoInput.value = data.telefono || '';
-                    
-                    // Display success message
-                    // Consider a less intrusive notification than alert if possible
-                    alert(`Persona encontrada: ${data.nombre} ${data.apellido}`);
-                } else {
-                    alert(data.mensaje || 'No se encontró ninguna persona con ese DNI. Por favor complete los datos manualmente.');
-                }
-            })
-            .catch(error => {
-                console.error('Error en buscarPersonaPorDNI:', error);
-                btnBuscarDNI.innerHTML = '<i class="bi bi-search"></i> Buscar';
-                btnBuscarDNI.disabled = false;
-                alert('Error al buscar la persona. Por favor intente nuevamente o verifique la consola para más detalles.');
-            });
-    }
-    
-    // Add event listeners
-    btnBuscarDNI.addEventListener('click', buscarPersonaPorDNI);
-    
-    // Also trigger search when pressing Enter in DNI field
-    dniInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            buscarPersonaPorDNI();
-        }
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any additional JavaScript functionality here if needed
+    console.log('Tribunal agregar form loaded');
 });
 </script>
 {% endblock %}

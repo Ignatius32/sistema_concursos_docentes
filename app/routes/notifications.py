@@ -3,7 +3,7 @@ Routes for notification campaigns in concursos docentes application.
 Contains functionality for creating, editing, and triggering email notification campaigns.
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, get_current_username
 from datetime import datetime
 import json
 
@@ -31,7 +31,7 @@ def parse_email_lines(email_text):
     return emails
 
 @notifications_bp.route('/notifications/campaigns/nueva', methods=['GET'])
-@login_required
+@keycloak_login_required
 def crear_notificacion_campaign_form():
     """Display form to create a new notification campaign."""
     
@@ -45,7 +45,7 @@ def crear_notificacion_campaign_form():
     )
 
 @notifications_bp.route('/notifications/campaigns/nueva', methods=['POST'])
-@login_required
+@keycloak_login_required
 def crear_notificacion_campaign():
     """Handle creation of a new notification campaign."""
     try:        # Get form data
@@ -107,7 +107,7 @@ def crear_notificacion_campaign():
             adjuntos_personalizados=adjuntos_personalizados_list,  # Store custom attachment IDs
             estado_al_enviar=estado_al_enviar,
             subestado_al_enviar=subestado_al_enviar,
-            creado_por_id=current_user.id
+            creado_por_id=None  # TODO: Update model to use Keycloak user ID or username
         )
         campaign.destinatarios_json = destinatarios_config
         db.session.add(campaign)
@@ -123,7 +123,7 @@ def crear_notificacion_campaign():
         return redirect(url_for('notifications.crear_notificacion_campaign_form'))
 
 @notifications_bp.route('/notifications/campaigns/<int:campaign_id>/editar', methods=['GET'])
-@login_required
+@keycloak_login_required
 def editar_notificacion_campaign_form(campaign_id):
     """Display form to edit an existing notification campaign."""
     campaign = NotificationCampaign.query.get_or_404(campaign_id)
@@ -145,7 +145,7 @@ def editar_notificacion_campaign_form(campaign_id):
     )
 
 @notifications_bp.route('/notifications/campaigns/<int:campaign_id>/editar', methods=['POST'])
-@login_required
+@keycloak_login_required
 def editar_notificacion_campaign(campaign_id):
     """Handle updating of an existing notification campaign."""
     campaign = NotificationCampaign.query.get_or_404(campaign_id)
@@ -222,7 +222,7 @@ def editar_notificacion_campaign(campaign_id):
         return redirect(url_for('notifications.editar_notificacion_campaign_form', campaign_id=campaign_id))
 
 @notifications_bp.route('/notifications/campaigns/<int:campaign_id>/eliminar', methods=['POST'])
-@login_required
+@keycloak_login_required
 def eliminar_notificacion_campaign(campaign_id):
     """Handle deletion of a notification campaign."""
     campaign = NotificationCampaign.query.get_or_404(campaign_id)
@@ -240,7 +240,7 @@ def eliminar_notificacion_campaign(campaign_id):
     return redirect(url_for('notifications.list_notification_campaigns'))
 
 @notifications_bp.route('/notifications/campaigns', methods=['GET'])
-@login_required
+@keycloak_login_required
 def list_notification_campaigns():
     """Display all global notification campaign templates."""
     campaigns = NotificationCampaign.query.order_by(NotificationCampaign.creado_en.desc()).all()
@@ -251,7 +251,7 @@ def list_notification_campaigns():
     )
 
 @notifications_bp.route('/concursos/<int:concurso_id>/notifications/campaigns/<int:campaign_id>/trigger', methods=['POST'])
-@login_required
+@keycloak_login_required
 def trigger_notification_campaign(concurso_id, campaign_id):
     """Trigger the sending of emails for a notification campaign in the context of a specific concurso."""    
     concurso = Concurso.query.get_or_404(concurso_id)
