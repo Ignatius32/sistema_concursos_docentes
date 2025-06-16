@@ -1,5 +1,5 @@
 from flask import render_template, redirect, url_for, flash, request
-from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username, is_admin
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion, TribunalMiembro, Persona
 from app.services.placeholder_resolver import get_core_placeholders
@@ -239,11 +239,17 @@ def ver(concurso_id):
                 'fecha_propuesta': proposal.fecha_propuesta,
                 'miembro': proposal.miembro  # Include the miembro relationship
             }
-    
-    # Debug: print what's being passed to the template
+      # Debug: print what's being passed to the template
     print(f"Passing {len(available_documents)} available documents to template")
     for doc in available_documents:
         print(f"Document: {doc['name']} ({doc['id']}) URL: {doc['url']}")
+    
+    # Create a current_user-like object for template compatibility
+    current_user_info = {
+        'role': 'admin' if is_admin() else 'user',
+        'is_admin': is_admin(),
+        'username': get_current_username()
+    }
         
     return render_template('concursos/ver.html', 
                       concurso=concurso,
@@ -252,7 +258,8 @@ def ver(concurso_id):
                       notification_campaigns=notification_campaigns,
                       notification_logs_by_campaign=notification_logs_by_campaign,
                       asignaturas_externas=asignaturas_externas,
-                      temas_por_miembro=temas_por_miembro)
+                      temas_por_miembro=temas_por_miembro,
+                      current_user=current_user_info)
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
 @keycloak_login_required

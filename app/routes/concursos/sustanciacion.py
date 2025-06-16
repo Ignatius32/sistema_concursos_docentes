@@ -1,11 +1,12 @@
 from flask import redirect, url_for, flash, jsonify, request
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
 import random
 from app.models.models import db, Concurso, HistorialEstado
 from . import concursos
 
 @concursos.route('/<int:concurso_id>/reset-temas', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def reset_temas(concurso_id):
     """Reset all sorteo temas for a concurso. Only accessible by admin."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -33,7 +34,7 @@ def reset_temas(concurso_id):
         concurso.sustanciacion.temas_cerrados = False
         
         estado = "TEMAS_SORTEO_REINICIADOS"
-        observaciones = f"Todos los temas de sorteo eliminados y proceso reabierto para el tribunal por administrador {current_user.username}"
+        observaciones = f"Todos los temas de sorteo eliminados y proceso reabierto para el tribunal por administrador {get_current_username()}"
         
         # Add entry to history
         historial = HistorialEstado(
@@ -53,7 +54,8 @@ def reset_temas(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/realizar-sorteo', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def realizar_sorteo(concurso_id):
     """Randomly select tema(s) from the list of consolidated temas_exposicion based on configuration."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -123,7 +125,8 @@ def realizar_sorteo(concurso_id):
         return jsonify({'error': str(e)}), 500
 
 @concursos.route('/<int:concurso_id>/reset-tema-sorteado', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def reset_tema_sorteado(concurso_id):
     """Reset only the tema_sorteado for a concurso, keeping temas_exposicion intact."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -142,7 +145,7 @@ def reset_tema_sorteado(concurso_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMA_SORTEADO_ELIMINADO",
-            observaciones=f"Tema(s) sorteado(s) eliminado(s) por administrador {current_user.username}. Tema(s) anterior(es): {tema_anterior}"
+            observaciones=f"Tema(s) sorteado(s) eliminado(s) por administrador {get_current_username()}. Tema(s) anterior(es): {tema_anterior}"
         )
         db.session.add(historial)
         db.session.commit()
@@ -156,7 +159,8 @@ def reset_tema_sorteado(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/finalizar-carga-temas', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def finalizar_carga_temas(concurso_id):
     """Consolidate temas from all tribunal members who have closed their proposals
     and mark the global temas as closed, ready for sorteo. Only accessible by admin."""
@@ -210,7 +214,7 @@ def finalizar_carga_temas(concurso_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMAS_SORTEO_CONSOLIDADOS",
-            observaciones=f"Propuestas de temas consolidadas por administrador {current_user.username}. Miembros que aportaron temas: {contributors}"
+            observaciones=f"Propuestas de temas consolidadas por administrador {get_current_username()}. Miembros que aportaron temas: {contributors}"
         )
         db.session.add(historial)
         db.session.commit()
@@ -224,7 +228,8 @@ def finalizar_carga_temas(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/desconsolidar-temas', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def desconsolidar_temas(concurso_id):
     """Un-consolidate topics for a concurso. This action reverts the consolidation without deleting
     individual tribunal member proposals. Only accessible by admin."""
@@ -252,7 +257,7 @@ def desconsolidar_temas(concurso_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="TEMAS_SORTEO_DESCONSOLIDADOS",
-            observaciones=f"Consolidación de temas revertida por administrador {current_user.username}. Propuestas individuales conservadas."
+            observaciones=f"Consolidación de temas revertida por administrador {get_current_username()}. Propuestas individuales conservadas."
         )
         db.session.add(historial)
         db.session.commit()

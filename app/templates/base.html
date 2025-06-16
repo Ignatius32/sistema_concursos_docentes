@@ -33,14 +33,16 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('public.index') }}">Concursos Públicos</a>
                     </li>
-                    
-                    <!-- Admin navigation - only for admin users -->
+                      <!-- Admin navigation - only for admin users -->
                     {% if keycloak_is_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('concursos.index') }}">Administrar Concursos</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_personas.list_personas') }}">Gestionar Personas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_sync.sync_dashboard') }}">Sincronizar Keycloak</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('notifications.list_notification_campaigns') }}">Campañas de Notificación</a>
@@ -50,7 +52,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_sorteo_config.index') }}">Configurar Sorteo</a>
-                    </li>                    {% elif keycloak_is_tribunal %}
+                    </li>{% elif keycloak_is_tribunal %}
                     <!-- Tribunal member navigation -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('tribunal.portal') }}">Mi Portal de Tribunal</a>

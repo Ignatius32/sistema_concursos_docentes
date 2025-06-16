@@ -1,7 +1,12 @@
-<div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">
-    <div class="card">
-        <div class="card-header header-primary">
+<div class="tab-pane fade" id="tribunal" role="tabpanel" aria-labelledby="tribunal-tab">    <div class="card">
+        <div class="card-header header-primary d-flex justify-content-between align-items-center">
             <h4 class="mb-0"><i class="bi bi-people"></i> Tribunal</h4>
+            <div>
+                {% set total_members = concurso.asignaciones_tribunal.count() %}
+                {% if total_members > 0 %}
+                <span class="badge bg-light text-dark">{{ total_members }} miembro{% if total_members != 1 %}s{% endif %}</span>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive tribunal-table">
@@ -20,33 +25,84 @@
                     </thead>
                     <tbody>
                         {% for miembro in concurso.asignaciones_tribunal.all() %}
-                        <tr>
-                            <td>
+                        <tr>                            <td>
                                 {% if miembro.rol == 'Presidente' %}
-                                <span class="badge badge-tribunal-primary" style="background-color: #2563eb !important; color: white !important;">{{ miembro.rol }}</span>
+                                <span class="badge badge-tribunal-primary" style="background-color: #2563eb !important; color: white !important;"
+                                      title="Presidente del Tribunal - Máximo nivel de permisos">
+                                    <i class="bi bi-award"></i> {{ miembro.rol }}
+                                </span>
                                 {% elif miembro.rol == 'Titular' %}
-                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;">{{ miembro.rol }}</span>
+                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;"
+                                      title="Miembro Titular - Permisos de evaluación y firma">
+                                    <i class="bi bi-person-check"></i> {{ miembro.rol }}
+                                </span>
+                                {% elif miembro.rol == 'Suplente' %}
+                                <span class="badge badge-tribunal-secondary" style="background-color: #6b7280 !important; color: white !important;"
+                                      title="Miembro Suplente - Permisos limitados">
+                                    <i class="bi bi-person-dash"></i> {{ miembro.rol }}
+                                </span>
                                 {% else %}
-                                <span class="badge badge-tribunal-secondary" style="background-color: #6b7280 !important; color: white !important;">{{ miembro.rol }}</span>
+                                <span class="badge badge-tribunal-secondary" style="background-color: #6b7280 !important; color: white !important;"
+                                      title="Veedor - Solo observación">
+                                    <i class="bi bi-eye"></i> {{ miembro.rol }}
+                                </span>
                                 {% endif %}
                             </td>
-                            <td>{{ miembro.claustro or 'No especificado' }}</td>
+                            <td>
+                                {% if miembro.claustro == 'Docente' %}
+                                <span class="text-success" title="Claustro Docente">
+                                    <i class="bi bi-mortarboard"></i> {{ miembro.claustro }}
+                                </span>
+                                {% elif miembro.claustro == 'Estudiante' %}
+                                <span class="text-primary" title="Claustro Estudiantil">
+                                    <i class="bi bi-book"></i> {{ miembro.claustro }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">
+                                    <i class="bi bi-question-circle"></i> No especificado
+                                </span>
+                                {% endif %}
+                            </td>
                             <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
                             <td>{{ miembro.persona.dni }}</td>
                             <td>{{ miembro.persona.correo or 'No disponible' }}</td>
-                            <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
-                            <td>
+                            <td>{{ miembro.persona.telefono or 'No disponible' }}</td>                            <td>
                                 {% if miembro.persona.password_hash %}
-                                <span class="badge badge-tribunal-success" style="background-color: #059669 !important; color: white !important;">Password Configurado</span>
+                                <span class="badge badge-tribunal-success" style="background-color: #059669 !important; color: white !important;" 
+                                      title="El miembro ya configuró su contraseña y puede acceder al sistema">
+                                    <i class="bi bi-check-circle"></i> Acceso Configurado
+                                </span>
                                 {% elif miembro.notificado %}
-                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;">Credenciales Enviadas</span>
+                                <span class="badge badge-tribunal-info" style="background-color: #0891b2 !important; color: white !important;"
+                                      title="Se enviaron las credenciales pero aún no configuró su acceso">
+                                    <i class="bi bi-envelope-check"></i> Credenciales Enviadas
+                                </span>
                                 {% else %}
-                                <span class="badge badge-tribunal-warning" style="background-color: #d97706 !important; color: white !important;">No notificado</span>
+                                <span class="badge badge-tribunal-warning" style="background-color: #d97706 !important; color: white !important;"
+                                      title="No se han enviado las credenciales de acceso">
+                                    <i class="bi bi-envelope-x"></i> No Notificado
+                                </span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group">
-                                </div>
+                            </td>                            <td>
+                                {% if not miembro.notificado and not miembro.persona.password_hash %}
+                                <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
+                                      style="display: inline;" onsubmit="return confirm('¿Enviar credenciales a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Enviar credenciales">
+                                        <i class="bi bi-envelope"></i>
+                                    </button>
+                                </form>
+                                {% elif miembro.notificado and not miembro.persona.password_hash %}
+                                <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
+                                      style="display: inline;" onsubmit="return confirm('¿Reenviar credenciales a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Reenviar credenciales">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="badge bg-success" title="Ya tiene acceso configurado">
+                                    <i class="bi bi-check-circle"></i>
+                                </span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% else %}
@@ -56,13 +112,101 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>            <div class="d-flex justify-content-between align-items-center mt-4">                <div>
+                    {% set all_tribunal_members = concurso.asignaciones_tribunal.all() %}
+                    {% set pending_notifications = all_tribunal_members | rejectattr('notificado') | list | length %}
+                    {% if pending_notifications > 0 %}
+                    <form method="POST" action="{{ url_for('tribunal.notificar_todos_miembros', concurso_id=concurso.id) }}" 
+                          style="display: inline;" onsubmit="return confirm('¿Enviar credenciales a todos los miembros no notificados ({{ pending_notifications }})?')">
+                        <button type="submit" class="btn btn-success me-2">
+                            <i class="bi bi-envelope-check"></i> Notificar Todos ({{ pending_notifications }})
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if concurso.asignaciones_tribunal.count() > 0 %}
+                    <button type="button" class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#tribunalStatsModal">
+                        <i class="bi bi-info-circle"></i> Estadísticas
+                    </button>
+                    {% endif %}
+                </div>                <div>
+                    <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-tribunal-primary me-2">
+                        <i class="bi bi-gear"></i> Administrar Tribunal
+                    </a>
+
+                </div>
+            </div>        </div>
+    </div>
+</div>
+
+<!-- Tribunal Statistics Modal -->
+<div class="modal fade" id="tribunalStatsModal" tabindex="-1" aria-labelledby="tribunalStatsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tribunalStatsModalLabel">
+                    <i class="bi bi-bar-chart"></i> Estadísticas del Tribunal
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>            <div class="modal-body">
+                {% set total_members = concurso.asignaciones_tribunal.count() %}
+                {% set all_members = concurso.asignaciones_tribunal.all() %}
+                {% set notified_members = all_members | selectattr('notificado', 'equalto', true) | list | length %}
+                {% set active_members = all_members | selectattr('persona.password_hash') | list | length %}
+                {% set presidente_count = all_members | selectattr('rol', 'equalto', 'Presidente') | list | length %}
+                {% set titular_count = all_members | selectattr('rol', 'equalto', 'Titular') | list | length %}
+                {% set suplente_count = all_members | selectattr('rol', 'equalto', 'Suplente') | list | length %}
+                {% set veedor_count = all_members | selectattr('rol', 'equalto', 'Veedor') | list | length %}
+                {% set docente_count = all_members | selectattr('claustro', 'equalto', 'Docente') | list | length %}
+                {% set estudiante_count = all_members | selectattr('claustro', 'equalto', 'Estudiante') | list | length %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-people"></i> Composición General</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total de miembros:</strong> {{ total_members }}</li>
+                            <li><strong>Notificados:</strong> {{ notified_members }}/{{ total_members }}</li>
+                            <li><strong>Con acceso activo:</strong> {{ active_members }}/{{ total_members }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-diagram-3"></i> Por Rol</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-primary">Presidente:</span> {{ presidente_count }}</li>
+                            <li><span class="badge bg-info">Titular:</span> {{ titular_count }}</li>
+                            <li><span class="badge bg-secondary">Suplente:</span> {{ suplente_count }}</li>
+                            <li><span class="badge bg-secondary">Veedor:</span> {{ veedor_count }}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-mortarboard"></i> Por Claustro</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-success">Docente:</span> {{ docente_count }}</li>
+                            <li><span class="badge bg-warning">Estudiante:</span> {{ estudiante_count }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Alertas</h6>
+                        <ul class="list-unstyled small">
+                            {% if presidente_count == 0 %}
+                            <li class="text-danger"><i class="bi bi-x-circle"></i> Sin Presidente asignado</li>
+                            {% elif presidente_count > 1 %}
+                            <li class="text-warning"><i class="bi bi-exclamation-triangle"></i> Múltiples Presidentes</li>
+                            {% endif %}
+                            {% if total_members < 3 %}
+                            <li class="text-warning"><i class="bi bi-exclamation-triangle"></i> Tribunal incompleto (mín. 3 miembros)</li>
+                            {% endif %}
+                            {% if notified_members < total_members %}
+                            <li class="text-info"><i class="bi bi-info-circle"></i> {{ total_members - notified_members }} miembro(s) sin notificar</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <div class="text-end mt-3">
-                <a href="{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}" class="btn btn-tribunal-primary me-2">
-                    <i class="bi bi-plus-circle"></i> Agregar Miembro
-                </a>                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-tribunal-secondary">
-                    Ver Tribunal Completo
-                </a>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>

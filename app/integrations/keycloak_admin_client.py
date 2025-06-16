@@ -323,8 +323,7 @@ class KeycloakAdminClient:
             if not role:
                 logger.error(f"Client role {role_name} not found in client {client_id}")
                 return False
-            
-            # Assign role
+              # Assign role
             self._admin_client.assign_client_role(user_id, client, role)
             logger.info(f"Assigned client role {role_name} to user {user_id}")
             return True
@@ -332,27 +331,39 @@ class KeycloakAdminClient:
         except Exception as e:
             logger.error(f"Error assigning client role {role_name} to user {user_id}: {e}")
             return False
-    
+
     def remove_client_role(self, user_id: str, role_name: str, client_id: str = None) -> bool:
         """Remove client role from user."""
         try:
             if not client_id:
                 client_id = KeycloakConfig.KEYCLOAK_CLIENT_ID
             
+            # Get user info before removing role (for debugging)
+            user_before = self._admin_client.get_user(user_id)
+            logger.info(f"User before role removal - Email: {user_before.get('email')}, Username: {user_before.get('username')}")
+            
             # Get client
-            client = self._admin_client.get_client_id(client_id)
-            if not client:
+            client_uuid = self._admin_client.get_client_id(client_id)
+            if not client_uuid:
                 logger.error(f"Client {client_id} not found")
                 return False
             
             # Get role
-            role = self._admin_client.get_client_role(client, role_name)
+            role = self._admin_client.get_client_role(client_uuid, role_name)
             if not role:
                 logger.error(f"Client role {role_name} not found in client {client_id}")
                 return False
             
-            # Remove role
-            self._admin_client.delete_client_role_from_user(user_id, client, role)
+            # Remove role (using delete_client_roles_of_user method)
+            self._admin_client.delete_client_roles_of_user(user_id, client_uuid, [role])
+            
+            # Get user info after removing role (for debugging)
+            user_after = self._admin_client.get_user(user_id)
+            logger.info(f"User after role removal - Email: {user_after.get('email')}, Username: {user_after.get('username')}")
+            
+            if user_before.get('email') != user_after.get('email'):
+                logger.warning(f"WARNING: User email changed from '{user_before.get('email')}' to '{user_after.get('email')}' after role removal!")
+            
             logger.info(f"Removed client role {role_name} from user {user_id}")
             return True
             
@@ -413,6 +424,95 @@ class KeycloakAdminClient:
         except Exception as e:
             logger.error(f"Error getting client roles: {e}")
             return []
+
+    def send_custom_email(self, user_id: str, subject: str, html_body: str, redirect_uri: str = None) -> bool:
+        """Send a custom HTML email to a user via Keycloak's email system."""
+        try:
+            # Method 1: Use Keycloak's direct email API if available
+            try:
+                # Try to use the direct email endpoint (requires admin privileges)
+                admin_token = self._admin_client.connection.token['access_token']
+                
+                # Build the email endpoint URL
+                email_url = f"{KeycloakConfig.KEYCLOAK_SERVER_URL}admin/realms/{KeycloakConfig.KEYCLOAK_REALM}/users/{user_id}/send-email"
+                
+                email_payload = {
+                    "subject": subject,
+                    "textBody": "",  # Plain text version
+                    "htmlBody": html_body,
+                    "redirect_uri": redirect_uri
+                }
+                
+                headers = {
+                    'Authorization': f'Bearer {admin_token}',
+                    'Content-Type': 'application/json'
+                }
+                
+                import requests
+                response = requests.post(email_url, json=email_payload, headers=headers, timeout=30)
+                
+                if response.status_code in [200, 204]:
+                    logger.info(f"Custom email sent successfully to user {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Direct email API failed: {response.status_code} - {response.text}")
+                    # Fall back to execute actions method
+                    
+            except Exception as e:
+                logger.warning(f"Direct email method failed: {e}, trying execute actions method")
+            
+            # Method 2: Fall back to execute actions email (more widely supported)
+            if redirect_uri:
+                success = self.send_execute_actions_email_with_redirect(
+                    user_id=user_id,
+                    actions=['UPDATE_PASSWORD'],
+                    client_id=KeycloakConfig.KEYCLOAK_CLIENT_ID,
+                    redirect_uri=redirect_uri
+                )
+                if success:
+                    logger.info(f"Execute actions email sent successfully to user {user_id}")
+                    return True
+            
+            logger.error(f"All email methods failed for user {user_id}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error sending custom email to user {user_id}: {e}")
+            return False
+    
+    def send_template_email(self, user_id: str, template_name: str, template_attributes: dict = None, redirect_uri: str = None) -> bool:
+        """Send an email using a Keycloak email template."""
+        try:
+            # Update user attributes with template data
+            if template_attributes:
+                current_user = self.get_user_by_id(user_id)
+                if current_user:
+                    existing_attributes = current_user.get('attributes', {})
+                    existing_attributes.update(template_attributes)
+                    
+                    self.update_user(user_id, {'attributes': existing_attributes})
+            
+            # Send email using the specified template
+            # This typically uses execute actions or custom actions
+            actions = [template_name] if template_name else ['UPDATE_PASSWORD']
+            
+            success = self.send_execute_actions_email_with_redirect(
+                user_id=user_id,
+                actions=actions,
+                client_id=KeycloakConfig.KEYCLOAK_CLIENT_ID,
+                redirect_uri=redirect_uri
+            )
+            
+            if success:
+                logger.info(f"Template email '{template_name}' sent to user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to send template email '{template_name}' to user {user_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending template email to user {user_id}: {e}")
+            return False
 
 
 # Global instance - lazy loaded

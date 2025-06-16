@@ -18,13 +18,17 @@ class KeycloakConfig:
     KEYCLOAK_CLIENT_SECRET: str = os.environ.get('KEYCLOAK_CLIENT_SECRET', '')
     
     # Admin API Configuration
-    KEYCLOAK_ADMIN_CLIENT_ID: str = os.environ.get('KEYCLOAK_ADMIN_CLIENT_ID', 'admin-cli')
+    KEYCLOAK_ADMIN_CLIENT_ID: str = os.environ.get('KEYCLOAK_ADMIN_CLIENT_ID', 'flask-admin')
     KEYCLOAK_ADMIN_CLIENT_SECRET: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_USERNAME: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_USERNAME')
     KEYCLOAK_ADMIN_PASSWORD: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_PASSWORD')    # Application URLs
     KEYCLOAK_REDIRECT_URI: str = os.environ.get('KEYCLOAK_REDIRECT_URI', 'http://127.0.0.1:5000/auth/callback')
     KEYCLOAK_POST_LOGOUT_REDIRECT_URI: str = os.environ.get('KEYCLOAK_POST_LOGOUT_REDIRECT_URI', 'http://127.0.0.1:5000/')
-      # Role Configuration
+    
+    # Password Reset Configuration
+    USE_INTERNAL_PASSWORD_RESET: bool = os.environ.get('USE_INTERNAL_PASSWORD_RESET', 'true').lower() == 'true'
+    
+    # Role Configuration
     KEYCLOAK_ADMIN_ROLE: str = os.environ.get('KEYCLOAK_ADMIN_ROLE', 'app_admin')
     KEYCLOAK_TRIBUNAL_ROLE: str = os.environ.get('KEYCLOAK_TRIBUNAL_ROLE', 'tribunal_member')
     

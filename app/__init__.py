@@ -101,8 +101,7 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
-    migrate.init_app(app, db)
-      # Initialize Keycloak OIDC
+    migrate.init_app(app, db)      # Initialize Keycloak OIDC
     try:
         keycloak_oidc.init_app(app)
         app.logger.info("Keycloak OIDC initialized successfully")
@@ -110,7 +109,15 @@ def create_app():
         app.logger.error(f"Failed to initialize Keycloak OIDC: {e}")
         # You can choose to raise the exception to prevent app startup
         # or continue without Keycloak (for development/testing)
-        # raise e    # Initialize Keycloak Admin Client - temporarily disabled
+        # raise e
+    
+    # Initialize sync scheduler
+    try:
+        from app.services.sync_scheduler import init_scheduler
+        init_scheduler(app)
+        app.logger.info("Keycloak sync scheduler initialized")
+    except Exception as e:
+        app.logger.error(f"Failed to initialize sync scheduler: {e}")# Initialize Keycloak Admin Client - temporarily disabled
     # TODO: Re-enable after configuring service account in Keycloak
     # try:
     #     # Test if we can get a keycloak admin client
@@ -138,10 +145,13 @@ def create_app():
     app.register_blueprint(postulantes_blueprint)
     
     from app.routes.tribunal import tribunal as tribunal_blueprint
-    app.register_blueprint(tribunal_blueprint)
-      # Register admin personas blueprint
+    app.register_blueprint(tribunal_blueprint)      # Register admin personas blueprint
     from app.routes.admin_personas import admin_personas_bp
     app.register_blueprint(admin_personas_bp)
+    
+    # Register admin sync blueprint
+    from app.routes.admin_sync import admin_sync_bp
+    app.register_blueprint(admin_sync_bp)
       # Register notifications blueprint
     from app.routes.notifications import notifications_bp
     app.register_blueprint(notifications_bp)

@@ -1,11 +1,12 @@
 from flask import redirect, url_for, flash, request
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
 from datetime import datetime
 from app.models.models import db, Concurso, HistorialEstado
 from . import concursos, drive_api
 
 @concursos.route('/<int:concurso_id>/cargar-tkd', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def cargar_tkd(concurso_id):
     """Upload or update TKD number and file for a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -92,7 +93,8 @@ def cargar_tkd(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/borrar-tkd', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def borrar_tkd(concurso_id):
     """Delete TKD number and file for a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -142,7 +144,8 @@ def borrar_tkd(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/gestionar-notas-adicionales', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def gestionar_notas_adicionales(concurso_id):
     """Upload or update multiple note types for a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -214,14 +217,13 @@ def gestionar_notas_adicionales(concurso_id):
             
             # Update concurso with new file ID
             setattr(concurso, note_type['model_field'], file_id)
-            
-            # Create history record for file upload
+              # Create history record for file upload
             action = "cargada" if not old_file_id else "actualizada"
             action_estado = "CARGADA" if not old_file_id else "ACTUALIZADA"
             historial = HistorialEstado(
                 concurso=concurso,
                 estado=f"{note_type['estado']} {action_estado}",
-                observaciones=f"{note_type['descripcion']} {action} por {current_user.username}"
+                observaciones=f"{note_type['descripcion']} {action} por {get_current_username()}"
             )
             db.session.add(historial)
             

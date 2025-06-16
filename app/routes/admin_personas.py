@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, g
 from app.models.models import db, Persona
 from app.integrations.google_drive import GoogleDriveAPI
 from app.integrations.keycloak_admin_client import get_keycloak_admin
 from app.config.keycloak_config import KeycloakConfig
-from app.utils.keycloak_auth import keycloak_login_required, admin_required
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_user_info
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import logging
@@ -49,22 +49,27 @@ def edit_persona(persona_id):
             if is_admin_checked:
                 persona.cargo = request.form.get('cargo', persona.cargo)
             else:
-                persona.cargo = None # Clear cargo if not admin
-              # Update Keycloak user if linked
+                persona.cargo = None # Clear cargo if not admin            # Update Keycloak user if linked
             if persona.keycloak_user_id and keycloak_admin:
+                # Prepare update data - only include email if persona has one
+                update_data = {
+                    'firstName': persona.nombre,
+                    'lastName': persona.apellido,
+                    'attributes': {
+                        'dni': persona.dni,
+                        'telefono': persona.telefono or '',
+                        'cargo': persona.cargo or ''
+                    }
+                }
+                
+                # Only update email if persona has a valid email (don't overwrite with empty values)
+                if persona.correo:
+                    update_data['email'] = persona.correo
+                
                 # Update user attributes in Keycloak
                 update_success = keycloak_admin.update_user(
                     persona.keycloak_user_id,
-                    {
-                        'email': persona.correo,
-                        'firstName': persona.nombre,
-                        'lastName': persona.apellido,
-                        'attributes': {
-                            'dni': persona.dni,
-                            'telefono': persona.telefono or '',
-                            'cargo': persona.cargo or ''
-                        }
-                    }
+                    update_data
                 )
                 
                 if not update_success:
@@ -148,23 +153,34 @@ def nueva_persona():
             telefono = request.form.get('telefono')
             is_admin_checked = 'is_admin' in request.form
             cargo_persona = request.form.get('cargo') if is_admin_checked else None
-            
-            # Validate required fields
-            if not all([nombre, apellido, dni, correo]):
-                flash('Nombre, apellido, DNI y correo son campos obligatorios.', 'danger')
+              # Validate required fields
+            if not all([nombre, apellido, dni]):
+                flash('Nombre, apellido y DNI son campos obligatorios.', 'danger')
                 return render_template('admin/personas/nueva_persona.html')
-              # Check if persona already exists
-            existing_persona = Persona.query.filter(
-                (Persona.dni == dni) | (Persona.correo == correo)
-            ).first()
             
-            if existing_persona:
-                flash('Ya existe una persona con ese DNI o correo electrónico.', 'danger')
+            # Check for duplicate DNI (always unique)
+            existing_dni = Persona.query.filter_by(dni=dni).first()
+            if existing_dni:
+                flash(f'Ya existe una persona con el DNI {dni}.', 'danger')
                 return render_template('admin/personas/nueva_persona.html')
-              # Step 1: Check if user already exists in Keycloak and create if necessary
-            username = dni  # Use DNI as username for both Keycloak and local record
+            
+            # Check for duplicate email if provided (only if not empty)
+            if correo and correo.strip():
+                existing_email = Persona.query.filter_by(correo=correo).first()
+                if existing_email:
+                    flash(f'Ya existe una persona con el correo electrónico {correo}.', 'danger')
+                    return render_template('admin/personas/nueva_persona.html')
+            
+            # Check for duplicate username (will use DNI as username)
+            username = dni  # Use DNI as username
+            existing_username = Persona.query.filter_by(username=username).first()
+            if existing_username:
+                flash(f'Ya existe una persona con el nombre de usuario {username}.', 'danger')
+                return render_template('admin/personas/nueva_persona.html')            # Step 1: Check if user already exists in Keycloak and create if necessary
+            # username is already set to dni above
             keycloak_user_id = None
             temporary_password = None
+            real_keycloak_data = None  # Will store the real user data from Keycloak
             
             # Check for existing user in Keycloak first by email
             if keycloak_admin:
@@ -172,15 +188,17 @@ def nueva_persona():
                 existing_keycloak_user = keycloak_admin.get_user_by_email(correo)
                 if existing_keycloak_user:
                     keycloak_user_id = existing_keycloak_user['id']
+                    real_keycloak_data = existing_keycloak_user
                     logger.info(f"Found existing Keycloak user with email {correo}: {keycloak_user_id}")
-                    flash(f'Usuario encontrado en Keycloak con email {correo}. Se vinculará con la nueva persona.', 'info')
+                    flash(f'Usuario encontrado en Keycloak con email {correo}. Se utilizarán los datos reales del usuario.', 'info')
                 else:
                     # Also check by username (DNI) if different from email
                     existing_keycloak_user = keycloak_admin.get_user_by_username(username)
                     if existing_keycloak_user:
                         keycloak_user_id = existing_keycloak_user['id']
+                        real_keycloak_data = existing_keycloak_user
                         logger.info(f"Found existing Keycloak user with username {username}: {keycloak_user_id}")
-                        flash(f'Usuario encontrado en Keycloak con DNI {username}. Se vinculará con la nueva persona.', 'info')
+                        flash(f'Usuario encontrado en Keycloak con DNI {username}. Se utilizarán los datos reales del usuario.', 'info')
                     else:
                         # Create new user in Keycloak
                         temporary_password = secrets.token_urlsafe(12)
@@ -247,14 +265,40 @@ def nueva_persona():
                     flash(f'Roles de cliente asignados exitosamente: {", ".join(roles_assigned)}', 'success')
                 if roles_failed:
                     flash(f'Error al asignar roles de cliente: {", ".join(roles_failed)}', 'warning')
+              # Step 3: Create local Persona record
+            # Use real Keycloak data if available, otherwise use admin-inputted data
+            if real_keycloak_data:
+                # Extract real data from Keycloak user
+                real_nombre = real_keycloak_data.get('firstName', '') or nombre
+                real_apellido = real_keycloak_data.get('lastName', '') or apellido
+                real_correo = real_keycloak_data.get('email', '') or correo
+                
+                # Extract attributes if available
+                attributes = real_keycloak_data.get('attributes', {})
+                real_telefono = attributes.get('telefono', [None])[0] if 'telefono' in attributes else telefono
+                real_dni = attributes.get('dni', [None])[0] if 'dni' in attributes else dni
+                
+                logger.info(f"Using real Keycloak data for persona creation:")
+                logger.info(f"  Real name: {real_nombre} {real_apellido}")
+                logger.info(f"  Real email: {real_correo}")
+                logger.info(f"  Real telefono: {real_telefono}")
+                logger.info(f"  Real DNI: {real_dni}")
+                
+                flash(f'Utilizando datos reales de Keycloak: {real_nombre} {real_apellido} ({real_correo})', 'info')
+            else:
+                # Use admin-inputted data for new users
+                real_nombre = nombre
+                real_apellido = apellido
+                real_correo = correo
+                real_telefono = telefono
+                real_dni = dni
             
-            # Step 3: Create local Persona record
             nueva_persona = Persona(
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
-                correo=correo,
-                telefono=telefono,
+                nombre=real_nombre,
+                apellido=real_apellido,
+                dni=real_dni,  # Use real DNI from Keycloak if available
+                correo=real_correo,
+                telefono=real_telefono,
                 username=username,
                 keycloak_user_id=keycloak_user_id,
                 is_admin=is_admin_checked,
@@ -290,12 +334,11 @@ def nueva_persona():
                 nueva_persona.cv_drive_web_link = web_link
                 db.session.commit()
                 flash('CV subido exitosamente.', 'success')
-            else:
-                db.session.commit()            # Step 4: Send password setup email
-            if keycloak_admin and keycloak_user_id and keycloak_admin.send_execute_actions_email(keycloak_user_id, ['UPDATE_PASSWORD']):
-                flash(f'Persona creada exitosamente. Se ha enviado un correo a {correo} para configurar la contraseña.', 'success')
-            elif temporary_password:
-                flash(f'Persona creada exitosamente. La contraseña temporal es: {temporary_password}', 'warning')
+            else:                db.session.commit()
+            
+            # Step 4: Persona created successfully (no email sent)
+            if keycloak_user_id:
+                flash('Persona creada exitosamente y vinculada con usuario de Keycloak.', 'success')
             else:
                 flash('Persona creada exitosamente.', 'success')
             
@@ -344,11 +387,41 @@ def eliminar_persona(persona_id):
             try:
                 drive_api.delete_file(persona.cv_drive_file_id)
             except Exception as e:
-                flash(f'No se pudo eliminar el CV de Drive: {str(e)}', 'warning')
-          # Delete user from Keycloak if linked
+                flash(f'No se pudo eliminar el CV de Drive: {str(e)}', 'warning')        # Remove tribunal_member role from Keycloak user (but keep the user account)
         if persona.keycloak_user_id and keycloak_admin:
-            if not keycloak_admin.delete_user(persona.keycloak_user_id):
-                flash('Advertencia: No se pudo eliminar el usuario de Keycloak.', 'warning')
+            # Safety check: Get current user info to avoid accidentally removing roles from current user
+            current_user_info = get_current_user_info()
+            current_user_id = current_user_info.get('sub')  # 'sub' is the user ID in Keycloak tokens
+            
+            logger.info(f"About to remove roles from user ID: {persona.keycloak_user_id} for persona: {persona.apellido}, {persona.nombre}")
+            logger.info(f"Current logged-in user ID: {current_user_id}")
+            
+            # Safety check: Don't remove roles from the current user
+            if persona.keycloak_user_id == current_user_id:
+                flash('Error: No se puede eliminar una persona que corresponde al usuario actualmente logueado.', 'danger')
+                return redirect(url_for('admin_personas.list_personas'))
+            
+            tribunal_role = KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE
+            if keycloak_admin.client_role_exists(tribunal_role):
+                if not keycloak_admin.remove_client_role(persona.keycloak_user_id, tribunal_role):
+                    flash(f'Advertencia: No se pudo remover el rol {tribunal_role} del usuario en Keycloak.', 'warning')
+                else:
+                    flash(f'Rol {tribunal_role} removido exitosamente del usuario en Keycloak.', 'info')
+            else:
+                flash(f'El rol {tribunal_role} no existe en Keycloak.', 'warning')
+            
+            # Also remove admin role if the user had it
+            if persona.is_admin:
+                admin_role = KeycloakConfig.KEYCLOAK_ADMIN_ROLE
+                if keycloak_admin.client_role_exists(admin_role):
+                    if not keycloak_admin.remove_client_role(persona.keycloak_user_id, admin_role):
+                        flash(f'Advertencia: No se pudo remover el rol {admin_role} del usuario en Keycloak.', 'warning')
+                    else:
+                        flash(f'Rol {admin_role} removido exitosamente del usuario en Keycloak.', 'info')
+                else:
+                    flash(f'El rol {admin_role} no existe en Keycloak.', 'warning')
+        else:
+            logger.info(f"No Keycloak user ID found for persona: {persona.apellido}, {persona.nombre} - skipping role removal")
         
         # Store persona info for the success message
         nombre_completo = f"{persona.apellido}, {persona.nombre}"

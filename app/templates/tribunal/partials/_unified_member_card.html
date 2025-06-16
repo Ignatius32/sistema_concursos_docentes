@@ -1,0 +1,128 @@
+<!-- Unified Member Card Template -->
+<!-- This template is used for both new and existing members with consistent structure -->
+<div class="col-md-6 col-xl-4 mb-3">
+    <div class="card member-card h-100 shadow-sm" data-member-id="" data-member-type="new" data-status="pending">
+        <div class="card-header py-2 member-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="mb-0 fw-semibold member-status">
+                    <i class="fas fa-clock me-1"></i>Pendiente de Guardar
+                </small>
+                <div class="header-actions">
+                    <!-- Actions for new members -->
+                    <button type="button" class="btn btn-sm btn-outline-dark remove-member d-none" 
+                            data-action="remove-new" title="Remover miembro">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    
+                    <!-- Actions for existing members -->
+                    <div class="dropdown existing-actions d-none">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button class="dropdown-item edit-member" type="button">
+                                    <i class="fas fa-edit me-2"></i>Editar
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger remove-member" type="button"
+                                        data-action="remove-existing">
+                                    <i class="fas fa-trash me-2"></i>Eliminar
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-3">
+            <div class="mb-3">
+                <h6 class="card-title mb-1 member-name text-primary fw-semibold"></h6>
+                <p class="card-text small text-muted mb-0 member-details"></p>
+            </div>
+              
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small fw-semibold text-muted">
+                        <i class="fas fa-user-tie me-1"></i> Rol
+                    </label>
+                    <select class="form-select form-select-sm member-rol" required>
+                        <option value="Presidente">👑 Presidente</option>
+                        <option value="Titular" selected>⭐ Titular</option>
+                        <option value="Suplente">🔄 Suplente</option>
+                        <option value="Veedor">👁️ Veedor</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-semibold text-muted">
+                        <i class="fas fa-graduation-cap me-1"></i> Claustro
+                    </label>
+                    <select class="form-select form-select-sm member-claustro" required>
+                        <option value="Docente" selected>🎓 Docente</option>
+                        <option value="Estudiante">📚 Estudiante</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Permissions Section -->
+            <div class="mt-3 member-permissions">
+                <hr class="my-2">
+                <div class="row g-1">
+                    <div class="col-6">
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input member-can-add-tema" type="checkbox">
+                            <label class="form-check-label small text-muted">
+                                <i class="fas fa-list-ol me-1"></i> Cargar temas
+                            </label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input member-can-upload-file" type="checkbox">
+                            <label class="form-check-label small text-muted">
+                                <i class="fas fa-upload me-1"></i> Subir archivos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input member-can-sign-file" type="checkbox">
+                            <label class="form-check-label small text-muted">
+                                <i class="fas fa-pen me-1"></i> Firmar docs.
+                            </label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input member-can-view-postulante-docs" type="checkbox">
+                            <label class="form-check-label small text-muted">
+                                <i class="fas fa-eye me-1"></i> Ver postulantes
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Save/Cancel Actions -->
+            <div class="mt-3 member-actions">
+                <!-- Save button for new members -->
+                <div class="d-grid new-member-actions">
+                    <button type="button" class="btn btn-success btn-sm save-member">
+                        <i class="fas fa-save me-1"></i>Guardar Miembro
+                    </button>
+                </div>
+                
+                <!-- Save/Cancel buttons for existing members -->
+                <div class="d-none existing-member-actions">
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-success save-member flex-fill">
+                            <i class="fas fa-check me-1"></i>Guardar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary cancel-member flex-fill">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

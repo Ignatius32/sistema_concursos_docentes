@@ -3,7 +3,7 @@ Base document generation functionality for concursos docentes application.
 Contains core functions for generating documents from templates and specific document type handlers.
 """
 from datetime import datetime
-from flask_login import current_user
+from app.utils.keycloak_auth import get_current_username
 from app.models.models import db, HistorialEstado, DocumentoConcurso, Concurso, Departamento, TribunalMiembro, DocumentTemplateConfig
 from app.integrations.google_drive import GoogleDriveAPI
 from app.services.placeholder_resolver import get_core_placeholders, replace_text_with_placeholders
@@ -309,12 +309,11 @@ def generar_documento_desde_template(concurso_id, template_name, doc_tipo, prepa
             else:
                 # If subestado is empty, initialize with a single value
                 concurso.subestado = json.dumps([template_config.subestado_al_generar_borrador])
-                
-        # Add entry to history
+                  # Add entry to history
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_GENERADO",
-            observaciones=f"{doc_tipo.replace('_', ' ').title()} generado por {current_user.username}"
+            observaciones=f"{doc_tipo.replace('_', ' ').title()} generado por {get_current_username()}"
         )
         db.session.add(historial)
         db.session.commit()

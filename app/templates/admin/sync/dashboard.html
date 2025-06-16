@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Sincronización Keycloak-Personas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-sync-alt"></i>
+                        Panel de Sincronización Keycloak-Personas
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Información:</strong> Esta herramienta sincroniza bidireccional mente las personas locales con los usuarios de Keycloak que tienen el rol <code>tribunal_member</code>.
+                    </div>
+
+                    <!-- Status Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Estado Actual</h5>
+                                    <button class="btn btn-sm btn-outline-primary float-right" id="refresh-status">
+                                        <i class="fas fa-refresh"></i> Actualizar
+                                    </button>
+                                </div>
+                                <div class="card-body" id="status-content">
+                                    <div class="text-center">
+                                        <i class="fas fa-spinner fa-spin"></i> Cargando estado...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sync Actions -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Sincronización Completa</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Ejecuta una sincronización bidireccional completa entre personas locales y usuarios de Keycloak.</p>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="full-sync-dry-run">
+                                        <label class="form-check-label" for="full-sync-dry-run">
+                                            Solo simular (no hacer cambios)
+                                        </label>
+                                    </div>
+                                    <button class="btn btn-primary" id="run-full-sync">
+                                        <i class="fas fa-sync-alt"></i> Ejecutar Sincronización Completa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Sincronizaciones Parciales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Ejecuta sincronizaciones específicas en una dirección.</p>
+                                    
+                                    <!-- Personas to Keycloak -->
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="p2k-dry-run">
+                                            <label class="form-check-label" for="p2k-dry-run">
+                                                Solo simular
+                                            </label>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm" id="sync-personas-to-keycloak">
+                                            <i class="fas fa-arrow-right"></i> Personas → Keycloak
+                                        </button>
+                                    </div>
+
+                                    <!-- Keycloak to Personas -->
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="k2p-dry-run">
+                                            <label class="form-check-label" for="k2p-dry-run">
+                                                Solo simular
+                                            </label>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm" id="sync-keycloak-to-personas">
+                                            <i class="fas fa-arrow-left"></i> Keycloak → Personas
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dangerous Operations -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Operaciones Peligrosas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-danger">
+                                        <strong>¡Atención!</strong> Estas operaciones pueden eliminar datos. Úsalas con precaución.
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <p><strong>Eliminar personas huérfanas:</strong> Elimina personas locales cuyos usuarios de Keycloak ya no existen o no tienen el rol <code>tribunal_member</code>.</p>
+                                        
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="orphan-dry-run" checked>
+                                            <label class="form-check-label" for="orphan-dry-run">
+                                                Solo simular (recomendado)
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="orphan-confirm">
+                                            <label class="form-check-label" for="orphan-confirm">
+                                                Confirmo que quiero eliminar personas (solo si no es simulación)
+                                            </label>
+                                        </div>
+                                        
+                                        <button class="btn btn-danger btn-sm" id="remove-orphaned-personas">
+                                            <i class="fas fa-trash"></i> Eliminar Personas Huérfanas
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="row mt-4" id="results-section" style="display: none;">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Resultados de la Última Operación</h5>
+                                </div>
+                                <div class="card-body" id="results-content">
+                                    <!-- Results will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial status
+    loadStatus();
+    
+    // Event listeners
+    document.getElementById('refresh-status').addEventListener('click', loadStatus);
+    document.getElementById('run-full-sync').addEventListener('click', runFullSync);
+    document.getElementById('sync-personas-to-keycloak').addEventListener('click', syncPersonasToKeycloak);
+    document.getElementById('sync-keycloak-to-personas').addEventListener('click', syncKeycloakToPersonas);
+    document.getElementById('remove-orphaned-personas').addEventListener('click', removeOrphanedPersonas);
+    
+    // Load status from API
+    function loadStatus() {
+        const statusContent = document.getElementById('status-content');
+        statusContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estado...</div>';
+        
+        fetch('{{ url_for("admin_sync.sync_status") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayStatus(data.status);
+                } else {
+                    statusContent.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                statusContent.innerHTML = `<div class="alert alert-danger">Error de conexión: ${error.message}</div>`;
+            });
+    }
+    
+    // Display status information
+    function displayStatus(status) {
+        const statusContent = document.getElementById('status-content');
+        const summary = status.summary;
+        
+        let html = '<div class="row">';
+        
+        // Personas to Keycloak
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-arrow-right"></i> Personas → Keycloak</h6>';
+        html += `<ul class="list-unstyled">`;
+        html += `<li><i class="fas fa-plus text-success"></i> ${summary.personas_created_in_keycloak} por crear</li>`;
+        html += `<li><i class="fas fa-edit text-warning"></i> ${summary.personas_updated_in_keycloak} por actualizar</li>`;
+        html += `</ul>`;
+        html += '</div>';
+        
+        // Keycloak to Personas
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-arrow-left"></i> Keycloak → Personas</h6>';
+        html += `<ul class="list-unstyled">`;
+        html += `<li><i class="fas fa-plus text-success"></i> ${summary.personas_created_locally} por crear</li>`;
+        html += `<li><i class="fas fa-edit text-warning"></i> ${summary.personas_updated_locally} por actualizar</li>`;
+        html += `</ul>`;
+        html += '</div>';
+        
+        html += '</div>';
+        
+        // Sync updates
+        html += '<div class="row mt-3">';
+        html += '<div class="col-md-12">';
+        html += '<h6><i class="fas fa-sync-alt"></i> Sincronización de Datos</h6>';
+        html += `<p class="mb-0"><i class="fas fa-check text-info"></i> ${summary.records_synchronized} registros por sincronizar</p>`;
+        html += '</div>';
+        html += '</div>';
+        
+        if (summary.total_errors > 0) {
+            html += '<div class="alert alert-warning mt-3">';
+            html += `<i class="fas fa-exclamation-triangle"></i> ${summary.total_errors} errores detectados`;
+            html += '</div>';
+        }
+        
+        statusContent.innerHTML = html;
+    }
+    
+    // Run full synchronization
+    function runFullSync() {
+        const dryRun = document.getElementById('full-sync-dry-run').checked;
+        const button = document.getElementById('run-full-sync');
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+        
+        fetch('{{ url_for("admin_sync.run_sync") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ dry_run: dryRun })
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+            loadStatus(); // Refresh status
+        })
+        .catch(error => {
+            displayResults({ success: false, error: error.message });
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-sync-alt"></i> Ejecutar Sincronización Completa';
+        });
+    }
+    
+    // Sync personas to Keycloak
+    function syncPersonasToKeycloak() {
+        const dryRun = document.getElementById('p2k-dry-run').checked;
+        const button = document.getElementById('sync-personas-to-keycloak');
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+        
+        fetch('{{ url_for("admin_sync.sync_personas_to_keycloak") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ dry_run: dryRun })
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+            loadStatus(); // Refresh status
+        })
+        .catch(error => {
+            displayResults({ success: false, error: error.message });
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-arrow-right"></i> Personas → Keycloak';
+        });
+    }
+    
+    // Sync Keycloak to personas
+    function syncKeycloakToPersonas() {
+        const dryRun = document.getElementById('k2p-dry-run').checked;
+        const button = document.getElementById('sync-keycloak-to-personas');
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+        
+        fetch('{{ url_for("admin_sync.sync_keycloak_to_personas") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ dry_run: dryRun })
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+            loadStatus(); // Refresh status
+        })
+        .catch(error => {
+            displayResults({ success: false, error: error.message });
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-arrow-left"></i> Keycloak → Personas';
+        });
+    }
+    
+    // Remove orphaned personas
+    function removeOrphanedPersonas() {
+        const dryRun = document.getElementById('orphan-dry-run').checked;
+        const confirm = document.getElementById('orphan-confirm').checked;
+        const button = document.getElementById('remove-orphaned-personas');
+        
+        if (!dryRun && !confirm) {
+            alert('Debe confirmar la eliminación para operaciones reales.');
+            return;
+        }
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+        
+        fetch('{{ url_for("admin_sync.remove_orphaned_personas") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ dry_run: dryRun, confirm: confirm })
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+            loadStatus(); // Refresh status
+        })
+        .catch(error => {
+            displayResults({ success: false, error: error.message });
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-trash"></i> Eliminar Personas Huérfanas';
+        });
+    }
+    
+    // Display operation results
+    function displayResults(data) {
+        const resultsSection = document.getElementById('results-section');
+        const resultsContent = document.getElementById('results-content');
+        
+        let html = '';
+        
+        if (data.success) {
+            html = '<div class="alert alert-success"><i class="fas fa-check"></i> Operación completada exitosamente</div>';
+            
+            // Display detailed results based on operation type
+            if (data.summary) {
+                // Full sync results
+                const summary = data.summary;
+                html += '<div class="row">';
+                html += '<div class="col-md-3"><div class="card bg-success text-white"><div class="card-body text-center">';
+                html += `<h4>${summary.personas_created_in_keycloak}</h4><small>Creados en Keycloak</small>`;
+                html += '</div></div></div>';
+                html += '<div class="col-md-3"><div class="card bg-info text-white"><div class="card-body text-center">';
+                html += `<h4>${summary.personas_created_locally}</h4><small>Creados localmente</small>`;
+                html += '</div></div></div>';
+                html += '<div class="col-md-3"><div class="card bg-warning text-white"><div class="card-body text-center">';
+                html += `<h4>${summary.records_synchronized}</h4><small>Sincronizados</small>`;
+                html += '</div></div></div>';
+                html += '<div class="col-md-3"><div class="card bg-danger text-white"><div class="card-body text-center">';
+                html += `<h4>${summary.total_errors}</h4><small>Errores</small>`;
+                html += '</div></div></div>';
+                html += '</div>';
+            } else if (data.results) {
+                // Partial sync results
+                const results = data.results;
+                html += '<div class="row">';
+                html += '<div class="col-md-4"><div class="card bg-success text-white"><div class="card-body text-center">';
+                html += `<h4>${results.created ? results.created.length : 0}</h4><small>Creados</small>`;
+                html += '</div></div></div>';
+                html += '<div class="col-md-4"><div class="card bg-info text-white"><div class="card-body text-center">';
+                html += `<h4>${results.updated ? results.updated.length : 0}</h4><small>Actualizados</small>`;
+                html += '</div></div></div>';
+                html += '<div class="col-md-4"><div class="card bg-danger text-white"><div class="card-body text-center">';
+                html += `<h4>${results.errors ? results.errors.length : 0}</h4><small>Errores</small>`;
+                html += '</div></div></div>';
+                html += '</div>';
+            }
+        } else {
+            html = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Error: ${data.error}</div>`;
+        }
+        
+        resultsContent.innerHTML = html;
+        resultsSection.style.display = 'block';
+        
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
+{% endblock %}

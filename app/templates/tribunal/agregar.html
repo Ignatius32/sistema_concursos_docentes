@@ -1,68 +1,218 @@
 {% extends "base.html" %}
 
-{% block title %}Agregar Miembro al Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
+{% block title %}Agregar Miembros al Tribunal - Concurso #{{ concurso.id }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h2 class="mb-0">Agregar Miembro al Tribunal - Concurso #{{ concurso.id }}</h2>
-    </div>
-    <div class="card-body">        <form method="POST">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="rol" class="form-label">Rol en el Tribunal</label>
-                    <select class="form-select" id="rol" name="rol" required>
-                        <option value="">Seleccione...</option>
-                        <option value="Presidente">Presidente</option>
-                        <option value="Titular">Titular</option>
-                        <option value="Suplente">Suplente</option>
-                        <option value="Veedor">Veedor</option>
-                    </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="claustro" class="form-label">Claustro</label>
-                    <select class="form-select" id="claustro" name="claustro" required>
-                        <option value="">Seleccione...</option>
-                        <option value="Docente" selected>Docente</option>
-                        <option value="Estudiante">Estudiante</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <label for="persona_id" class="form-label">Seleccionar Persona</label>
-                    <select class="form-select" id="persona_id" name="persona_id" required>
-                        <option value="">Seleccione una persona...</option>
-                        {% for persona in available_personas %}
-                        <option value="{{ persona.id }}">
-                            {{ persona.apellido }}, {{ persona.nombre }} - DNI: {{ persona.dni }}
-                            {% if persona.correo %} - {{ persona.correo }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-text text-muted">
-                        Solo se muestran las personas que no están asignadas a este concurso. 
-                        {% if not available_personas %}
-                        <br><strong>No hay personas disponibles. <a href="{{ url_for('admin_personas.nueva_persona') }}" target="_blank">Crear nueva persona</a></strong>
-                        {% endif %}
-                    </small>
-                </div>
-            </div>
-
-            <div class="text-end">
-                <a href="{{ url_for('tribunal.index', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Agregar Miembro</button>
-            </div>
-        </form>    </div>
+<div class="mb-4">    <!-- Breadcrumb navigation -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('concursos.index') }}">
+                    <i class="bi bi-list-ul"></i> Concursos
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}#tribunal">
+                    Concurso #{{ concurso.id }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Administrar Tribunal  </li>
+        </ol>
+    </nav>
 </div>
 
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Add any additional JavaScript functionality here if needed
-    console.log('Tribunal agregar form loaded');
-});
-</script>
+<!-- Header Section -->
+<div class="mb-4">
+    <h1 class="h3 mb-2">
+        <i class="fas fa-users text-primary me-2"></i>
+        Agregar Miembros al Tribunal
+    </h1>
+    <p class="text-muted mb-0">
+        <i class="fas fa-graduation-cap me-1"></i>
+        Concurso #{{ concurso.id }} - {{ concurso.descripcion_cargo }}
+    </p>
+    <small class="text-muted">{{ concurso.departamento_area_orientacion }}</small>
+</div>
+
+<!-- Main Content Card -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <!-- Alert area for messages -->
+        <div id="alertArea"></div>          <!-- Multiple Members Mode (Default) -->
+        <div id="multipleMode">
+            <!-- Search Section -->
+            {% include 'tribunal/partials/_search_personas.html' %}
+            
+            <!-- Unified Members Section -->
+            {% include 'tribunal/partials/_unified_members_section.html' %}
+        </div><!-- Single Member Mode (Hidden) -->
+        <div id="singleMode" style="display: none;">
+            <!-- Single mode is disabled for now -->
+        </div>
+    </div>
+</div>
+
+<!-- Unified Member Card Template -->
+<template id="unifiedMemberCardTemplate">
+    {% include 'tribunal/partials/_unified_member_card.html' %}
+</template>
+
 {% endblock %}
+
+{% block scripts %}
+<!-- Load unified JavaScript manager -->
+<script src="{{ url_for('static', filename='js/tribunal-search.js') }}?v=3.0"></script>
+<script src="{{ url_for('static', filename='js/tribunal-unified-manager.js') }}?v=6.0"></script>
+
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=3.0">
+<style>
+/* Unified Member Card Styles */
+.member-card {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
+.member-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* New member cards */
+.member-card[data-member-type="new"] {
+    border-color: #ffc107;
+    background-color: #fffdf5;
+}
+
+.member-card[data-member-type="new"]:hover {
+    border-color: #ffb300;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
+}
+
+/* Existing member cards */
+.member-card[data-member-type="existing"] {
+    border-color: #6c757d;
+    background-color: #f8f9fa;
+}
+
+.member-card[data-member-type="existing"]:hover {
+    border-color: #495057;
+    box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+}
+
+/* State-based styling */
+.member-card.border-warning {
+    border-color: #ff6b35 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+.member-card.border-primary {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Search results */
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+#searchResults {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.search-container .input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.search-container .form-control {
+    border-left: none;
+    padding-left: 0;
+}
+
+.search-container .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.save-changes-section {
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alert {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dropdown menu improvements */
+.dropdown-menu {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: #f8d7da;
+    color: #721c24 !important;
+}
+
+/* Permissions section styling */
+.permissions-section, .existing-permissions-section {
+    transition: all 0.3s ease;
+}
+
+.permissions-updated {
+    background-color: #e7f3ff;
+    border-radius: 4px;
+    animation: permissionsPulse 1s ease;
+}
+
+@keyframes permissionsPulse {
+    0% { background-color: #e7f3ff; }
+    50% { background-color: #cce7ff; }
+    100% { background-color: #e7f3ff; }
+}
+
+.form-check-sm .form-check-input {
+    margin-top: 0.125rem;
+}
+
+.form-check-sm .form-check-label {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* Enhanced member cards */
+.member-card .permissions-section {
+    border-top: 1px solid #e9ecef;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.existing-member-card .existing-permissions-section {
+    border-top: 1px solid #e9ecef;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+}
+</style>
 {% endblock %}

@@ -1,5 +1,5 @@
 from flask import redirect, url_for, flash, request, render_template
-from flask_login import login_required, current_user
+from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, DocumentoConcurso, HistorialEstado, DocumentTemplateConfig
 from app.services.placeholder_resolver import get_core_placeholders
@@ -9,7 +9,8 @@ import json
 from . import concursos, drive_api
 
 @concursos.route('/<int:concurso_id>/generar-resolucion-llamado-tribunal', methods=['GET'])
-@login_required
+@keycloak_login_required
+@admin_required
 def generar_resolucion_llamado_tribunal(concurso_id):
     """Handle the request to generate a resolution document with tribunal information."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -20,7 +21,8 @@ def generar_resolucion_llamado_tribunal(concurso_id):
                            template_name='resLlamadoTribunalInterino'))
 
 @concursos.route('/<int:concurso_id>/generar-resolucion-llamado-regular', methods=['GET'])
-@login_required
+@keycloak_login_required
+@admin_required
 def generar_resolucion_llamado_regular(concurso_id):
     """Handle the request to generate a regular resolution document."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -31,7 +33,8 @@ def generar_resolucion_llamado_regular(concurso_id):
                            template_name='resLlamadoRegular'))
 
 @concursos.route('/<int:concurso_id>/generar-resolucion-tribunal-regular', methods=['GET'])
-@login_required
+@keycloak_login_required
+@admin_required
 def generar_resolucion_tribunal_regular(concurso_id):
     """Handle the request to generate a regular tribunal resolution document."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -42,7 +45,8 @@ def generar_resolucion_tribunal_regular(concurso_id):
                            template_name='resTribunalRegular'))
 
 @concursos.route('/<int:concurso_id>/generar-acta-constitucion-tribunal-regular', methods=['GET'])
-@login_required
+@keycloak_login_required
+@admin_required
 def generar_acta_constitucion_tribunal_regular(concurso_id):
     """Handle the request to generate a regular tribunal constitution document."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -78,7 +82,8 @@ def generar_acta_constitucion_tribunal_regular(concurso_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/considerandos-builder', methods=['GET', 'POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def considerandos_builder(concurso_id):
     """
     Handle the considerandos builder interface.
@@ -219,7 +224,8 @@ def considerandos_builder(concurso_id):
     )
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_documento(concurso_id, documento_id):
     """Delete a document from a concurso."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -247,7 +253,7 @@ def eliminar_documento(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_ELIMINADO",
-            observaciones=f"Documento {documento.tipo} eliminado por {current_user.username}"
+            observaciones=f"Documento {documento.tipo} eliminado por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -261,7 +267,8 @@ def eliminar_documento(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/subir-firmado', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def subir_documento_firmado(concurso_id, documento_id):
     """Upload a signed version of a document."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -335,7 +342,7 @@ def subir_documento_firmado(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_FIRMADO",
-            observaciones=f"Documento firmado {documento.tipo} subido por {current_user.username}"
+            observaciones=f"Documento firmado {documento.tipo} subido por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -349,7 +356,8 @@ def subir_documento_firmado(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documentos/<int:documento_id>/enviar-firma', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def enviar_firma(concurso_id, documento_id):
     """Send a document for signature via email."""
     try:
@@ -431,7 +439,8 @@ def enviar_firma(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/nueva-version', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def nueva_version_documento(concurso_id, documento_id):
     """Create a new version of a document."""
     try:
@@ -474,7 +483,7 @@ def nueva_version_documento(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="NUEVA_VERSION_DOCUMENTO",
-            observaciones=f"Nueva versión del documento {documento.tipo} creada por {current_user.username}: {observaciones}"
+            observaciones=f"Nueva versión del documento {documento.tipo} creada por {get_current_username()}: {observaciones}"
         )
         db.session.add(historial)
         
@@ -488,7 +497,8 @@ def nueva_version_documento(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-firmado', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_documento_firmado(concurso_id, documento_id):
     """Delete a signed version of a document."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -555,7 +565,7 @@ def eliminar_documento_firmado(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_FIRMADO_ELIMINADO",
-            observaciones=f"Documento firmado {documento.tipo} eliminado por {current_user.username}"
+            observaciones=f"Documento firmado {documento.tipo} eliminado por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -569,7 +579,8 @@ def eliminar_documento_firmado(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-pendiente-firma', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_documento_pendiente_firma(concurso_id, documento_id):
     """Delete a document that is pending signature, resetting it back to BORRADOR state."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -606,7 +617,7 @@ def eliminar_documento_pendiente_firma(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_PENDIENTE_FIRMA_ELIMINADO",
-            observaciones=f"Documento pendiente de firma {documento.tipo} eliminado por {current_user.username}"
+            observaciones=f"Documento pendiente de firma {documento.tipo} eliminado por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -620,7 +631,8 @@ def eliminar_documento_pendiente_firma(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-borrador', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_borrador(concurso_id, documento_id):
     """Delete a draft document from the borradores folder."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -641,7 +653,7 @@ def eliminar_borrador(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="BORRADOR_ELIMINADO",
-            observaciones=f"Borrador de {documento.tipo} eliminado por {current_user.username}"
+            observaciones=f"Borrador de {documento.tipo} eliminado por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -712,7 +724,8 @@ def eliminar_borrador(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/eliminar-subido', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def eliminar_subido(concurso_id, documento_id):
     """Delete an uploaded/signed document from the firmados folder."""
     concurso = Concurso.query.get_or_404(concurso_id)
@@ -799,7 +812,7 @@ def eliminar_subido(concurso_id, documento_id):
         historial = HistorialEstado(
             concurso=concurso,
             estado="DOCUMENTO_SUBIDO_ELIMINADO",
-            observaciones=f"Documento subido {documento.tipo} eliminado por {current_user.username}"
+            observaciones=f"Documento subido {documento.tipo} eliminado por {get_current_username()}"
         )
         db.session.add(historial)
         
@@ -813,7 +826,8 @@ def eliminar_subido(concurso_id, documento_id):
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @concursos.route('/<int:concurso_id>/generar-documento/<string:document_type_key>', methods=['GET'])
-@login_required
+@keycloak_login_required
+@admin_required
 def generar_documento(concurso_id, document_type_key):
     """
     Generic document generation route that handles all document types based on configuration.
@@ -874,13 +888,11 @@ def generar_documento(concurso_id, document_type_key):
 
 # Add the admin signature route
 @concursos.route('/<int:concurso_id>/documento/<int:documento_id>/admin-firmar', methods=['POST'])
-@login_required
+@keycloak_login_required
+@admin_required
 def admin_firmar_documento(concurso_id, documento_id):
-    """Allow an admin to digitally sign a draft document."""
-    # Verify user is logged in and is an admin
-    if not current_user.is_authenticated or current_user.role != 'admin':
-        flash('Debe ser administrador para firmar documentos', 'danger')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    """Allow an admin to digitally sign a draft document."""    # Admin authentication is handled by the decorators above
+    # Remove the old flask-login authentication check
     
     try:
         # Fetch concurso and document
@@ -915,7 +927,7 @@ def admin_firmar_documento(concurso_id, documento_id):
             
         # Get admin persona record
         from app.models.models import Persona, User
-        admin_persona = Persona.query.filter_by(username=current_user.username).first()
+        admin_persona = Persona.query.filter_by(username=get_current_username()).first()
         
         if not admin_persona:
             # Look for any admin persona records - if none found, use default information
@@ -935,7 +947,7 @@ def admin_firmar_documento(concurso_id, documento_id):
                 cargo = "Administrador"
                 
                 # Try to get User record for better information
-                admin_user = User.query.filter_by(username=current_user.username).first()
+                admin_user = User.query.filter_by(username=get_current_username()).first()
                 if admin_user:
                     username_parts = admin_user.username.split('.')
                     if len(username_parts) > 1:
@@ -1039,3 +1051,4 @@ def admin_firmar_documento(concurso_id, documento_id):
         print(traceback.format_exc())
         flash(f'Error inesperado: {str(e)}', 'danger')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+

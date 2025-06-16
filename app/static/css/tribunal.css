@@ -49,6 +49,19 @@
     color: white;
 }
 
+/* Permission update animation */
+.permissions-updated {
+    background-color: #dbeafe !important;
+    border: 2px solid #2563eb !important;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+}
+
+.permissions-updated .form-check-label {
+    color: #1e40af !important;
+    font-weight: 500;
+}
+
 .btn-tribunal-primary:focus {
     background-color: #1e40af; 
     border-color: #1e40af; 

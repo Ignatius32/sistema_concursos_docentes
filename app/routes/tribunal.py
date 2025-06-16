@@ -14,18 +14,238 @@ from app.utils.keycloak_auth import (
     get_current_username
 )
 from app.config.keycloak_config import KeycloakConfig
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from functools import wraps
-import string
-import random
+import secrets
+import hashlib
 import os
-import json
-import base64
 import io
+import base64
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
 drive_api = GoogleDriveAPI()
+
+# Token utilities for password reset
+def generate_reset_token(user_id: str, expiry_hours: int = 24) -> str:
+    """Generate a secure reset token for password reset."""
+    # Create a random token
+    random_token = secrets.token_urlsafe(32)
+    
+    # Create expiry timestamp
+    expiry = datetime.utcnow() + timedelta(hours=expiry_hours)
+    expiry_str = expiry.isoformat()
+    
+    # Create the payload: user_id|expiry|random_token
+    payload = f"{user_id}|{expiry_str}|{random_token}"
+    
+    # Create a hash using a secret key (you should store this in config)
+    secret_key = os.environ.get('RESET_TOKEN_SECRET', 'your-secret-key-here')
+    signature = hashlib.sha256(f"{payload}|{secret_key}".encode()).hexdigest()
+    
+    # Combine payload and signature
+    token = f"{payload}|{signature}"
+    
+    # URL-safe base64 encode
+    import base64
+    return base64.urlsafe_b64encode(token.encode()).decode()
+
+def verify_reset_token(token: str) -> dict:
+    """Verify and decode a reset token."""
+    try:
+        import base64
+        
+        # Decode from base64
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        
+        # Split the token
+        parts = decoded.split('|')
+        if len(parts) != 4:
+            return {'valid': False, 'error': 'Invalid token format'}
+        
+        user_id, expiry_str, random_token, signature = parts
+        
+        # Verify signature
+        secret_key = os.environ.get('RESET_TOKEN_SECRET', 'your-secret-key-here')
+        expected_signature = hashlib.sha256(f"{user_id}|{expiry_str}|{random_token}|{secret_key}".encode()).hexdigest()
+        
+        if signature != expected_signature:
+            return {'valid': False, 'error': 'Invalid token signature'}
+        
+        # Check expiry
+        expiry = datetime.fromisoformat(expiry_str)
+        if datetime.utcnow() > expiry:
+            return {'valid': False, 'error': 'Token has expired'}
+        
+        return {
+            'valid': True,
+            'user_id': user_id,
+            'expiry': expiry
+        }
+        
+    except Exception as e:
+        return {'valid': False, 'error': f'Token verification failed: {str(e)}'}
+
+def send_reset_email_internal(persona: Persona, keycloak_user_id: str) -> bool:
+    """Send password reset email using Google Drive email system."""
+    try:
+        # Generate reset token
+        reset_token = generate_reset_token(keycloak_user_id)
+        
+        # Build reset URL pointing to our app
+        reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+        
+        # Use Google Drive email system
+        try:
+            # Initialize Google Drive API
+            drive_api = GoogleDriveAPI()
+            
+            # Email subject
+            subject = "Configurar Contraseña - Portal de Tribunal"
+            
+            # HTML email body with placeholders
+            html_body = """
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Configurar Contraseña - Portal de Tribunal</title>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                    .content { background-color: #f8f9fa; padding: 30px; border: 1px solid #dee2e6; border-top: none; }
+                    .button { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+                    .footer { background-color: #e9ecef; padding: 15px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 5px 5px; font-size: 0.9em; color: #6c757d; }
+                    .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Portal de Tribunal</h1>
+                    <p>Sistema de Concursos Docentes</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Hola <<nombre>> <<apellido>>,</h2>
+                    
+                    <p>Ha sido designado(a) como miembro del tribunal para un concurso docente. Para acceder al Portal de Tribunal, necesita configurar su contraseña de acceso.</p>
+                    
+                    <p>Haga clic en el siguiente enlace para configurar su contraseña:</p>
+                    
+                    <div style="text-align: center;">
+                        <a href="<<reset_url>>" class="button">Configurar Contraseña</a>
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>Importante:</strong>
+                        <ul>
+                            <li>Este enlace es válido por 24 horas</li>
+                            <li>Solo puede ser usado una vez</li>
+                            <li>No comparta este enlace con otras personas</li>
+                        </ul>
+                    </div>
+                    
+                    <p>Una vez que configure su contraseña, podrá acceder al Portal de Tribunal usando su correo electrónico y la contraseña que haya elegido.</p>
+                    
+                    <p>Si tiene problemas para acceder o no solicitó este acceso, contacte al administrador del sistema.</p>
+                </div>
+                
+                <div class="footer">
+                    <p><strong>Sistema de Concursos Docentes</strong></p>
+                    <p>Este es un mensaje automático, por favor no responda a este correo.</p>
+                    <p>Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:</p>
+                    <p style="word-break: break-all; font-size: 0.8em;"><<reset_url>></p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Placeholders for email content
+            placeholders = {
+                'nombre': persona.nombre,
+                'apellido': persona.apellido,
+                'reset_url': reset_url,
+                'correo': persona.correo
+            }
+            
+            # Send email via Google Drive API
+            result = drive_api.send_email(
+                to_email=persona.correo,
+                subject=subject,
+                html_body=html_body,
+                sender_name="Sistema de Concursos Docentes",
+                placeholders=placeholders
+            )
+            
+            current_app.logger.info(f"Password reset email sent successfully to {persona.correo} via Google Drive")
+            current_app.logger.info(f"Reset URL: {reset_url}")
+            
+            # Show success message in development
+            if current_app.debug:
+                flash(f'Email de configuración enviado a {persona.correo}. Reset URL: <a href="{reset_url}" target="_blank">{reset_url}</a>', 'info')
+            
+            return True
+            
+        except Exception as email_error:
+            current_app.logger.error(f"Failed to send email via Google Drive: {email_error}")
+            
+            # Fallback: Log the URL for manual testing
+            current_app.logger.info(f"EMAIL FALLBACK - Password reset URL for {persona.correo}: {reset_url}")
+            current_app.logger.info(f"Reset token: {reset_token}")
+            
+            # In development, show the link in the UI as fallback
+            if current_app.debug:
+                flash(f'Error enviando email, pero enlace generado: <a href="{reset_url}" target="_blank">Configurar contraseña para {persona.correo}</a>', 'warning')
+            
+            return True  # Return True because token was generated successfully
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating reset email: {e}")
+        return False
+
+
+
+def notify_tribunal_member_with_reset(persona: Persona, keycloak_admin: KeycloakAdminClient) -> dict:
+    """
+    Notify a tribunal member with password reset link using Drive integration.
+    Returns dict with success status and message.
+    """
+    try:
+        if not persona.correo:
+            return {
+                'success': False,
+                'message': f'{persona.nombre} {persona.apellido} no tiene correo registrado'
+            }
+        
+        # Find user in Keycloak by email
+        keycloak_user = keycloak_admin.get_user_by_email(persona.correo)        
+        if not keycloak_user:
+            return {
+                'success': False,
+                'message': f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.'
+            }
+        
+        # Use our internal reset system with Drive integration
+        success = send_reset_email_internal(persona, keycloak_user['id'])
+        
+        if success:
+            return {
+                'success': True,
+                'message': f'Email de configuración enviado a {persona.nombre} {persona.apellido} via Drive.',
+                'keycloak_user_id': keycloak_user['id']
+            }
+        else:
+            return {
+                'success': False,
+                'message': f'Error al enviar email a {persona.nombre} {persona.apellido}.'
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}'
+        }
 
 def tribunal_login_required(f):
     @wraps(f)
@@ -47,67 +267,208 @@ def index(concurso_id):
 @tribunal.route('/concurso/<int:concurso_id>/agregar', methods=['GET', 'POST'])
 @admin_required
 def agregar(concurso_id):
-    """Add an existing member to the tribunal of a concurso."""
+    """Add multiple members to the tribunal of a concurso."""
+    current_app.logger.info(f"agregar() called - Method: {request.method}, Content-Type: {request.content_type}")
+    current_app.logger.info(f"Request is_json: {request.is_json}")
+    current_app.logger.info(f"Request form data: {dict(request.form)}")
+    current_app.logger.info(f"Request JSON data: {request.get_json(silent=True)}")
+    
     concurso = Concurso.query.get_or_404(concurso_id)
     
     if request.method == 'POST':
+        current_app.logger.info(f"POST request to agregar - Content-Type: {request.content_type}, is_json: {request.is_json}")
         try:
-            # Extract form data
-            rol = request.form.get('rol')
-            claustro = request.form.get('claustro')
-            persona_id = request.form.get('persona_id')
+            # Handle multiple member additions
+            json_data = request.get_json() if request.is_json else None
+            current_app.logger.info(f"JSON data received: {json_data}")
             
-            if not persona_id:
-                flash('Debe seleccionar una persona existente.', 'danger')
-                return render_template('tribunal/agregar.html', concurso=concurso)
-              # Find the existing persona
-            persona = Persona.query.get_or_404(persona_id)
-              # Ensure user has tribunal role in Keycloak
-            if persona.keycloak_user_id:
-                try:
-                    # Assign tribunal role if not already assigned
-                    keycloak_admin = KeycloakAdminClient()
-                    # Check if user already has the tribunal role
-                    if not keycloak_admin.has_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE):
-                        keycloak_admin.assign_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE)
-                        current_app.logger.info(f"Assigned tribunal role to user {persona.keycloak_user_id}")
-                    else:
-                        current_app.logger.info(f"User {persona.keycloak_user_id} already has tribunal role")
-                except Exception as e:
-                    current_app.logger.warning(f"Could not assign tribunal role to user {persona.keycloak_user_id}: {e}")
+            if json_data:
+                # Extract members array from JSON data
+                if 'members' in json_data:
+                    members_data = json_data['members']
+                else:
+                    members_data = json_data  # Backwards compatibility
+                
+                current_app.logger.info(f"Members data extracted: {members_data}")
+                # JSON request for multiple members
+                return agregar_multiple_members(concurso_id, members_data)
+            else:
+                # Traditional form submission for single member (backward compatibility)
+                return agregar_single_member(concurso_id, concurso)
+                        
+        except Exception as e:
+            db.session.rollback()
+            if request.is_json:
+                return jsonify({
+                    'success': False,
+                    'errors': [f'Error al procesar la solicitud: {str(e)}'],
+                    'message': 'Error interno del servidor'
+                }), 500
+            else:
+                flash(f'Error al procesar la solicitud: {str(e)}', 'danger')
+                return redirect(url_for('tribunal.agregar', concurso_id=concurso_id))
+    
+    # GET request - show the form
+    # Get available personas for selection (exclude those already assigned to this concurso)
+    assigned_persona_ids = db.session.query(TribunalMiembro.persona_id).filter_by(concurso_id=concurso_id).subquery()
+    available_personas = Persona.query.filter(~Persona.id.in_(db.select(assigned_persona_ids))).order_by(Persona.apellido, Persona.nombre).all()
+    
+    # Get existing members for this concurso
+    existing_members = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).order_by(Persona.apellido, Persona.nombre).all()
+    
+    return render_template('tribunal/agregar.html', 
+                          concurso=concurso, 
+                          available_personas=available_personas,
+                          existing_members=existing_members)
+
+def agregar_single_member(concurso_id, concurso):
+    """Handle single member addition (backward compatibility)."""
+    # Extract form data
+    rol = request.form.get('rol')
+    claustro = request.form.get('claustro')
+    persona_id = request.form.get('persona_id')
+    
+    if not persona_id:
+        flash('Debe seleccionar una persona existente.', 'danger')
+        return redirect(url_for('tribunal.agregar', concurso_id=concurso_id))
+    
+    # Find the existing persona
+    persona = Persona.query.get_or_404(persona_id)
+    
+    # Check if this persona is already assigned to this concurso
+    existing_assignment = TribunalMiembro.query.filter_by(
+        persona_id=persona.id, 
+        concurso_id=concurso_id
+    ).first()
+    
+    if existing_assignment:
+        flash(f'La persona {persona.nombre} {persona.apellido} ya está asignada a este concurso como {existing_assignment.rol}.', 'warning')
+        return redirect(url_for('tribunal.index', concurso_id=concurso_id))
+    
+    # Create the tribunal member
+    success = create_tribunal_member(concurso, persona, rol, claustro)
+    
+    if success:
+        flash('Miembro del tribunal asignado exitosamente.', 'success')
+        return redirect(url_for('tribunal.index', concurso_id=concurso_id))
+    else:
+        return redirect(url_for('tribunal.agregar', concurso_id=concurso_id))
+
+def agregar_multiple_members(concurso_id, members_data):
+    """Handle multiple member additions via JSON."""
+    current_app.logger.info(f"agregar_multiple_members called with {len(members_data) if members_data else 0} members")
+    concurso = Concurso.query.get_or_404(concurso_id)
+    added_members = []
+    errors = []
+    
+    for member_data in members_data:
+        persona_id = member_data.get('persona_id')
+        rol = member_data.get('rol')
+        claustro = member_data.get('claustro', 'Docente')
+        
+        # Get permissions from the data (convert string values to boolean)
+        permissions = {
+            'can_add_tema': member_data.get('can_add_tema') in ['1', True, 'true', 'True'],
+            'can_upload_file': member_data.get('can_upload_file') in ['1', True, 'true', 'True'],
+            'can_sign_file': member_data.get('can_sign_file') in ['1', True, 'true', 'True'],
+            'can_view_postulante_docs': member_data.get('can_view_postulante_docs') in ['1', True, 'true', 'True']
+        }
+        
+        if not persona_id or not rol:
+            errors.append('Datos incompletos para uno de los miembros')
+            continue
             
-            # Check if this persona is already assigned to this concurso
-            existing_assignment = TribunalMiembro.query.filter_by(
-                persona_id=persona.id, 
-                concurso_id=concurso_id
-            ).first()
+        # Find the persona
+        persona = Persona.query.get(persona_id)
+        if not persona:
+            errors.append(f'Persona con ID {persona_id} no encontrada')
+            continue
             
-            if existing_assignment:
-                flash(f'La persona {persona.nombre} {persona.apellido} ya está asignada a este concurso como {existing_assignment.rol}.', 'warning')
-                return redirect(url_for('tribunal.index', concurso_id=concurso_id))
-            
-            # Create Google Drive folder for tribunal member
-            folder_name = f"{rol}_{persona.apellido}_{persona.nombre}_{persona.dni}"
-            folder_id = drive_api.create_tribunal_folder(
-                parent_folder_id=concurso.tribunal_folder_id,
-                nombre=persona.nombre,
-                apellido=persona.apellido,
-                dni=persona.dni,
-                rol=rol
-            )
-            
-            # Create new tribunal member assignment
-            miembro = TribunalMiembro(
-                concurso_id=concurso_id,
-                persona_id=persona.id,
-                rol=rol,
-                claustro=claustro,
-                drive_folder_id=folder_id,
-                notificado=False
-            )
-              # Set default permissions based on role
+        # Check if already assigned
+        existing_assignment = TribunalMiembro.query.filter_by(
+            persona_id=persona.id, 
+            concurso_id=concurso_id
+        ).first()
+        
+        if existing_assignment:
+            errors.append(f'{persona.nombre} {persona.apellido} ya está asignado como {existing_assignment.rol}')
+            continue
+        
+        # Create the tribunal member with custom permissions
+        current_app.logger.info(f"Attempting to create tribunal member: {persona.nombre} {persona.apellido} - {rol}")
+        current_app.logger.info(f"Permissions: {permissions}")
+        member_id = create_tribunal_member(concurso, persona, rol, claustro, permissions)
+        
+        if member_id:
+            added_members.append({
+                'id': member_id,
+                'persona_id': persona.id,
+                'name': f'{persona.nombre} {persona.apellido}',
+                'rol': rol,
+                'claustro': claustro
+            })
+            current_app.logger.info(f"Successfully added: {persona.nombre} {persona.apellido} with ID {member_id}")
+        else:
+            errors.append(f'Error al agregar {persona.nombre} {persona.apellido}')
+            current_app.logger.error(f"Failed to add: {persona.nombre} {persona.apellido}")
+    
+    # Return JSON response
+    success = len(added_members) > 0
+    response_data = {
+        'success': success,
+        'members': added_members,
+        'errors': errors,
+        'message': f'Se agregaron {len(added_members)} miembros al tribunal' if success else 'No se pudo agregar ningún miembro'
+    }
+    
+    current_app.logger.info(f"Returning response: {response_data}")
+    return jsonify(response_data), 200 if success else 400
+
+def create_tribunal_member(concurso, persona, rol, claustro, custom_permissions=None):
+    """Create a tribunal member with proper permissions and Keycloak role."""
+    try:
+        current_app.logger.info(f"Creating tribunal member: {persona.nombre} {persona.apellido}, rol: {rol}, claustro: {claustro}")
+        current_app.logger.info(f"Custom permissions: {custom_permissions}")
+        
+        # Ensure user has tribunal role in Keycloak
+        if persona.keycloak_user_id:
+            try:
+                keycloak_admin = KeycloakAdminClient()
+                if not keycloak_admin.has_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE):
+                    keycloak_admin.assign_client_role(persona.keycloak_user_id, KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE)
+                    current_app.logger.info(f"Assigned tribunal role to user {persona.keycloak_user_id}")
+            except Exception as e:
+                current_app.logger.warning(f"Could not assign tribunal role to user {persona.keycloak_user_id}: {e}")
+        
+        # Create Google Drive folder for tribunal member
+        folder_id = drive_api.create_tribunal_folder(
+            parent_folder_id=concurso.tribunal_folder_id,
+            nombre=persona.nombre,
+            apellido=persona.apellido,
+            dni=persona.dni,
+            rol=rol
+        )
+        
+        # Create new tribunal member assignment
+        miembro = TribunalMiembro(
+            concurso_id=concurso.id,
+            persona_id=persona.id,
+            rol=rol,
+            claustro=claustro,
+            drive_folder_id=folder_id,
+            notificado=False
+        )
+        
+        # Set permissions based on custom permissions or default role-based permissions
+        if custom_permissions:
+            miembro.can_add_tema = custom_permissions.get('can_add_tema', False)
+            miembro.can_upload_file = custom_permissions.get('can_upload_file', False)
+            miembro.can_sign_file = custom_permissions.get('can_sign_file', False)
+            miembro.can_view_postulante_docs = custom_permissions.get('can_view_postulante_docs', False)
+        else:
+            # Set default permissions based on role            
             if rol == 'Presidente':
-                miembro.can_add_tema = True                
+                miembro.can_add_tema = True
                 miembro.can_upload_file = True
                 miembro.can_sign_file = True
                 miembro.can_view_postulante_docs = True
@@ -121,21 +482,16 @@ def agregar(concurso_id):
                 miembro.can_upload_file = False
                 miembro.can_sign_file = False
                 miembro.can_view_postulante_docs = False
-            
-            db.session.add(miembro)
-            db.session.commit()            
-            flash('Miembro del tribunal asignado exitosamente.', 'success')
-            return redirect(url_for('tribunal.index', concurso_id=concurso_id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al asignar miembro del tribunal: {str(e)}', 'danger')
-    
-    # Get available personas for the dropdown (exclude those already assigned to this concurso)
-    assigned_persona_ids = db.session.query(TribunalMiembro.persona_id).filter_by(concurso_id=concurso_id).subquery()
-    available_personas = Persona.query.filter(~Persona.id.in_(assigned_persona_ids)).order_by(Persona.apellido, Persona.nombre).all()
-    
-    return render_template('tribunal/agregar.html', concurso=concurso, available_personas=available_personas)
+        
+        db.session.add(miembro)
+        db.session.commit()
+        return miembro.id  # Return the member ID instead of True
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error creating tribunal member: {str(e)}')
+        flash(f'Error al crear miembro del tribunal: {str(e)}', 'danger')
+        return None  # Return None instead of False
 
 @tribunal.route('/<int:miembro_id>/editar', methods=['GET', 'POST'])
 @admin_required
@@ -280,7 +636,22 @@ def subir_documento(miembro_id):
     
     return redirect(url_for('tribunal.index', concurso_id=concurso.id))
 
-
+# Test endpoint for debugging JSON requests
+@tribunal.route('/test-json', methods=['POST'])
+@admin_required  
+def test_json():
+    """Test endpoint to debug JSON requests."""
+    current_app.logger.info(f"Test JSON - Content-Type: {request.content_type}, is_json: {request.is_json}")
+    current_app.logger.info(f"Request data: {request.get_data()}")
+    
+    try:
+        if request.is_json:
+            data = request.get_json()
+            return jsonify({"success": True, "received": data})
+        else:
+            return jsonify({"success": False, "error": "Not JSON request"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 @tribunal.route('/notificar-tribunal/<int:concurso_id>/<int:documento_id>', methods=['POST'])
 @admin_required
@@ -309,39 +680,23 @@ def notificar_tribunal(concurso_id, documento_id):
         
         for miembro in miembros:
             persona = miembro.persona
-            if not persona.correo:
-                errores.append(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.')
-                continue
             
-            try:
-                # Find user in Keycloak by email
-                keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
-                if not keycloak_user:
-                    errores.append(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.')
-                    continue
-                
-                # Send password reset email via Keycloak
-                success = keycloak_admin.send_execute_actions_email_with_redirect(
-                    user_id=keycloak_user['id'],
-                    actions=['UPDATE_PASSWORD']
-                )
-                
-                if success:
-                    # Update notification status
-                    miembro.notificado = True
-                    miembro.fecha_notificacion = datetime.utcnow()
-                    notificados += 1
-                else:
-                    errores.append(f'Error al enviar email a {persona.nombre} {persona.apellido}.')
-                    
-            except Exception as e:
-                errores.append(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}')
+            # Use the Drive-based notification helper function
+            result = notify_tribunal_member_with_reset(persona, keycloak_admin)
+            
+            if result['success']:
+                # Update notification status
+                miembro.notificado = True
+                miembro.fecha_notificacion = datetime.utcnow()
+                notificados += 1
+            else:
+                errores.append(result['message'])
         
         db.session.commit()
         
         # Show results
         if notificados > 0:
-            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal (excepto suplentes) via Keycloak.', 'success')
+            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal via Drive.', 'success')
         
         if errores:
             for error in errores:
@@ -374,38 +729,21 @@ def notificar_todos_miembros(concurso_id):
                 
             persona = miembro.persona
             
-            if not persona.correo:
-                errores.append(f'{persona.nombre} {persona.apellido} no tiene correo registrado')
-                continue
+            # Use the new notification helper function
+            result = notify_tribunal_member_with_reset(persona, keycloak_admin)
             
-            try:                # Find user in Keycloak by email
-                keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
-                if not keycloak_user:
-                    errores.append(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.')
-                    continue
-                
-                # Send password reset email via Keycloak
-                success = keycloak_admin.send_execute_actions_email_with_redirect(
-                    user_id=keycloak_user['id'],
-                    actions=['UPDATE_PASSWORD']
-                )
-                
-                if success:
-                    # Update notification status
-                    miembro.notificado = True
-                    miembro.fecha_notificacion = datetime.utcnow()
-                    notificados += 1
-                else:
-                    errores.append(f'Error al enviar email a {persona.nombre} {persona.apellido}.')
-                    
-            except Exception as e:
-                errores.append(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}')
+            if result['success']:
+                # Update notification status
+                miembro.notificado = True
+                miembro.fecha_notificacion = datetime.utcnow()
+                notificados += 1
+            else:
+                errores.append(result['message'])
         
         db.session.commit()
-        
-        # Show results
+          # Show results
         if notificados > 0:
-            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal via Keycloak.', 'success')
+            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal via Drive.', 'success')
         
         if errores:
             for error in errores:
@@ -429,34 +767,20 @@ def notificar_miembro(miembro_id):
         if not persona.correo:
             flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
             return redirect(url_for('tribunal.index', concurso_id=concurso.id))
-        
-        # Initialize Keycloak admin client
+          # Initialize Keycloak admin client
         keycloak_admin = KeycloakAdminClient()
         
-        try:
-            # Find user in Keycloak by email
-            keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
-            if not keycloak_user:
-                flash(f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.', 'warning')
-                return redirect(url_for('tribunal.index', concurso_id=concurso.id))
-            
-            # Send password reset email via Keycloak
-            success = keycloak_admin.send_execute_actions_email_with_redirect(
-                user_id=keycloak_user['id'],
-                actions=['UPDATE_PASSWORD']
-            )
-            
-            if success:
-                # Update notification status
-                miembro.notificado = True
-                miembro.fecha_notificacion = datetime.utcnow()
-                db.session.commit()
-                flash(f'Email de configuración de contraseña enviado exitosamente a {persona.nombre} {persona.apellido} via Keycloak.', 'success')
-            else:
-                flash(f'Error al enviar email a {persona.nombre} {persona.apellido}.', 'danger')
-                
-        except Exception as e:
-            flash(f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}', 'danger')
+        # Use the new notification helper function
+        result = notify_tribunal_member_with_reset(persona, keycloak_admin)
+        
+        if result['success']:
+            # Update notification status
+            miembro.notificado = True
+            miembro.fecha_notificacion = datetime.utcnow()
+            db.session.commit()
+            flash(result['message'], 'success')
+        else:
+            flash(result['message'], 'danger')
         
     except Exception as e:
         db.session.rollback()
@@ -471,11 +795,58 @@ def acceso():
     flash('Para acceder al portal de tribunal, utilice el inicio de sesión principal del sistema.', 'info')
     return redirect(url_for('auth.login'))
 
-@tribunal.route('/reset/<token>')
+@tribunal.route('/reset/<token>', methods=['GET', 'POST'])
 def reset_password(token):
-    """Legacy password reset route - redirect to main login."""
-    flash('El sistema de contraseñas ha sido migrado. Por favor, contacte al administrador para restablecer su acceso.', 'info')
-    return redirect(url_for('auth.login'))
+    """Handle password reset with token validation and Keycloak integration."""
+    
+    # Verify the token
+    token_data = verify_reset_token(token)
+    
+    if not token_data['valid']:
+        flash(f'Enlace de restablecimiento inválido o expirado: {token_data.get("error", "Token inválido")}', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    keycloak_user_id = token_data['user_id']
+    
+    if request.method == 'GET':
+        # Show the reset password form
+        return render_template('tribunal/reset_password.html', token=token)
+    
+    # POST request - process password reset
+    password = request.form.get('password', '').strip()
+    confirm_password = request.form.get('confirm_password', '').strip()
+    
+    # Validate passwords
+    if not password or not confirm_password:
+        flash('Por favor complete todos los campos.', 'danger')
+        return render_template('tribunal/reset_password.html', token=token)
+    
+    if password != confirm_password:
+        flash('Las contraseñas no coinciden.', 'danger')
+        return render_template('tribunal/reset_password.html', token=token)
+    
+    if len(password) < 6:
+        flash('La contraseña debe tener al menos 6 caracteres.', 'danger')
+        return render_template('tribunal/reset_password.html', token=token)
+    
+    try:
+        # Initialize Keycloak admin client
+        keycloak_admin = KeycloakAdminClient()
+        
+        # Set the new password in Keycloak
+        success = keycloak_admin.set_user_password(keycloak_user_id, password, temporary=False)
+        
+        if success:
+            flash('Contraseña configurada exitosamente. Ya puede acceder al portal.', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('Error al configurar la contraseña. Intente nuevamente.', 'danger')
+            return render_template('tribunal/reset_password.html', token=token)
+            
+    except Exception as e:
+        current_app.logger.error(f"Error setting password for user {keycloak_user_id}: {e}")
+        flash('Error interno al configurar la contraseña. Contacte al administrador.', 'danger')
+        return render_template('tribunal/reset_password.html', token=token)
 
 @tribunal.route('/activar', methods=['GET', 'POST'])
 def activar_cuenta():
@@ -490,13 +861,12 @@ def activar_cuenta():
         if not persona:
             flash('No se encontró una persona con esos datos en el sistema.', 'danger')
             return render_template('tribunal/activar_cuenta.html')
-            
-        # Check if this persona is assigned to any tribunal
+              # Check if this persona is assigned to any tribunal
         miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).first()
         if not miembro:
             flash('Esta persona no está asignada a ningún tribunal.', 'danger')
             return render_template('tribunal/activar_cuenta.html')
-            
+        
         try:
             # Initialize Keycloak admin client
             keycloak_admin = KeycloakAdminClient()
@@ -507,16 +877,11 @@ def activar_cuenta():
                 flash('Usuario no encontrado en Keycloak. Contacte al administrador.', 'danger')
                 return render_template('tribunal/activar_cuenta.html')
             
-            # Send password reset email via Keycloak
-            portal_url = url_for('tribunal.acceso', _external=True)
-            success = keycloak_admin.send_execute_actions_email_with_redirect(
-                user_id=keycloak_user['id'],
-                actions=['UPDATE_PASSWORD'],
-                redirect_uri=portal_url
-            )
+            # Send password reset email using Drive integration
+            success = send_reset_email_internal(persona, keycloak_user['id'])
             
             if success:
-                flash('Se ha enviado un enlace de activación a su correo electrónico via Keycloak.', 'success')
+                flash('Se ha enviado un enlace de activación a su correo electrónico.', 'success')
                 return redirect(url_for('tribunal.acceso'))
             else:
                 flash('Error al enviar el enlace de activación. Contacte al administrador.', 'danger')
@@ -539,8 +904,7 @@ def recuperar_password():
         if not persona:
             flash('No se encontró una persona con esos datos en el sistema.', 'danger')
             return render_template('tribunal/recuperar_password.html')
-            
-        # Check if this persona is assigned to any tribunal
+              # Check if this persona is assigned to any tribunal
         miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).first()
         if not miembro:
             flash('Esta persona no está asignada a ningún tribunal.', 'danger')
@@ -556,16 +920,11 @@ def recuperar_password():
                 flash('Usuario no encontrado en Keycloak. Contacte al administrador.', 'danger')
                 return render_template('tribunal/recuperar_password.html')
             
-            # Send password reset email via Keycloak
-            portal_url = url_for('tribunal.acceso', _external=True)
-            success = keycloak_admin.send_execute_actions_email_with_redirect(
-                user_id=keycloak_user['id'],
-                actions=['UPDATE_PASSWORD'],
-                redirect_uri=portal_url
-            )
+            # Send password reset email using Drive integration
+            success = send_reset_email_internal(persona, keycloak_user['id'])
             
             if success:
-                flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico via Keycloak.', 'success')
+                flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico.', 'success')
                 return redirect(url_for('tribunal.acceso'))
             else:
                 flash('Error al enviar el enlace de restablecimiento. Contacte al administrador.', 'danger')
@@ -974,8 +1333,8 @@ def firmar_documento(concurso_id, documento_id):
         if documento.concurso_id != concurso_id:
             flash('El documento no pertenece a este concurso.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-        
-        # Check if member already signed        if documento.ya_firmado_por(miembro.id):
+          # Check if member already signed
+        if documento.ya_firmado_por(miembro.id):
             flash('Ya ha firmado este documento.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
             
@@ -993,89 +1352,85 @@ def firmar_documento(concurso_id, documento_id):
             flash('El documento no está en estado correcto para ser firmado.', 'danger')
             return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
         
-        try:
-            # Get the file content from Drive
-            file_content_response = drive_api.get_file_content(documento.file_id)
-            if not file_content_response.get('fileData'):
-                raise Exception("No se pudo obtener el contenido del archivo")
+        # Get the file content from Drive
+        file_content_response = drive_api.get_file_content(documento.file_id)
+        if not file_content_response.get('fileData'):
+            raise Exception("No se pudo obtener el contenido del archivo")
+        
+        # Get the binary content from base64
+        import base64
+        pdf_content = base64.b64decode(file_content_response['fileData'])
+        
+        # Add the signature using the PDF utility
+        pdf_with_stamp = add_signature_stamp(
+            pdf_content,
+            miembro.persona.apellido,
+            miembro.persona.nombre,
+            miembro.persona.dni,
+            documento.firma_count
+        )
+        
+        if not pdf_with_stamp:
+            raise Exception("Error al agregar la firma al PDF")
+        
+        # Convert back to base64 for upload
+        pdf_base64 = base64.b64encode(pdf_with_stamp).decode('utf-8')
+        
+        # Upload back to Drive, replacing the original
+        new_file_id, web_view_link = drive_api.overwrite_file(
+            documento.file_id,
+            pdf_base64
+        )
+        
+        if not new_file_id:
+            raise Exception("Error al guardar el documento firmado")
+        
+        # Update document with new file ID and URL if changed
+        if new_file_id != documento.file_id:
+            documento.file_id = new_file_id
+        if web_view_link:
+            documento.url = web_view_link
+        
+        # Increment signature count
+        documento.firma_count += 1
+        
+        # Add firma record
+        firma = FirmaDocumento(
+            documento_id=documento.id,
+            miembro_id=miembro.id
+        )  # fecha_firma will be set automatically by the default value
+        db.session.add(firma)
+        
+        # If document is not already marked as FIRMADO, update status once all tribunal members have signed
+        if documento.estado != 'FIRMADO':
+            tribunal_titulares = TribunalMiembro.query.filter(
+                TribunalMiembro.concurso_id == concurso_id,
+                TribunalMiembro.rol != 'Suplente'
+            ).count()
             
-            # Get the binary content from base64
-            import base64
-            pdf_content = base64.b64decode(file_content_response['fileData'])
-              # Add the signature using the PDF utility
-            pdf_with_stamp = add_signature_stamp(
-                pdf_content,
-                miembro.persona.apellido,
-                miembro.persona.nombre,
-                miembro.persona.dni,
-                documento.firma_count
-            )
-            
-            if not pdf_with_stamp:
-                raise Exception("Error al agregar la firma al PDF")
-            
-            # Convert back to base64 for upload
-            pdf_base64 = base64.b64encode(pdf_with_stamp).decode('utf-8')
-            
-            # Upload back to Drive, replacing the original
-            new_file_id, web_view_link = drive_api.overwrite_file(
-                documento.file_id,
-                pdf_base64
-            )
-            
-            if not new_file_id:
-                raise Exception("Error al guardar el documento firmado")
-            
-            # Update document with new file ID and URL if changed
-            if new_file_id != documento.file_id:
-                documento.file_id = new_file_id
-            if web_view_link:
-                documento.url = web_view_link
-            
-            # Increment signature count
-            documento.firma_count += 1
-            
-            # Add firma record
-            firma = FirmaDocumento(
-                documento_id=documento.id,
-                miembro_id=miembro.id
-            )  # fecha_firma will be set automatically by the default value
-            db.session.add(firma)
-            
-            # If document is not already marked as FIRMADO, update status once all tribunal members have signed
-            if documento.estado != 'FIRMADO':
-                tribunal_titulares = TribunalMiembro.query.filter(
-                    TribunalMiembro.concurso_id == concurso_id,
-                    TribunalMiembro.rol != 'Suplente'
-                ).count()
+            if documento.firma_count >= tribunal_titulares:
+                documento.estado = 'FIRMADO'
                 
-                if documento.firma_count >= tribunal_titulares:
-                    documento.estado = 'FIRMADO'
-                    
-                    # Add entry to history
-                    historial = HistorialEstado(
-                        concurso=concurso,
-                        estado="DOCUMENTO_FIRMADO",
-                        observaciones=f"Documento {documento.tipo} completamente firmado"
-                    )
-                    db.session.add(historial)
-            
-            db.session.commit()
-            flash('Documento firmado exitosamente.', 'success')
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al firmar el documento: {str(e)}', 'danger')
-            import traceback
-            print(traceback.format_exc())
+                # Add entry to history
+                historial = HistorialEstado(
+                    concurso=concurso,
+                    estado="DOCUMENTO_FIRMADO",
+                    observaciones=f"Documento {documento.tipo} completamente firmado"
+                )
+                db.session.add(historial)
+        
+        db.session.commit()
+        flash('Documento firmado exitosamente.', 'success')
         
     except Exception as e:
         db.session.rollback()
         flash(f'Error al firmar el documento: {str(e)}', 'danger')
+        import traceback
+        print(traceback.format_exc())
     
     return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
 
-@tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir', methods=['POST'])
+@tribunal.route('/<int:concurso_id>/documento/<int:documento_id>/subir', methods=['POST'], endpoint='subir_acta_firmada')
 def subir_acta_firmada(concurso_id, documento_id):
     """Handle tribunal member uploading a signed document. Redirects to subir_documento_presidente."""
     # Redirect to the standard endpoint for consistency
@@ -1272,6 +1627,8 @@ def reset_temas(concurso_id):
     """Reset sorteo temas for a concurso. Only accessible by admin."""
     concurso = Concurso.query.get_or_404(concurso_id)
     
+   
+    
     if not concurso.sustanciacion:
         flash('El concurso no tiene información de sustanciación.', 'danger')
         return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
@@ -1297,6 +1654,8 @@ def reset_temas(concurso_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar los temas: {str(e)}', 'danger')
+    
+
     
     return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
 
@@ -1389,10 +1748,59 @@ def buscar_persona():
         'encontrado': True,
         'nombre': persona.nombre,
         'apellido': persona.apellido,
-        'correo': persona.correo,
-        'telefono': persona.telefono,
-        'dni': persona.dni
+        'dni': persona.dni,
+        'correo': persona.correo or '',
+        'telefono': persona.telefono or '',
+        'display_name': f"{persona.apellido}, {persona.nombre} - DNI: {persona.dni}" + 
+                       (f" - {persona.correo}" if persona.correo else "")
     })
+
+@tribunal.route('/api/buscar-personas', methods=['GET'])
+@admin_required
+def buscar_personas():
+    """API endpoint to search for personas with flexible criteria"""
+    query = request.args.get('q', '').strip()
+    concurso_id = request.args.get('concurso_id')
+    limit = min(int(request.args.get('limit', 50)), 100)  # Max 100 results
+    
+    if not query or len(query) < 2:
+        return jsonify({'personas': []})
+    
+    # Base query for personas
+    personas_query = Persona.query
+      # If concurso_id is provided, exclude already assigned personas
+    if concurso_id:
+        assigned_persona_ids = db.session.query(TribunalMiembro.persona_id).filter_by(concurso_id=concurso_id).subquery()
+        personas_query = personas_query.filter(~Persona.id.in_(db.select(assigned_persona_ids)))
+    
+    # Search by name, surname, DNI, or email
+    search_filter = db.or_(
+        Persona.nombre.ilike(f'%{query}%'),
+        Persona.apellido.ilike(f'%{query}%'),
+        Persona.dni.ilike(f'%{query}%'),
+        Persona.correo.ilike(f'%{query}%')
+    )
+    
+    personas = personas_query.filter(search_filter)\
+                            .order_by(Persona.apellido, Persona.nombre)\
+                            .limit(limit)\
+                            .all()
+    
+    # Format results
+    results = []
+    for persona in personas:
+        results.append({
+            'id': persona.id,
+            'nombre': persona.nombre,
+            'apellido': persona.apellido,
+            'dni': persona.dni,
+            'correo': persona.correo or '',
+            'telefono': persona.telefono or '',
+            'display_name': f"{persona.apellido}, {persona.nombre} - DNI: {persona.dni}" + 
+                           (f" - {persona.correo}" if persona.correo else "")
+        })
+    
+    return jsonify({'personas': results})
 
 @tribunal.route('/concurso/<int:concurso_id>/postulante/<int:postulante_id>/download-docs', methods=['GET'])
 @tribunal_login_required
@@ -1462,4 +1870,214 @@ def download_postulante_docs(concurso_id, postulante_id):
     except Exception as e:
         current_app.logger.error(f"Error generating merged PDF for postulante {postulante_id}: {str(e)}")
         flash('Error al generar el archivo PDF', 'danger')
-        return redirect(url_for('tribunal.documentacion_postulantes', concurso_id=concurso_id))
+
+# Unified API routes for the new tribunal management system
+@tribunal.route('/concurso/<int:concurso_id>/tribunal/add', methods=['POST'])
+@admin_required
+def add_single_member(concurso_id):
+    """Add a single member to the tribunal via JSON API."""
+    try:
+        concurso = Concurso.query.get_or_404(concurso_id)
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No se recibieron datos'
+            }), 400
+        
+        persona_id = data.get('persona_id')
+        if not persona_id:
+            return jsonify({
+                'success': False,
+                'message': 'ID de persona requerido'
+            }), 400
+        
+        persona = Persona.query.get_or_404(persona_id)
+        
+        # Check if already exists
+        existing = TribunalMiembro.query.filter_by(
+            concurso_id=concurso_id,
+            persona_id=persona_id
+        ).first()
+        
+        if existing:
+            return jsonify({
+                'success': False,
+                'message': f'{persona.nombre} {persona.apellido} ya está en el tribunal'
+            }), 400
+        
+        # Create member with permissions
+        permissions = {
+            'can_add_tema': data.get('can_add_tema', False),
+            'can_upload_file': data.get('can_upload_file', False),
+            'can_sign_file': data.get('can_sign_file', False),
+            'can_view_postulante_docs': data.get('can_view_postulante_docs', False)
+        }
+        
+        miembro_id = create_tribunal_member(
+            concurso=concurso,
+            persona=persona,
+            rol=data.get('rol', 'Titular'),
+            claustro=data.get('claustro', 'Docente'),
+            custom_permissions=permissions
+        )
+        
+        if miembro_id:
+            miembro = TribunalMiembro.query.get(miembro_id)
+            return jsonify({
+                'success': True,
+                'message': f'{persona.nombre} {persona.apellido} agregado al tribunal',
+                'miembro': {
+                    'id': miembro.id,
+                    'rol': miembro.rol,
+                    'claustro': miembro.claustro,
+                    'can_add_tema': miembro.can_add_tema,
+                    'can_upload_file': miembro.can_upload_file,
+                    'can_sign_file': miembro.can_sign_file,
+                    'can_view_postulante_docs': miembro.can_view_postulante_docs
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Error al crear el miembro del tribunal'
+            }), 500
+            
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error adding tribunal member: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Error interno: {str(e)}'
+        }), 500
+
+@tribunal.route('/concurso/<int:concurso_id>/tribunal/edit/<int:miembro_id>', methods=['PUT'])
+@admin_required
+def edit_member_api(concurso_id, miembro_id):
+    """Edit a tribunal member via JSON API."""
+
+    try:
+        miembro = TribunalMiembro.query.get_or_404(miembro_id)
+        
+        if miembro.concurso_id != concurso_id:
+            return jsonify({
+                'success': False,
+                'message': 'Miembro no pertenece a este concurso'
+            }), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No se recibieron datos'
+            }), 400
+        
+        # Store old values for Drive folder update
+        old_rol = miembro.rol
+        persona = miembro.persona
+        
+        # Update member data
+        miembro.rol = data.get('rol', miembro.rol)
+        miembro.claustro = data.get('claustro', miembro.claustro)
+        miembro.can_add_tema = data.get('can_add_tema', False)
+        miembro.can_upload_file = data.get('can_upload_file', False)
+        miembro.can_sign_file = data.get('can_sign_file', False)
+        miembro.can_view_postulante_docs = data.get('can_view_postulante_docs', False)
+        
+        # Update Drive folder name if role changed
+        if miembro.drive_folder_id and old_rol != miembro.rol:
+            try:
+                new_folder_name = f"{miembro.rol}_{persona.apellido}_{persona.nombre}_{persona.dni}"
+                drive_api.update_folder_name(miembro.drive_folder_id, new_folder_name)
+            except Exception as drive_error:
+                current_app.logger.warning(f'Error updating Drive folder name: {drive_error}')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Miembro actualizado correctamente',
+            'miembro': {
+                'id': miembro.id,
+                'rol': miembro.rol,
+                'claustro': miembro.claustro,
+                'can_add_tema': miembro.can_add_tema,
+                'can_upload_file': miembro.can_upload_file,
+                'can_sign_file': miembro.can_sign_file,
+                'can_view_postulante_docs': miembro.can_view_postulante_docs
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error editing tribunal member: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Error interno: {str(e)}'
+        }), 500
+
+@tribunal.route('/concurso/<int:concurso_id>/tribunal/delete/<int:miembro_id>', methods=['DELETE'])
+@admin_required
+def delete_member_api(concurso_id, miembro_id):
+    """Delete a tribunal member via JSON API."""
+    try:
+        miembro = TribunalMiembro.query.get_or_404(miembro_id)
+        
+        if miembro.concurso_id != concurso_id:
+            return jsonify({
+                'success': False,
+                'message': 'Miembro no pertenece a este concurso'
+            }), 400
+        
+        persona = miembro.persona
+        
+        # Delete Drive folder if exists
+        if miembro.drive_folder_id:
+            try:
+                drive_api.delete_folder(miembro.drive_folder_id)
+            except Exception as drive_error:
+                current_app.logger.warning(f'Error deleting Drive folder: {drive_error}')
+        
+        db.session.delete(miembro)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{persona.nombre} {persona.apellido} eliminado del tribunal'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error deleting tribunal member: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Error interno: {str(e)}'
+        }), 500
+
+def send_simple_reset_fallback(persona: Persona, keycloak_user_id: str) -> bool:
+    """Simple fallback method that generates token and logs it without Keycloak API calls."""
+    try:
+        # Generate reset token
+        reset_token = generate_reset_token(keycloak_user_id)
+        
+        # Build reset URL pointing to our app
+        reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+        
+        # Log the information for manual testing
+        current_app.logger.info(f"Password reset fallback for {persona.correo}")
+        current_app.logger.info(f"Reset URL: {reset_url}")
+        current_app.logger.info(f"Token: {reset_token}")
+        
+        # In debug mode, show the link in the UI
+        if current_app.debug:
+            flash(f'Password reset link for {persona.nombre} {persona.apellido}: <a href="{reset_url}" target="_blank">Reset Password</a>', 'info')
+        
+        # You can implement actual email sending here without Keycloak
+        # For example, using Flask-Mail or any other email service
+        
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in fallback reset email: {e}")
+        return False

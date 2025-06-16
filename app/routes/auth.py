@@ -1,11 +1,17 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from app.models.models import Persona, db, TribunalMiembro
 from app.integrations.keycloak_oidc import keycloak_oidc
-from app.integrations.keycloak_admin_client import get_keycloak_admin
+from app.integrations.keycloak_admin_client import get_keycloak_admin, KeycloakAdminClient
 from app.utils.keycloak_auth import get_current_user_info, is_admin, keycloak_login_required, get_current_user_roles
 from app.config.keycloak_config import KeycloakConfig
 from datetime import datetime
 import logging
+
+# Import the Drive-based reset email function from tribunal routes
+def get_send_reset_email_internal():
+    """Lazy import to avoid circular imports"""
+    from app.routes.tribunal import send_reset_email_internal
+    return send_reset_email_internal
 
 logger = logging.getLogger(__name__)
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -164,7 +170,7 @@ def clear_session():
 
 @auth.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
-    """Handle password reset requests."""
+    """Handle password reset requests using Drive-based system."""
     if request.method == 'POST':
         username_or_email = request.form.get('username_or_email', '').strip()
         
@@ -172,14 +178,52 @@ def reset_password():
             flash('Por favor ingrese su usuario o correo electrónico.', 'danger')
             return render_template('auth/reset_password.html')
         
-        # Initiate password reset via Keycloak
-        result = keycloak_oidc.reset_password(username_or_email)
-        
-        if result['success']:
-            flash(result['message'], 'success')
+        try:
+            # Initialize Keycloak admin client
+            keycloak_admin = KeycloakAdminClient()
+            
+            # Try to find user by email first, then by username
+            keycloak_user = None
+            persona = None
+            
+            # Check if input looks like an email
+            if '@' in username_or_email:
+                # Try to find by email in Keycloak
+                keycloak_user = keycloak_admin.get_user_by_email(username_or_email)
+                if keycloak_user:
+                    # Find corresponding persona
+                    persona = Persona.query.filter_by(correo=username_or_email).first()
+            else:
+                # Try to find persona by DNI/username first
+                persona = Persona.query.filter(
+                    (Persona.dni == username_or_email) | 
+                    (Persona.username == username_or_email)
+                ).first()
+                
+                if persona and persona.correo:
+                    # Find corresponding Keycloak user
+                    keycloak_user = keycloak_admin.get_user_by_email(persona.correo)
+            
+            if not persona or not keycloak_user:
+                # Don't reveal whether user exists or not for security
+                flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'info')
+                return render_template('auth/reset_password.html')
+            
+            # Use the Drive-based reset email system
+            send_reset_email_internal = get_send_reset_email_internal()
+            success = send_reset_email_internal(persona, keycloak_user['id'])
+            
+            if success:
+                flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'success')
+            else:
+                flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'info')
+            
             return redirect(url_for('auth.login'))
-        else:
-            flash(result['message'], 'danger')
+            
+        except Exception as e:
+            logger.error(f"Error in password reset: {e}")
+            # Don't reveal specific error details to user
+            flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'info')
     
     return render_template('auth/reset_password.html')
 
@@ -211,21 +255,52 @@ def sync_keycloak_user_with_persona(keycloak_user_info):
                 logger.info(f"Linked existing persona {persona.id} to Keycloak user {keycloak_user_id}")
         
         if not persona:
-            # Create new persona if not found
-            # Note: For admin users, they should be created through admin interface
-            # This is mainly for tribunal members who might be created on-the-fly
-            if email and username:
-                persona = Persona(
-                    keycloak_user_id=keycloak_user_id,
-                    correo=email,
-                    username=username,
-                    nombre=first_name,
-                    apellido=last_name,
-                    dni=username,  # Assuming username is DNI, adjust as needed
-                    is_admin=False  # Will be set through role assignment
-                )
-                db.session.add(persona)
-                logger.info(f"Created new persona for Keycloak user {keycloak_user_id}")
+            # Only create new personas for users with tribunal_member role
+            # Admin users should be managed through the admin interface only
+            roles = keycloak_user_info.get('realm_access', {}).get('roles', [])
+            client_roles = keycloak_user_info.get('resource_access', {}).get(
+                KeycloakConfig.KEYCLOAK_CLIENT_ID, {}
+            ).get('roles', [])
+              # Check if user has tribunal_member role (should be in client roles)
+            has_tribunal_role = KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE in client_roles
+            
+            if has_tribunal_role and email and username:
+                # Validate for duplicates before creating
+                validation_errors = []
+                
+                # Check for duplicate DNI
+                existing_dni = Persona.query.filter_by(dni=username).first()
+                if existing_dni:
+                    validation_errors.append(f"DNI {username} already exists")
+                
+                # Check for duplicate email
+                existing_email = Persona.query.filter_by(correo=email).first()
+                if existing_email:
+                    validation_errors.append(f"Email {email} already exists")
+                
+                # Check for duplicate username
+                existing_username = Persona.query.filter_by(username=username).first()
+                if existing_username:
+                    validation_errors.append(f"Username {username} already exists")
+                
+                # Only create if no duplicates found
+                if not validation_errors:
+                    persona = Persona(
+                        keycloak_user_id=keycloak_user_id,
+                        correo=email,
+                        username=username,
+                        nombre=first_name,
+                        apellido=last_name,
+                        dni=username,  # Assuming username is DNI, adjust as needed
+                        is_admin=False  # Always create as non-admin for tribunal members
+                    )
+                    db.session.add(persona)
+                    logger.info(f"Created new persona for tribunal member {keycloak_user_id}")
+                else:
+                    logger.warning(f"Cannot create persona for {keycloak_user_id}: {'; '.join(validation_errors)}")
+            else:
+                # Don't create personas for users without tribunal_member role
+                logger.info(f"User {keycloak_user_id} does not have tribunal_member role - no persona created")
         else:
             # Update existing persona with current Keycloak data
             if email and persona.correo != email:

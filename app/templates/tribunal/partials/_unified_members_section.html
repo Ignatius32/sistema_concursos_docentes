@@ -1,0 +1,165 @@
+<!-- Unified Tribunal Members Section -->
+<div id="tribunalMembers" class="mt-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0 text-primary">
+            <i class="fas fa-users me-2"></i>Miembros del Tribunal
+            <span id="totalMemberCount" class="badge bg-primary rounded-pill">{{ existing_members|length if existing_members else 0 }}</span>
+        </h5>
+        <div class="text-muted small">
+            <span id="newMemberCount">0</span> nuevos, 
+            <span id="existingMemberCount">{{ existing_members|length if existing_members else 0 }}</span> guardados
+        </div>
+    </div>
+    
+    <!-- Members List -->
+    <div class="row" id="tribunalMembersList">
+        <!-- Existing members will be loaded here -->
+        {% if existing_members %}
+            {% for miembro in existing_members %}
+            <div class="col-md-6 col-xl-4 mb-3">
+                <div class="card member-card h-100 shadow-sm border-secondary" 
+                     data-member-id="{{ miembro.id }}" 
+                     data-member-type="existing">
+                    
+                    <div class="card-header bg-secondary text-white py-2 member-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="mb-0 fw-semibold member-status">
+                                <i class="fas fa-check me-1"></i>Guardado
+                            </small>
+                            <div class="header-actions">
+                                <!-- Actions for existing members -->
+                                <div class="dropdown existing-actions">
+                                    <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" 
+                                            data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item edit-member" type="button">
+                                                <i class="fas fa-edit me-2"></i>Editar
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger remove-member" type="button"
+                                                    data-action="remove-existing">
+                                                <i class="fas fa-trash me-2"></i>Eliminar
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-3">
+                        <div class="mb-3">
+                            <h6 class="card-title mb-1 member-name text-secondary fw-semibold">
+                                {{ miembro.persona.apellido }}, {{ miembro.persona.nombre }}
+                            </h6>
+                            <p class="card-text small text-muted mb-0 member-details">
+                                DNI: {{ miembro.persona.dni }}{% if miembro.persona.correo %} - {{ miembro.persona.correo }}{% endif %}
+                            </p>
+                        </div>
+                          
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted">
+                                    <i class="fas fa-user-tie me-1"></i> Rol
+                                </label>
+                                <select class="form-select form-select-sm member-rol" disabled>
+                                    <option value="Presidente" {% if miembro.rol == 'Presidente' %}selected{% endif %}>👑 Presidente</option>
+                                    <option value="Titular" {% if miembro.rol == 'Titular' %}selected{% endif %}>⭐ Titular</option>
+                                    <option value="Suplente" {% if miembro.rol == 'Suplente' %}selected{% endif %}>🔄 Suplente</option>
+                                    <option value="Veedor" {% if miembro.rol == 'Veedor' %}selected{% endif %}>👁️ Veedor</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted">
+                                    <i class="fas fa-graduation-cap me-1"></i> Claustro
+                                </label>
+                                <select class="form-select form-select-sm member-claustro" disabled>
+                                    <option value="Docente" {% if miembro.claustro == 'Docente' %}selected{% endif %}>🎓 Docente</option>
+                                    <option value="Estudiante" {% if miembro.claustro == 'Estudiante' %}selected{% endif %}>📚 Estudiante</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions Section -->
+                        <div class="mt-3 member-permissions">
+                            <hr class="my-2">
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input member-can-add-tema" type="checkbox"
+                                               {% if miembro.can_add_tema %}checked{% endif %} disabled>
+                                        <label class="form-check-label small text-muted">
+                                            <i class="fas fa-list-ol me-1"></i> Cargar temas
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input member-can-upload-file" type="checkbox"
+                                               {% if miembro.can_upload_file %}checked{% endif %} disabled>
+                                        <label class="form-check-label small text-muted">
+                                            <i class="fas fa-upload me-1"></i> Subir archivos
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input member-can-sign-file" type="checkbox"
+                                               {% if miembro.can_sign_file %}checked{% endif %} disabled>
+                                        <label class="form-check-label small text-muted">
+                                            <i class="fas fa-pen me-1"></i> Firmar docs.
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input member-can-view-postulante-docs" type="checkbox"
+                                               {% if miembro.can_view_postulante_docs %}checked{% endif %} disabled>
+                                        <label class="form-check-label small text-muted">
+                                            <i class="fas fa-eye me-1"></i> Ver postulantes
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Save/Cancel Actions -->
+                        <div class="mt-3 member-actions">
+                            <!-- Save button for new members (hidden for existing) -->
+                            <div class="d-none new-member-actions">
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-success btn-sm save-member">
+                                        <i class="fas fa-save me-1"></i>Guardar Miembro
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Save/Cancel buttons for existing members (hidden initially) -->
+                            <div class="d-none existing-member-actions">
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-success save-member flex-fill">
+                                        <i class="fas fa-check me-1"></i>Guardar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary cancel-member flex-fill">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+        <!-- New member cards will be added here dynamically -->
+    </div>
+    
+    <!-- No Members Message -->
+    <div id="noMembersMsg" class="text-center py-5 bg-light rounded-3 border-2 border-dashed" 
+         {% if existing_members %}style="display: none;"{% endif %}>
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h6 class="text-muted">No hay miembros en el tribunal</h6>
+        <p class="text-muted mb-0">Use la búsqueda para agregar personas al tribunal</p>
+    </div>
+</div>

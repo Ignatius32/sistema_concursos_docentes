@@ -1,0 +1,48 @@
+<!-- Search Component for Available Personas -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="search-container">
+            <label for="personaSearch" class="form-label fw-semibold">
+                <i class="fas fa-search text-primary me-1"></i> Buscar Personas
+            </label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" 
+                       class="form-control border-start-0 ps-0" 
+                       id="personaSearch" 
+                       placeholder="Escriba nombre, apellido, DNI o email para buscar..."
+                       autocomplete="off">
+            </div>
+            <div class="form-text">
+                <i class="fas fa-info-circle me-1"></i>
+                Escriba al menos 2 caracteres para buscar personas disponibles
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <label class="form-label fw-semibold">&nbsp;</label>
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-success" id="saveAllMembers" disabled>
+                <i class="fas fa-save me-1"></i> Guardar Todos los Miembros
+            </button>
+            <button type="button" class="btn btn-outline-danger" id="clearAll">
+                <i class="fas fa-trash me-1"></i> Limpiar Selección
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div id="searchResults" class="mb-4" style="display: none;">
+    <div class="d-flex align-items-center mb-3">
+        <h5 class="mb-0 text-primary">
+            <i class="fas fa-search-plus me-2"></i>Resultados de Búsqueda
+        </h5>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" onclick="document.getElementById('searchResults').style.display='none'">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="searchResultsList" class="list-group shadow-sm"></div>
+</div>

@@ -50,6 +50,11 @@ def admin_required(f):
     """Decorator to require admin role."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        from flask import current_app
+        current_app.logger.info(f"admin_required check - is_authenticated: {g.get('is_authenticated', False)}")
+        current_app.logger.info(f"admin_required check - user_roles: {g.get('user_roles', [])}")
+        current_app.logger.info(f"admin_required check - required role: {KeycloakConfig.KEYCLOAK_ADMIN_ROLE}")
+        
         if not g.get('is_authenticated', False):
             flash('Acceso no autorizado. Debe iniciar sesión.', 'danger')
             from app.integrations.keycloak_oidc import keycloak_oidc
@@ -58,8 +63,10 @@ def admin_required(f):
         user_roles = g.get('user_roles', [])
         if KeycloakConfig.KEYCLOAK_ADMIN_ROLE not in user_roles:
             flash('Acceso no autorizado. Requiere permisos de administrador.', 'danger')
+            current_app.logger.warning(f"Access denied - user has roles {user_roles}, needs {KeycloakConfig.KEYCLOAK_ADMIN_ROLE}")
             return redirect(url_for('public.index'))
         
+        current_app.logger.info("admin_required check passed")
         return f(*args, **kwargs)
     return decorated_function
 

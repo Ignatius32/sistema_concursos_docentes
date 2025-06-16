@@ -56,9 +56,8 @@
                         </td>
                         <td>                            <a href="{{ url_for('admin_personas.edit_persona', persona_id=persona.id) }}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i> Editar
-                            </a>
-                            <form action="{{ url_for('admin_personas.eliminar_persona', persona_id=persona.id) }}" method="POST" class="d-inline ms-1">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro que desea eliminar esta persona? Esta acción no se puede deshacer y también eliminará su CV si existe.');">
+                            </a>                            <form action="{{ url_for('admin_personas.eliminar_persona', persona_id=persona.id) }}" method="POST" class="d-inline ms-1">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro que desea eliminar esta persona del sistema local? Se removerán los roles de tribunal en Keycloak pero la cuenta de usuario se mantendrá. Esta acción no se puede deshacer y también eliminará su CV si existe.');">
                                     <i class="fas fa-trash-alt"></i> Eliminar
                                 </button>
                             </form>
