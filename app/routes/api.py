@@ -212,15 +212,15 @@ def buscar_personas():
                 'status': 'error',
                 'message': 'La consulta debe tener al menos 2 caracteres'
             }), 400
-        
-        # Search in multiple fields
+          # Search in multiple fields (SQLite compatible)
         personas = Persona.query.filter(
             db.or_(
                 Persona.nombre.ilike(f'%{query}%'),
                 Persona.apellido.ilike(f'%{query}%'),
                 Persona.dni.ilike(f'%{query}%'),
                 Persona.correo.ilike(f'%{query}%'),
-                db.func.concat(Persona.nombre, ' ', Persona.apellido).ilike(f'%{query}%')
+                # Use SQLite string concatenation with ||
+                (Persona.nombre + ' ' + Persona.apellido).ilike(f'%{query}%')
             )
         ).limit(20).all()
         

@@ -68,7 +68,7 @@
 // Initialize the tribunal search manager with proper API URLs
 document.addEventListener('DOMContentLoaded', function() {    // Pass the correct API URLs to JavaScript
     window.TRIBUNAL_API_CONFIG = {
-        buscarPersonasUrl: "{{ url_for('api.buscar_personas') }}",
+        buscarPersonasUrl: "{{ url_for('tribunal.buscar_personas') }}",
         addMemberUrl: "{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}",
         editMemberUrlTemplate: "{{ url_for('tribunal.editar', miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),
         deleteMemberUrlTemplate: "{{ url_for('tribunal.eliminar', miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),

@@ -55,14 +55,23 @@ class TribunalSearchManager {
       async searchPersonas(query) {
         try {
             console.log('API call - Searching for:', query);
-            
-            // Use the API URL from the global configuration if available
+              // Use the API URL from the global configuration if available
             let baseUrl = '/api/buscar-personas';
             if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.buscarPersonasUrl) {
                 baseUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
             }
             
-            const url = `${baseUrl}?q=${encodeURIComponent(query)}`;
+            // Build URL with query parameters
+            const params = new URLSearchParams({
+                q: query
+            });
+            
+            // Add concurso_id if available to exclude already assigned personas
+            if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.concursoId) {
+                params.append('concurso_id', window.TRIBUNAL_API_CONFIG.concursoId);
+            }
+            
+            const url = `${baseUrl}?${params.toString()}`;
             console.log('API URL:', url);
             
             const response = await fetch(url);
@@ -71,16 +80,23 @@ class TribunalSearchManager {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
-            const data = await response.json();
+              const data = await response.json();
             console.log('API Response:', data);
             
-            if (data.status === 'success') {
-                this.displaySearchResults(data.personas || []);
-            } else {
-                console.error('API error:', data.message);
-                this.showAlert(data.message || 'Error al buscar personas', 'danger');
+            // Handle different response formats
+            let personas = [];
+            if (data.personas) {
+                // Direct personas array (from tribunal endpoint)
+                personas = data.personas;
+            } else if (data.status === 'success' && data.personas) {
+                // Wrapped response (from api endpoint)
+                personas = data.personas;
+            } else if (Array.isArray(data)) {
+                // Direct array response
+                personas = data;
             }
+            
+            this.displaySearchResults(personas);
         } catch (error) {
             console.error('Error searching personas:', error);
             this.showAlert('Error al buscar personas: ' + error.message, 'danger');
