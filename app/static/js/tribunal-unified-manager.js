@@ -365,10 +365,12 @@ class UnifiedTribunalMemberManager {
             // Convert new member card to existing member card
             // Handle both response formats: single member or members array
             let memberData = null;
-            
-            if (response.member) {
+              if (response.member) {
                 // Single member format from add_single_member endpoint
                 memberData = response.member;
+            } else if (response.miembro) {
+                // Spanish format from server
+                memberData = response.miembro;
             } else if (response.members && response.members.length > 0) {
                 // Members array format from agregar_multiple_members endpoint
                 memberData = response.members[0];
@@ -416,6 +418,7 @@ class UnifiedTribunalMemberManager {
         this.showAlert('Error al guardar: ' + error.message, 'error');
     }    async convertNewToExistingMember(card, miembroData) {
         console.log('Converting new member to existing member:', miembroData);
+        console.log('miembroData.id:', miembroData.id);
         console.log('Card before conversion:', card);
         
         // Validate input parameters
