@@ -4,6 +4,8 @@ API routes for fetching programa information.
 
 from flask import Blueprint, jsonify, current_app, request
 from app.helpers.api_services import get_programa_by_id_materia, get_programa_download_url, get_programas_by_materia_ids
+from app.models.models import Persona, db
+from app.utils.keycloak_auth import admin_required
 
 # Create a blueprint for API routes
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -190,4 +192,59 @@ def get_programas_bulk():
             'status': 'error',
             'message': 'Error al obtener información de programas',
             'manual_url': 'https://huayca.crub.uncoma.edu.ar/programas/'
+        }), 500
+
+
+@api_bp.route('/buscar-personas', methods=['GET'])
+@admin_required
+def buscar_personas():
+    """
+    API endpoint to search for personas by name, DNI, or email.
+    
+    Returns:
+        JSON response with list of matching personas
+    """
+    try:
+        query = request.args.get('q', '').strip()
+        
+        if not query or len(query) < 2:
+            return jsonify({
+                'status': 'error',
+                'message': 'La consulta debe tener al menos 2 caracteres'
+            }), 400
+        
+        # Search in multiple fields
+        personas = Persona.query.filter(
+            db.or_(
+                Persona.nombre.ilike(f'%{query}%'),
+                Persona.apellido.ilike(f'%{query}%'),
+                Persona.dni.ilike(f'%{query}%'),
+                Persona.correo.ilike(f'%{query}%'),
+                db.func.concat(Persona.nombre, ' ', Persona.apellido).ilike(f'%{query}%')
+            )
+        ).limit(20).all()
+        
+        # Convert to dictionary format
+        personas_data = []
+        for persona in personas:
+            personas_data.append({
+                'id': persona.id,
+                'nombre': persona.nombre,
+                'apellido': persona.apellido,
+                'dni': persona.dni,
+                'correo': persona.correo,
+                'telefono': persona.telefono,
+                'full_name': f"{persona.nombre} {persona.apellido}".strip()
+            })
+        
+        return jsonify({
+            'status': 'success',
+            'personas': personas_data
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error searching personas: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al buscar personas'
         }), 500

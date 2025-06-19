@@ -57,12 +57,12 @@ class TribunalSearchManager {
             console.log('API call - Searching for:', query);
             
             // Use the API URL from the global configuration if available
-            let baseUrl = '/tribunal/api/buscar-personas';
+            let baseUrl = '/api/buscar-personas';
             if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.buscarPersonasUrl) {
                 baseUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
             }
             
-            const url = `${baseUrl}?q=${encodeURIComponent(query)}&concurso_id=${this.concursoId}&limit=20`;
+            const url = `${baseUrl}?q=${encodeURIComponent(query)}`;
             console.log('API URL:', url);
             
             const response = await fetch(url);
@@ -75,7 +75,12 @@ class TribunalSearchManager {
             const data = await response.json();
             console.log('API Response:', data);
             
-            this.displaySearchResults(data.personas || []);
+            if (data.status === 'success') {
+                this.displaySearchResults(data.personas || []);
+            } else {
+                console.error('API error:', data.message);
+                this.showAlert(data.message || 'Error al buscar personas', 'danger');
+            }
         } catch (error) {
             console.error('Error searching personas:', error);
             this.showAlert('Error al buscar personas: ' + error.message, 'danger');
