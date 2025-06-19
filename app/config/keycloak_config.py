@@ -90,8 +90,7 @@ class KeycloakConfig:
             
         if not cls.KEYCLOAK_CLIENT_SECRET:
             errors.append("KEYCLOAK_CLIENT_SECRET is required")
-            
-        # Admin API validation - at least one method should be configured
+              # Admin API validation - at least one method should be configured
         has_client_credentials = cls.KEYCLOAK_ADMIN_CLIENT_SECRET is not None
         has_user_credentials = cls.KEYCLOAK_ADMIN_USERNAME and cls.KEYCLOAK_ADMIN_PASSWORD
         
@@ -121,16 +120,20 @@ class KeycloakConfig:
             scheme = request.scheme
             host = request.host
             
-            # Add application root if configured
-            root_path = cls.APPLICATION_ROOT.strip('/')
+            # Get application root from environment or Flask config
+            root_path = cls.APPLICATION_ROOT.strip('/') or os.environ.get('APPLICATION_ROOT', '').strip('/')
             if root_path:
                 base_url = f"{scheme}://{host}/{root_path}"
             else:
                 base_url = f"{scheme}://{host}"
             
             return f"{base_url}/auth/callback"
+          # Fallback to configured default with APPLICATION_ROOT
+        root_path = cls.APPLICATION_ROOT.strip('/') or os.environ.get('APPLICATION_ROOT', '').strip('/')
+        if root_path:
+            # For production fallback, assume HTTPS and construct with APPLICATION_ROOT
+            return f"https://{os.environ.get('PRODUCTION_HOST', 'your-domain.com')}/{root_path}/auth/callback"
         
-        # Fallback to configured default
         return cls.KEYCLOAK_REDIRECT_URI
     
     @classmethod
@@ -154,8 +157,8 @@ class KeycloakConfig:
             scheme = request.scheme
             host = request.host
             
-            # Add application root if configured
-            root_path = cls.APPLICATION_ROOT.strip('/')
+            # Get application root from environment or Flask config
+            root_path = cls.APPLICATION_ROOT.strip('/') or os.environ.get('APPLICATION_ROOT', '').strip('/')
             if root_path:
                 base_url = f"{scheme}://{host}/{root_path}"
             else:
@@ -163,5 +166,10 @@ class KeycloakConfig:
             
             return f"{base_url}/"
         
-        # Fallback to configured default
+        # Fallback to configured default with APPLICATION_ROOT
+        root_path = cls.APPLICATION_ROOT.strip('/') or os.environ.get('APPLICATION_ROOT', '').strip('/')
+        if root_path:
+            # For production fallback, assume HTTPS and construct with APPLICATION_ROOT
+            return f"https://{os.environ.get('PRODUCTION_HOST', 'your-domain.com')}/{root_path}/"
+        
         return cls.KEYCLOAK_POST_LOGOUT_REDIRECT_URI

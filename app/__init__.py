@@ -71,6 +71,9 @@ def create_app():
     
     app = Flask(__name__, instance_relative_config=True)
     
+    # Configure APPLICATION_ROOT for deployment with base path
+    app.config['APPLICATION_ROOT'] = os.environ.get('APPLICATION_ROOT', '/concursos-docentes')
+    
     # Ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
