@@ -69,9 +69,9 @@
 document.addEventListener('DOMContentLoaded', function() {    // Pass the correct API URLs to JavaScript
     window.TRIBUNAL_API_CONFIG = {
         buscarPersonasUrl: "{{ url_for('tribunal.buscar_personas') }}",
-        addMemberUrl: "{{ url_for('tribunal.agregar', concurso_id=concurso.id) }}",
-        editMemberUrlTemplate: "{{ url_for('tribunal.editar', miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),
-        deleteMemberUrlTemplate: "{{ url_for('tribunal.eliminar', miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),
+        addMemberUrl: "{{ url_for('tribunal.add_single_member', concurso_id=concurso.id) }}",
+        editMemberUrlTemplate: "{{ url_for('tribunal.edit_member_api', concurso_id=concurso.id, miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),
+        deleteMemberUrlTemplate: "{{ url_for('tribunal.delete_member_api', concurso_id=concurso.id, miembro_id=999999) }}".replace('999999', '__MIEMBRO_ID__'),
         concursoId: {{ concurso.id }},
         basePath: "{{ request.script_root }}"
     };

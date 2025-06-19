@@ -279,11 +279,8 @@ class UnifiedTribunalMemberManager {
     }    async saveNewMember(personaId, memberData) {
         console.log('Saving new member to server:', personaId, memberData);
         
-        // Use the API URL from the global configuration if available
-        let url = `/tribunal/concurso/${this.concursoId}/tribunal/add`;
-        if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.addMemberUrl) {
-            url = window.TRIBUNAL_API_CONFIG.addMemberUrl;
-        }
+        // Use the API URL from the global configuration
+        let url = window.TRIBUNAL_API_CONFIG?.addMemberUrl || `/tribunal/concurso/${this.concursoId}/tribunal/add`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -307,11 +304,9 @@ class UnifiedTribunalMemberManager {
     }    async updateExistingMember(miembroId, memberData) {
         console.log('Updating existing member on server:', miembroId, memberData);
         
-        // Use the API URL from the global configuration if available
-        let url = `/tribunal/concurso/${this.concursoId}/tribunal/edit/${miembroId}`;
-        if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.editMemberUrl) {
-            url = window.TRIBUNAL_API_CONFIG.editMemberUrl + miembroId;
-        }
+        // Use the API URL from the global configuration
+        let url = window.TRIBUNAL_API_CONFIG?.editMemberUrlTemplate?.replace('__MIEMBRO_ID__', miembroId) || 
+                 `/tribunal/concurso/${this.concursoId}/tribunal/edit/${miembroId}`;
         
         const response = await fetch(url, {
             method: 'PUT',
@@ -331,11 +326,9 @@ class UnifiedTribunalMemberManager {
         return data;
     }    async deleteMemberFromServer(miembroId, card) {
         try {
-            // Use the API URL from the global configuration if available
-            let url = `/tribunal/concurso/${this.concursoId}/tribunal/delete/${miembroId}`;
-            if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.deleteMemberUrl) {
-                url = window.TRIBUNAL_API_CONFIG.deleteMemberUrl + miembroId;
-            }
+            // Use the API URL from the global configuration
+            let url = window.TRIBUNAL_API_CONFIG?.deleteMemberUrlTemplate?.replace('__MIEMBRO_ID__', miembroId) || 
+                     `/tribunal/concurso/${this.concursoId}/tribunal/delete/${miembroId}`;
             
             const response = await fetch(url, {
                 method: 'DELETE',
@@ -370,7 +363,24 @@ class UnifiedTribunalMemberManager {
         
         if (memberType === 'new') {
             // Convert new member card to existing member card
-            await this.convertNewToExistingMember(card, response.miembro);
+            // Handle both response formats: single member or members array
+            let memberData = null;
+            
+            if (response.member) {
+                // Single member format from add_single_member endpoint
+                memberData = response.member;
+            } else if (response.members && response.members.length > 0) {
+                // Members array format from agregar_multiple_members endpoint
+                memberData = response.members[0];
+            }
+            
+            if (memberData) {
+                await this.convertNewToExistingMember(card, memberData);
+            } else {
+                console.error('No member data received from server:', response);
+                this.showAlert('Error: No se recibieron datos del miembro guardado', 'error');
+                return;
+            }
             // Don't re-enable member actions for converted cards since they're now existing members
         } else {
             // Update existing member data
@@ -407,6 +417,19 @@ class UnifiedTribunalMemberManager {
     }    async convertNewToExistingMember(card, miembroData) {
         console.log('Converting new member to existing member:', miembroData);
         console.log('Card before conversion:', card);
+        
+        // Validate input parameters
+        if (!miembroData) {
+            console.error('miembroData is undefined or null');
+            this.showAlert('Error: Datos del miembro no disponibles', 'error');
+            return;
+        }
+        
+        if (!miembroData.id) {
+            console.error('miembroData.id is missing:', miembroData);
+            this.showAlert('Error: ID del miembro no disponible', 'error');
+            return;
+        }
         
         // Remove from selected members
         const personaId = card.dataset.memberId;
