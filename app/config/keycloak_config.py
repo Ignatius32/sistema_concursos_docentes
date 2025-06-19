@@ -21,9 +21,12 @@ class KeycloakConfig:
     KEYCLOAK_ADMIN_CLIENT_ID: str = os.environ.get('KEYCLOAK_ADMIN_CLIENT_ID', 'flask-admin')
     KEYCLOAK_ADMIN_CLIENT_SECRET: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_USERNAME: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_USERNAME')
-    KEYCLOAK_ADMIN_PASSWORD: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_PASSWORD')    # Application URLs
+    KEYCLOAK_ADMIN_PASSWORD: Optional[str] = os.environ.get('KEYCLOAK_ADMIN_PASSWORD')    # Application URLs - these can be overridden by environment variables or computed dynamically
     KEYCLOAK_REDIRECT_URI: str = os.environ.get('KEYCLOAK_REDIRECT_URI', 'http://127.0.0.1:5000/auth/callback')
     KEYCLOAK_POST_LOGOUT_REDIRECT_URI: str = os.environ.get('KEYCLOAK_POST_LOGOUT_REDIRECT_URI', 'http://127.0.0.1:5000/')
+    
+    # Application base path configuration
+    APPLICATION_ROOT: str = os.environ.get('APPLICATION_ROOT', '')  # e.g., '/concursos-docentes' for production
     
     # Password Reset Configuration
     USE_INTERNAL_PASSWORD_RESET: bool = os.environ.get('USE_INTERNAL_PASSWORD_RESET', 'true').lower() == 'true'
@@ -96,3 +99,69 @@ class KeycloakConfig:
             errors.append("Either KEYCLOAK_ADMIN_CLIENT_SECRET or (KEYCLOAK_ADMIN_USERNAME + KEYCLOAK_ADMIN_PASSWORD) must be configured for Admin API access")
         
         return errors
+    
+    @classmethod
+    def get_dynamic_redirect_uri(cls, request=None) -> str:
+        """
+        Get the callback redirect URI dynamically based on the current request.
+        This handles both local development and production with base paths.
+        """
+        # If explicitly set in environment, use that
+        redirect_uri = os.environ.get('KEYCLOAK_REDIRECT_URI')
+        if redirect_uri:
+            return redirect_uri
+        
+        # Otherwise, build it dynamically from Flask request
+        if request is None:
+            from flask import request as flask_request
+            request = flask_request
+        
+        if request:
+            # Build the base URL from the request
+            scheme = request.scheme
+            host = request.host
+            
+            # Add application root if configured
+            root_path = cls.APPLICATION_ROOT.strip('/')
+            if root_path:
+                base_url = f"{scheme}://{host}/{root_path}"
+            else:
+                base_url = f"{scheme}://{host}"
+            
+            return f"{base_url}/auth/callback"
+        
+        # Fallback to configured default
+        return cls.KEYCLOAK_REDIRECT_URI
+    
+    @classmethod
+    def get_dynamic_post_logout_redirect_uri(cls, request=None) -> str:
+        """
+        Get the post-logout redirect URI dynamically based on the current request.
+        This handles both local development and production with base paths.
+        """
+        # If explicitly set in environment, use that
+        post_logout_uri = os.environ.get('KEYCLOAK_POST_LOGOUT_REDIRECT_URI')
+        if post_logout_uri:
+            return post_logout_uri
+        
+        # Otherwise, build it dynamically from Flask request
+        if request is None:
+            from flask import request as flask_request
+            request = flask_request
+        
+        if request:
+            # Build the base URL from the request
+            scheme = request.scheme
+            host = request.host
+            
+            # Add application root if configured
+            root_path = cls.APPLICATION_ROOT.strip('/')
+            if root_path:
+                base_url = f"{scheme}://{host}/{root_path}"
+            else:
+                base_url = f"{scheme}://{host}"
+            
+            return f"{base_url}/"
+        
+        # Fallback to configured default
+        return cls.KEYCLOAK_POST_LOGOUT_REDIRECT_URI

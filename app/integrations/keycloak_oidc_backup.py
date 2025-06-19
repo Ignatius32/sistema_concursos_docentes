@@ -104,14 +104,14 @@ class KeycloakOIDCClient:
             
         except Exception as e:
             logger.error(f"Failed to get user info from token: {e}")
-            return None
-
-    def _extract_roles_from_token(self, token: dict) -> list[str]:
+            return None    def _extract_roles_from_token(self, token: dict) -> list[str]:
         """Extract roles from access token."""
         try:
             access_token = token.get('access_token')
             if not access_token:
-                return []            # Decode JWT token to get roles
+                return []
+            
+            # Decode JWT token to get roles
             
             # Get JWT header to determine key id
             unverified_header = jwt.get_unverified_header(access_token)
@@ -136,7 +136,9 @@ class KeycloakOIDCClient:
             
             if not public_key:
                 logger.warning(f"No public key found for kid: {kid}")
-                return []              # Decode and verify the token (skip audience and issuer validation for now)
+                return []
+            
+            # Decode and verify the token (skip audience and issuer validation for now)
             decoded_token = jwt.decode(
                 access_token, 
                 public_key, 
@@ -146,7 +148,8 @@ class KeycloakOIDCClient:
                     "verify_iss": False   # Skip issuer validation for now
                 }
             )
-              # Extract roles from different possible locations
+            
+            # Extract roles from different possible locations
             roles = []
             
             # Check realm_access roles
@@ -161,7 +164,8 @@ class KeycloakOIDCClient:
             client_role_list = client_roles.get('roles', [])
             roles.extend(client_role_list)
             logger.info(f"Client roles found: {client_role_list}")
-              # Also check for account client roles (common in Keycloak)
+            
+            # Also check for account client roles (common in Keycloak)
             account_roles = resource_access.get('account', {})
             account_role_list = account_roles.get('roles', [])
             roles.extend(account_role_list)
@@ -179,15 +183,36 @@ class KeycloakOIDCClient:
         except Exception as e:
             logger.error(f"Failed to extract roles from token: {e}")
             return []
+            logger.warning("JWT token has expired")
+            return []
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid JWT token: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Failed to extract roles from token: {e}")
+            return []
 
     def login(self, redirect_uri: Optional[str] = None) -> str:        
         """Initiate OIDC login flow."""
         if not redirect_uri:
-            # Use dynamic redirect URI based on current request
-            redirect_uri = KeycloakConfig.get_dynamic_redirect_uri()
+            redirect_uri = self._get_dynamic_redirect_uri()
         
         return self.keycloak_client.authorize_redirect(redirect_uri)
+    
+    def _get_dynamic_redirect_uri(self) -> str:
+        """Get the redirect URI dynamically based on the current request context."""
+        from flask import request, url_for
         
+        try:
+            # Try to generate the callback URL using Flask's url_for
+            # This will automatically handle the APPLICATION_ROOT or any base path
+            callback_url = url_for('auth.callback', _external=True)
+            logger.info(f"Generated dynamic redirect URI: {callback_url}")
+            return callback_url
+        except Exception as e:
+            logger.warning(f"Failed to generate dynamic redirect URI: {e}")
+            # Fallback to configured URI
+            return KeycloakConfig.KEYCLOAK_REDIRECT_URI
     def handle_callback(self):
         """Handle OIDC callback and exchange code for tokens."""
         try:
@@ -206,6 +231,7 @@ class KeycloakOIDCClient:
             
             logger.info("User successfully authenticated via Keycloak")
             return True
+            
         except OAuthError as e:
             logger.error(f"OAuth error during callback: {e}")
             return False
@@ -225,8 +251,7 @@ class KeycloakOIDCClient:
         
         # Set default redirect URI if not provided
         if not post_logout_redirect_uri:
-            # Use dynamic post-logout redirect URI based on current request
-            post_logout_redirect_uri = KeycloakConfig.get_dynamic_post_logout_redirect_uri()
+            post_logout_redirect_uri = KeycloakConfig.KEYCLOAK_POST_LOGOUT_REDIRECT_URI
         
         logger.info("Performing local logout (session cleared)")
         
