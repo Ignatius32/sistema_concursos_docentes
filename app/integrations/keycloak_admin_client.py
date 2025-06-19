@@ -43,14 +43,19 @@ class KeycloakAdminClient:
             )
             
             logger.info("Keycloak Admin client initialized successfully")
-            
-            # Test the connection by trying to get realm info
+              # Test the connection by trying to get realm info
             try:
                 realm_info = self._admin_client.get_realm(KeycloakConfig.KEYCLOAK_REALM)
-                logger.info(f"Successfully connected to realm: {realm_info.get('realm', 'Unknown')}")
+                if realm_info:
+                    logger.info(f"Successfully connected to realm: {realm_info.get('realm', KeycloakConfig.KEYCLOAK_REALM)}")
+                else:
+                    logger.warning("Realm info is None - admin client may not have sufficient permissions")
+                    # Don't raise exception, but log the issue
+                    logger.warning("Continuing without realm validation - some admin functions may not work")
             except Exception as e:
                 logger.error(f"Failed to get realm info (connection test): {e}")
-                raise
+                # Don't raise exception for realm info test failure
+                logger.warning("Continuing without realm validation - some admin functions may not work")
             
         except Exception as e:
             logger.error(f"Failed to initialize Keycloak Admin client: {e}")
