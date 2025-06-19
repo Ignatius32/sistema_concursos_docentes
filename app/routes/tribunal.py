@@ -65,8 +65,12 @@ def agregar(concurso_id):
                 # Extract members array from JSON data
                 if 'members' in json_data:
                     members_data = json_data['members']
+                elif isinstance(json_data, list):
+                    # Already a list of members
+                    members_data = json_data
                 else:
-                    members_data = json_data  # Backwards compatibility
+                    # Single member object, convert to list
+                    members_data = [json_data]
                 
                 current_app.logger.info(f"Members data extracted: {members_data}")
                 # JSON request for multiple members
@@ -135,12 +139,30 @@ def agregar_single_member(concurso_id, concurso):
 
 def agregar_multiple_members(concurso_id, members_data):
     """Handle multiple member additions via JSON."""
-    current_app.logger.info(f"agregar_multiple_members called with {len(members_data) if members_data else 0} members")
+    current_app.logger.info(f"agregar_multiple_members called with data: {members_data}")
+    
+    # Validate that members_data is a list
+    if not isinstance(members_data, list):
+        current_app.logger.error(f"Expected list for members_data, got {type(members_data)}: {members_data}")
+        return jsonify({
+            'success': False,
+            'errors': ['Invalid data format - expected list of members'],
+            'message': 'Error en formato de datos'
+        }), 400
+    
+    current_app.logger.info(f"Processing {len(members_data)} members")
     concurso = Concurso.query.get_or_404(concurso_id)
     added_members = []
     errors = []
     
-    for member_data in members_data:
+    for i, member_data in enumerate(members_data):
+        current_app.logger.info(f"Processing member {i+1}: {member_data}")
+        
+        # Validate that member_data is a dictionary
+        if not isinstance(member_data, dict):
+            errors.append(f'Miembro {i+1}: formato de datos inválido')
+            continue
+            
         persona_id = member_data.get('persona_id')
         rol = member_data.get('rol')
         claustro = member_data.get('claustro', 'Docente')
