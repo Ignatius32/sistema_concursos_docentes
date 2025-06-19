@@ -514,6 +514,158 @@ class KeycloakAdminClient:
             logger.error(f"Error sending template email to user {user_id}: {e}")
             return False
 
+    def has_user_set_password(self, user_id: str) -> bool:
+        """
+        Check if a user has set their password (not using temporary password).
+        
+        Args:
+            user_id: Keycloak user ID
+            
+        Returns:
+            True if user has set their own password, False if still using temporary/no password
+        """
+        try:
+            if not self._admin_client:
+                logger.error("Admin client not initialized")
+                return False
+            
+            # Get user details
+            user = self._admin_client.get_user(user_id)
+            if not user:
+                logger.warning(f"User {user_id} not found")
+                return False
+            
+            # Method 1: Check required actions - if UPDATE_PASSWORD is present, password not set
+            required_actions = user.get('requiredActions', [])
+            if 'UPDATE_PASSWORD' in required_actions:
+                logger.debug(f"User {user_id} has UPDATE_PASSWORD in required actions - password not set")
+                return False
+            
+            # Method 2: Check if user has password credentials
+            try:
+                credentials = self._admin_client.get_credentials(user_id)
+                password_credentials = [cred for cred in credentials if cred.get('type') == 'password']
+                
+                if not password_credentials:
+                    logger.debug(f"User {user_id} has no password credentials")
+                    return False
+                
+                # If we have password credentials and no UPDATE_PASSWORD required action,
+                # the user has likely set their password
+                logger.debug(f"User {user_id} has password credentials and no UPDATE_PASSWORD action")
+                return True
+                
+            except Exception as cred_error:
+                logger.warning(f"Could not get credentials for user {user_id}: {cred_error}")
+                # Fallback: if no required actions and user is enabled, assume password is set
+                if not required_actions and user.get('enabled', False):
+                    return True
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking password status for user {user_id}: {e}")
+            return False
+    
+    def get_user_password_status(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get detailed password status information for a user.
+        
+        Args:
+            user_id: Keycloak user ID
+            
+        Returns:
+            Dictionary with password status details
+        """
+        try:
+            if not self._admin_client:
+                return {
+                    'has_password': False,
+                    'status': 'unknown',
+                    'details': 'Admin client not initialized'
+                }
+            
+            user = self._admin_client.get_user(user_id)
+            if not user:
+                return {
+                    'has_password': False,
+                    'status': 'user_not_found',
+                    'details': 'User not found in Keycloak'
+                }
+            
+            required_actions = user.get('requiredActions', [])
+            email_verified = user.get('emailVerified', False)
+            enabled = user.get('enabled', False)
+              # Check credentials
+            has_password_cred = False
+            is_temp_password = False
+            try:
+                credentials = self._admin_client.get_credentials(user_id)
+                password_credentials = [cred for cred in credentials if cred.get('type') == 'password']
+                has_password_cred = len(password_credentials) > 0
+                
+                # Check if it's a temporary password
+                if password_credentials:
+                    # In Keycloak, if a password is temporary, it usually has a createdDate very close to user creation
+                    # and the user will have UPDATE_PASSWORD in required actions or temporary flag
+                    password_cred = password_credentials[0]
+                    is_temp_password = password_cred.get('temporary', False)
+                    
+            except Exception as e:
+                logger.warning(f"Could not get credentials for user {user_id}: {e}")
+                has_password_cred = None
+                
+            # Determine status based on multiple factors
+            if 'UPDATE_PASSWORD' in required_actions:
+                status = 'password_required'
+                has_password = False
+                details = 'User must set password on next login'
+            elif is_temp_password:
+                status = 'password_required'
+                has_password = False  
+                details = 'User has temporary password and must change it'
+            elif has_password_cred and not required_actions and enabled:
+                # Check additional indicators of a user-set password
+                # If user has logged in recently or has no temporary indicators, assume they've set their password
+                status = 'password_set'
+                has_password = True
+                details = 'User has set their password'
+            elif not enabled:
+                status = 'disabled'
+                has_password = False
+                details = 'User account is disabled'
+            elif has_password_cred is False:  # Explicitly no password credential
+                status = 'not_configured'
+                has_password = False
+                details = 'User has not configured their password yet'
+            elif has_password_cred and required_actions:
+                # Has password but also has required actions - likely needs to update
+                status = 'password_required'
+                has_password = False
+                details = f'User needs to complete actions: {", ".join(required_actions)}'
+            else:
+                status = 'uncertain'
+                has_password = False  # Default to False for safety - prefer to send notifications
+                details = 'Password status unclear - assuming needs setup'
+           
+            return {
+                'has_password': has_password,
+                'status': status,
+                'details': details,
+                'required_actions': required_actions,
+                'email_verified': email_verified,
+                'enabled': enabled,
+                'has_password_credential': has_password_cred,
+                'is_temp_password': is_temp_password
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting password status for user {user_id}: {e}")
+            return {
+                'has_password': False,
+                'status': 'error',
+                'details': f'Error: {str(e)}'
+            }
+
 
 # Global instance - lazy loaded
 _keycloak_admin = None

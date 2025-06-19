@@ -4,14 +4,14 @@ from app.integrations.keycloak_oidc import keycloak_oidc
 from app.integrations.keycloak_admin_client import get_keycloak_admin, KeycloakAdminClient
 from app.utils.keycloak_auth import get_current_user_info, is_admin, keycloak_login_required, get_current_user_roles
 from app.config.keycloak_config import KeycloakConfig
+from app.services.password_reset_service import password_reset_service
 from datetime import datetime
 import logging
 
-# Import the Drive-based reset email function from tribunal routes
+# Import the Drive-based reset email function from the password reset service
 def get_send_reset_email_internal():
     """Lazy import to avoid circular imports"""
-    from app.routes.tribunal import send_reset_email_internal
-    return send_reset_email_internal
+    return password_reset_service.send_reset_email_internal
 
 logger = logging.getLogger(__name__)
 auth = Blueprint('auth', __name__, url_prefix='/auth')

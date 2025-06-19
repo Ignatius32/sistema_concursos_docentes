@@ -12,13 +12,13 @@
             <div class="table-responsive tribunal-table">
                 <table class="table table-striped table-hover">
                     <thead class="table-light">
-                        <tr>
-                            <th>Rol</th>
+                        <tr>                            <th>Rol</th>
                             <th>Claustro</th>
                             <th>Nombre</th>
                             <th>DNI</th>
                             <th>Correo</th>
                             <th>Teléfono</th>
+                            <th>Estado Keycloak</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -63,10 +63,45 @@
                                 </span>
                                 {% endif %}
                             </td>
-                            <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>
-                            <td>{{ miembro.persona.dni }}</td>
+                            <td>{{ miembro.persona.nombre }} {{ miembro.persona.apellido }}</td>                            <td>{{ miembro.persona.dni }}</td>
                             <td>{{ miembro.persona.correo or 'No disponible' }}</td>
-                            <td>{{ miembro.persona.telefono or 'No disponible' }}</td>                            <td>
+                            <td>{{ miembro.persona.telefono or 'No disponible' }}</td>
+                            <td>
+                                {% if miembro.persona.keycloak_user_id %}
+                                    {% set keycloak_admin = get_keycloak_admin() %}
+                                    {% if keycloak_admin %}
+                                        {% set password_status = keycloak_admin.get_user_password_status(miembro.persona.keycloak_user_id) %}
+                                        {% if password_status.has_password %}
+                                        <span class="badge bg-success" title="{{ password_status.details }}">
+                                            <i class="bi bi-shield-check"></i> Contraseña Activa
+                                        </span>
+                                        {% elif password_status.status == 'password_required' %}
+                                        <span class="badge bg-warning" title="{{ password_status.details }}">
+                                            <i class="bi bi-key"></i> Requiere Contraseña
+                                        </span>                                        {% elif password_status.status == 'disabled' %}
+                                        <span class="badge bg-secondary" title="{{ password_status.details }}">
+                                            <i class="bi bi-person-x"></i> Usuario Deshabilitado
+                                        </span>
+                                        {% elif password_status.status == 'not_configured' %}
+                                        <span class="badge bg-warning text-dark" title="{{ password_status.details }}">
+                                            <i class="bi bi-key-fill"></i> No Configurado
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark" title="{{ password_status.details }}">
+                                            <i class="bi bi-question-circle"></i> Estado Incierto
+                                        </span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-danger" title="No se puede conectar con Keycloak">
+                                        <i class="bi bi-exclamation-triangle"></i> Error Conexión
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary" title="No tiene usuario en Keycloak">
+                                    <i class="bi bi-person-plus"></i> Sin Usuario KC
+                                </span>
+                                {% endif %}
+                            </td><td>
                                 {% if miembro.persona.password_hash %}
                                 <span class="badge badge-tribunal-success" style="background-color: #059669 !important; color: white !important;" 
                                       title="El miembro ya configuró su contraseña y puede acceder al sistema">
@@ -84,44 +119,140 @@
                                 </span>
                                 {% endif %}
                             </td>                            <td>
-                                {% if not miembro.notificado and not miembro.persona.password_hash %}
-                                <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
-                                      style="display: inline;" onsubmit="return confirm('¿Enviar credenciales a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
-                                    <button type="submit" class="btn btn-sm btn-success" title="Enviar credenciales">
-                                        <i class="bi bi-envelope"></i>
-                                    </button>
-                                </form>
-                                {% elif miembro.notificado and not miembro.persona.password_hash %}
-                                <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
-                                      style="display: inline;" onsubmit="return confirm('¿Reenviar credenciales a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
-                                    <button type="submit" class="btn btn-sm btn-warning" title="Reenviar credenciales">
-                                        <i class="bi bi-arrow-repeat"></i>
-                                    </button>
-                                </form>
+                                {% if miembro.persona.keycloak_user_id %}
+                                    {% set keycloak_admin = get_keycloak_admin() %}
+                                    {% if keycloak_admin %}
+                                        {% set password_status = keycloak_admin.get_user_password_status(miembro.persona.keycloak_user_id) %}
+                                        {% if password_status.has_password %}
+                                        <!-- User already has password configured - show login reminder option -->
+                                        <div class="d-flex gap-1">
+
+                                            <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('¿Enviar recordatorio de acceso a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Enviar recordatorio de acceso al portal">
+                                                    <i class="bi bi-box-arrow-in-right"></i> Recordar Acceso
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                        <!-- User needs password configuration - show reset option -->
+                                        <form method="POST" action="{{ url_for('tribunal.notificar_miembro', miembro_id=miembro.id) }}" 
+                                              style="display: inline;" 
+                                              onsubmit="return confirm('¿Enviar credenciales de configuración a {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}?')">
+                                            {% if miembro.notificado %}
+                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Reenviar credenciales de configuración">
+                                                <i class="bi bi-arrow-repeat"></i> Reenviar Config.
+                                            </button>
+                                            {% else %}
+                                            <button type="submit" class="btn btn-sm btn-success" title="Enviar credenciales de configuración">
+                                                <i class="bi bi-key"></i> Configurar
+                                            </button>
+                                            {% endif %}
+                                        </form>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-danger" title="Error de conexión con Keycloak">
+                                        <i class="bi bi-exclamation-triangle"></i> Error
+                                    </span>
+                                    {% endif %}
                                 {% else %}
-                                <span class="badge bg-success" title="Ya tiene acceso configurado">
-                                    <i class="bi bi-check-circle"></i>
+                                <span class="badge bg-secondary" title="Usuario no existe en Keycloak">
+                                    <i class="bi bi-person-plus"></i> Crear Usuario
                                 </span>
-                                {% endif %}
-                            </td>
+                                {% endif %}                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center">No hay miembros en el tribunal</td>
+                            <td colspan="9" class="text-center">No hay miembros en el tribunal</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>            <div class="d-flex justify-content-between align-items-center mt-4">                <div>
                     {% set all_tribunal_members = concurso.asignaciones_tribunal.all() %}
-                    {% set pending_notifications = all_tribunal_members | rejectattr('notificado') | list | length %}
-                    {% if pending_notifications > 0 %}
+                    {% set keycloak_admin = get_keycloak_admin() %}
+                    
+                    <!-- Count members with Keycloak IDs -->
+                    {% set members_with_kc_id = all_tribunal_members | selectattr('persona.keycloak_user_id') | list %}
+                    {% set all_keycloak_members = members_with_kc_id | length %}
+                    
+                    <!-- Count not notified members with Keycloak IDs -->
+                    {% set not_notified_with_kc_id = members_with_kc_id | rejectattr('notificado') | list %}
+                    {% set not_notified_members = not_notified_with_kc_id | length %}
+                    
+                    <!-- Count password statuses (we'll do this with a simple loop for now) -->
+                    {% set all_configured_members = 0 %}
+                    {% set all_unconfigured_members = 0 %}
+                    {% set not_notified_configured = 0 %}
+                    {% set not_notified_unconfigured = 0 %}
+                    
+                    {% if keycloak_admin %}
+                        <!-- Create temporary lists to store the counts -->
+                        {% set configured_list = [] %}
+                        {% set unconfigured_list = [] %}
+                        {% set not_notified_configured_list = [] %}
+                        {% set not_notified_unconfigured_list = [] %}
+                        
+                        {% for miembro in members_with_kc_id %}
+                            {% set password_status = keycloak_admin.get_user_password_status(miembro.persona.keycloak_user_id) %}
+                            {% if password_status.has_password %}
+                                {% if configured_list.append(miembro) %}{% endif %}
+                                {% if not miembro.notificado %}
+                                    {% if not_notified_configured_list.append(miembro) %}{% endif %}
+                                {% endif %}
+                            {% else %}
+                                {% if unconfigured_list.append(miembro) %}{% endif %}
+                                {% if not miembro.notificado %}
+                                    {% if not_notified_unconfigured_list.append(miembro) %}{% endif %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% set all_configured_members = configured_list | length %}
+                        {% set all_unconfigured_members = unconfigured_list | length %}
+                        {% set not_notified_configured = not_notified_configured_list | length %}
+                        {% set not_notified_unconfigured = not_notified_unconfigured_list | length %}
+                    {% endif %}
+                      <!-- Button for NOT NOTIFIED members only -->
+                    {% if not_notified_members > 0 or concurso.asignaciones_tribunal.count() > 0 %}
                     <form method="POST" action="{{ url_for('tribunal.notificar_todos_miembros', concurso_id=concurso.id) }}" 
-                          style="display: inline;" onsubmit="return confirm('¿Enviar credenciales a todos los miembros no notificados ({{ pending_notifications }})?')">
-                        <button type="submit" class="btn btn-success me-2">
-                            <i class="bi bi-envelope-check"></i> Notificar Todos ({{ pending_notifications }})
+                          style="display: inline;" onsubmit="return confirm('¿Enviar notificaciones a miembros NO NOTIFICADOS ({{ not_notified_members }})?\n\n• {{ not_notified_configured }} recibirán recordatorio de acceso (ya configurados)\n• {{ not_notified_unconfigured }} recibirán configuración de contraseña (por configurar)')">
+                        <button type="submit" class="btn btn-success me-2" {{ 'disabled' if not_notified_members == 0 else '' }}>
+                            <i class="bi bi-envelope-check"></i> Notificar No Notificados ({{ not_notified_members }})
                         </button>
                     </form>
+                    {% endif %}                    
+                    <!-- Button for ALL members with Keycloak IDs -->
+                    {% if all_keycloak_members > 0 or concurso.asignaciones_tribunal.count() > 0 %}
+                    <form method="POST" action="{{ url_for('tribunal.reenviar_todos_miembros', concurso_id=concurso.id) }}" 
+                          style="display: inline;" onsubmit="return confirm('¿Reenviar a TODOS los miembros ({{ all_keycloak_members }})?\n\n• {{ all_configured_members }} recibirán recordatorio de acceso\n• {{ all_unconfigured_members }} recibirán configuración de contraseña\n\nIncluye miembros ya notificados.')">
+                        <button type="submit" class="btn btn-outline-primary me-2" {{ 'disabled' if all_keycloak_members == 0 else '' }}>
+                            <i class="bi bi-arrow-repeat"></i> Reenviar Todos ({{ all_keycloak_members }})
+                        </button>
+                    </form>
+                    {% endif %}
+                      <!-- Enhanced debug info -->
+                    {% if concurso.asignaciones_tribunal.count() > 0 %}
+                    <div class="alert alert-info mt-2 mb-2" style="font-size: 0.85em;">
+                        <strong>🐛 Debug Info:</strong><br>
+                        • Total miembros: {{ concurso.asignaciones_tribunal.count() }}<br>
+                        • Keycloak Admin disponible: {{ 'Sí' if keycloak_admin else 'No' }}<br>
+                        • Miembros con Keycloak ID: {{ all_keycloak_members }}<br>
+                        • No notificados: {{ not_notified_members }} (Conf: {{ not_notified_configured }}, Sin conf: {{ not_notified_unconfigured }})<br>
+                        • Todos configurados: {{ all_configured_members }}, Sin configurar: {{ all_unconfigured_members }}<br>
+                        
+                        <strong>Detalle por miembro:</strong><br>
+                        {% for miembro in all_tribunal_members %}
+                        • {{ miembro.persona.nombre }} {{ miembro.persona.apellido }}: 
+                          KC_ID={{ 'Sí' if miembro.persona.keycloak_user_id else 'No' }}, 
+                          Notificado={{ 'Sí' if miembro.notificado else 'No' }}
+                          {% if miembro.persona.keycloak_user_id and keycloak_admin %}
+                            {% set debug_status = keycloak_admin.get_user_password_status(miembro.persona.keycloak_user_id) %}
+                            , Password={{ 'Sí' if debug_status.has_password else 'No' }}
+                          {% endif %}<br>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                     
                     {% if concurso.asignaciones_tribunal.count() > 0 %}
@@ -160,6 +291,23 @@
                 {% set docente_count = all_members | selectattr('claustro', 'equalto', 'Docente') | list | length %}
                 {% set estudiante_count = all_members | selectattr('claustro', 'equalto', 'Estudiante') | list | length %}
                 
+                <!-- Calculate Keycloak password status -->
+                {% set keycloak_admin = get_keycloak_admin() %}
+                {% set keycloak_configured = 0 %}
+                {% set keycloak_unconfigured = 0 %}
+                {% if keycloak_admin %}
+                    {% for miembro in all_members %}
+                        {% if miembro.persona.keycloak_user_id %}
+                            {% set password_status = keycloak_admin.get_user_password_status(miembro.persona.keycloak_user_id) %}
+                            {% if password_status.has_password %}
+                                {% set keycloak_configured = keycloak_configured + 1 %}
+                            {% else %}
+                                {% set keycloak_unconfigured = keycloak_unconfigured + 1 %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
                 <div class="row">
                     <div class="col-md-6">
                         <h6><i class="bi bi-people"></i> Composición General</h6>
@@ -167,6 +315,13 @@
                             <li><strong>Total de miembros:</strong> {{ total_members }}</li>
                             <li><strong>Notificados:</strong> {{ notified_members }}/{{ total_members }}</li>
                             <li><strong>Con acceso activo:</strong> {{ active_members }}/{{ total_members }}</li>
+                        </ul>
+                        
+                        <h6><i class="bi bi-key"></i> Estado de Contraseñas</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-success">Configuradas:</span> {{ keycloak_configured }}</li>
+                            <li><span class="badge bg-warning">Por configurar:</span> {{ keycloak_unconfigured }}</li>
+                            <li><span class="badge bg-secondary">Sin usuario KC:</span> {{ total_members - keycloak_configured - keycloak_unconfigured }}</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
@@ -198,8 +353,11 @@
                             {% if total_members < 3 %}
                             <li class="text-warning"><i class="bi bi-exclamation-triangle"></i> Tribunal incompleto (mín. 3 miembros)</li>
                             {% endif %}
-                            {% if notified_members < total_members %}
-                            <li class="text-info"><i class="bi bi-info-circle"></i> {{ total_members - notified_members }} miembro(s) sin notificar</li>
+                            {% if keycloak_unconfigured > 0 %}
+                            <li class="text-info"><i class="bi bi-info-circle"></i> {{ keycloak_unconfigured }} miembro(s) necesitan configurar contraseña</li>
+                            {% endif %}
+                            {% if keycloak_configured > 0 and keycloak_configured == total_members %}
+                            <li class="text-success"><i class="bi bi-check-circle"></i> Todos los miembros tienen acceso configurado</li>
                             {% endif %}
                         </ul>
                     </div>

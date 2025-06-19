@@ -4,6 +4,7 @@ from datetime import datetime
 from app.models.models import db, Concurso, Departamento, Area, Orientacion, Categoria, HistorialEstado, DocumentoConcurso, Sustanciacion, TribunalMiembro, Persona
 from app.services.placeholder_resolver import get_core_placeholders
 from app.helpers.api_services import get_considerandos_data, get_asignaturas_from_external_api
+from app.integrations.keycloak_admin_client import get_keycloak_admin
 from . import concursos, drive_api
 
 @concursos.route('/')
@@ -245,8 +246,7 @@ def ver(concurso_id):
         print(f"Document: {doc['name']} ({doc['id']}) URL: {doc['url']}")
     
     # Create a current_user-like object for template compatibility
-    current_user_info = {
-        'role': 'admin' if is_admin() else 'user',
+    current_user_info = {        'role': 'admin' if is_admin() else 'user',
         'is_admin': is_admin(),
         'username': get_current_username()
     }
@@ -259,7 +259,8 @@ def ver(concurso_id):
                       notification_logs_by_campaign=notification_logs_by_campaign,
                       asignaturas_externas=asignaturas_externas,
                       temas_por_miembro=temas_por_miembro,
-                      current_user=current_user_info)
+                      current_user=current_user_info,
+                      get_keycloak_admin=get_keycloak_admin)
 
 @concursos.route('/<int:concurso_id>/editar', methods=['GET', 'POST'])
 @keycloak_login_required

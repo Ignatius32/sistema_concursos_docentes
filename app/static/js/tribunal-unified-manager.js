@@ -574,7 +574,7 @@ class UnifiedTribunalMemberManager {
                 break;
             case 'Titular':
                 basePermissions = {
-                    can_add_tema: false,
+                    can_add_tema: true,
                     can_upload_file: false,
                     can_sign_file: true,
                     can_view_postulante_docs: true
@@ -594,10 +594,20 @@ class UnifiedTribunalMemberManager {
         
         // Estudiantes have more restricted permissions
         if (claustro === 'Estudiante') {
-            basePermissions.can_sign_file = false;
-            if (rol !== 'Presidente') {
-                basePermissions.can_add_tema = false;
-                basePermissions.can_upload_file = false;
+            if (rol === 'Suplente') {
+                // If Estudiante and Suplente, all permissions are false
+                basePermissions = {
+                    can_add_tema: false,
+                    can_upload_file: false,
+                    can_sign_file: false,
+                    can_view_postulante_docs: false
+                };
+            } else {
+                basePermissions.can_sign_file = true;
+                if (rol !== 'Presidente') {
+                    basePermissions.can_add_tema = false;
+                    basePermissions.can_upload_file = false;
+                }
             }
         }
         

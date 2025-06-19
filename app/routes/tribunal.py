@@ -14,238 +14,17 @@ from app.utils.keycloak_auth import (
     get_current_username
 )
 from app.config.keycloak_config import KeycloakConfig
+from app.services.password_reset_service import password_reset_service
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from functools import wraps
-import secrets
-import hashlib
-import os
 import io
-import base64
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
 drive_api = GoogleDriveAPI()
 
-# Token utilities for password reset
-def generate_reset_token(user_id: str, expiry_hours: int = 24) -> str:
-    """Generate a secure reset token for password reset."""
-    # Create a random token
-    random_token = secrets.token_urlsafe(32)
-    
-    # Create expiry timestamp
-    expiry = datetime.utcnow() + timedelta(hours=expiry_hours)
-    expiry_str = expiry.isoformat()
-    
-    # Create the payload: user_id|expiry|random_token
-    payload = f"{user_id}|{expiry_str}|{random_token}"
-    
-    # Create a hash using a secret key (you should store this in config)
-    secret_key = os.environ.get('RESET_TOKEN_SECRET', 'your-secret-key-here')
-    signature = hashlib.sha256(f"{payload}|{secret_key}".encode()).hexdigest()
-    
-    # Combine payload and signature
-    token = f"{payload}|{signature}"
-    
-    # URL-safe base64 encode
-    import base64
-    return base64.urlsafe_b64encode(token.encode()).decode()
-
-def verify_reset_token(token: str) -> dict:
-    """Verify and decode a reset token."""
-    try:
-        import base64
-        
-        # Decode from base64
-        decoded = base64.urlsafe_b64decode(token.encode()).decode()
-        
-        # Split the token
-        parts = decoded.split('|')
-        if len(parts) != 4:
-            return {'valid': False, 'error': 'Invalid token format'}
-        
-        user_id, expiry_str, random_token, signature = parts
-        
-        # Verify signature
-        secret_key = os.environ.get('RESET_TOKEN_SECRET', 'your-secret-key-here')
-        expected_signature = hashlib.sha256(f"{user_id}|{expiry_str}|{random_token}|{secret_key}".encode()).hexdigest()
-        
-        if signature != expected_signature:
-            return {'valid': False, 'error': 'Invalid token signature'}
-        
-        # Check expiry
-        expiry = datetime.fromisoformat(expiry_str)
-        if datetime.utcnow() > expiry:
-            return {'valid': False, 'error': 'Token has expired'}
-        
-        return {
-            'valid': True,
-            'user_id': user_id,
-            'expiry': expiry
-        }
-        
-    except Exception as e:
-        return {'valid': False, 'error': f'Token verification failed: {str(e)}'}
-
-def send_reset_email_internal(persona: Persona, keycloak_user_id: str) -> bool:
-    """Send password reset email using Google Drive email system."""
-    try:
-        # Generate reset token
-        reset_token = generate_reset_token(keycloak_user_id)
-        
-        # Build reset URL pointing to our app
-        reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
-        
-        # Use Google Drive email system
-        try:
-            # Initialize Google Drive API
-            drive_api = GoogleDriveAPI()
-            
-            # Email subject
-            subject = "Configurar Contraseña - Portal de Tribunal"
-            
-            # HTML email body with placeholders
-            html_body = """
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Configurar Contraseña - Portal de Tribunal</title>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                    .content { background-color: #f8f9fa; padding: 30px; border: 1px solid #dee2e6; border-top: none; }
-                    .button { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
-                    .footer { background-color: #e9ecef; padding: 15px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 5px 5px; font-size: 0.9em; color: #6c757d; }
-                    .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 15px 0; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>Portal de Tribunal</h1>
-                    <p>Sistema de Concursos Docentes</p>
-                </div>
-                
-                <div class="content">
-                    <h2>Hola <<nombre>> <<apellido>>,</h2>
-                    
-                    <p>Ha sido designado(a) como miembro del tribunal para un concurso docente. Para acceder al Portal de Tribunal, necesita configurar su contraseña de acceso.</p>
-                    
-                    <p>Haga clic en el siguiente enlace para configurar su contraseña:</p>
-                    
-                    <div style="text-align: center;">
-                        <a href="<<reset_url>>" class="button">Configurar Contraseña</a>
-                    </div>
-                    
-                    <div class="warning">
-                        <strong>Importante:</strong>
-                        <ul>
-                            <li>Este enlace es válido por 24 horas</li>
-                            <li>Solo puede ser usado una vez</li>
-                            <li>No comparta este enlace con otras personas</li>
-                        </ul>
-                    </div>
-                    
-                    <p>Una vez que configure su contraseña, podrá acceder al Portal de Tribunal usando su correo electrónico y la contraseña que haya elegido.</p>
-                    
-                    <p>Si tiene problemas para acceder o no solicitó este acceso, contacte al administrador del sistema.</p>
-                </div>
-                
-                <div class="footer">
-                    <p><strong>Sistema de Concursos Docentes</strong></p>
-                    <p>Este es un mensaje automático, por favor no responda a este correo.</p>
-                    <p>Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:</p>
-                    <p style="word-break: break-all; font-size: 0.8em;"><<reset_url>></p>
-                </div>
-            </body>
-            </html>
-            """
-            
-            # Placeholders for email content
-            placeholders = {
-                'nombre': persona.nombre,
-                'apellido': persona.apellido,
-                'reset_url': reset_url,
-                'correo': persona.correo
-            }
-            
-            # Send email via Google Drive API
-            result = drive_api.send_email(
-                to_email=persona.correo,
-                subject=subject,
-                html_body=html_body,
-                sender_name="Sistema de Concursos Docentes",
-                placeholders=placeholders
-            )
-            
-            current_app.logger.info(f"Password reset email sent successfully to {persona.correo} via Google Drive")
-            current_app.logger.info(f"Reset URL: {reset_url}")
-            
-            # Show success message in development
-            if current_app.debug:
-                flash(f'Email de configuración enviado a {persona.correo}. Reset URL: <a href="{reset_url}" target="_blank">{reset_url}</a>', 'info')
-            
-            return True
-            
-        except Exception as email_error:
-            current_app.logger.error(f"Failed to send email via Google Drive: {email_error}")
-            
-            # Fallback: Log the URL for manual testing
-            current_app.logger.info(f"EMAIL FALLBACK - Password reset URL for {persona.correo}: {reset_url}")
-            current_app.logger.info(f"Reset token: {reset_token}")
-            
-            # In development, show the link in the UI as fallback
-            if current_app.debug:
-                flash(f'Error enviando email, pero enlace generado: <a href="{reset_url}" target="_blank">Configurar contraseña para {persona.correo}</a>', 'warning')
-            
-            return True  # Return True because token was generated successfully
-        
-    except Exception as e:
-        current_app.logger.error(f"Error generating reset email: {e}")
-        return False
-
-
-
-def notify_tribunal_member_with_reset(persona: Persona, keycloak_admin: KeycloakAdminClient) -> dict:
-    """
-    Notify a tribunal member with password reset link using Drive integration.
-    Returns dict with success status and message.
-    """
-    try:
-        if not persona.correo:
-            return {
-                'success': False,
-                'message': f'{persona.nombre} {persona.apellido} no tiene correo registrado'
-            }
-        
-        # Find user in Keycloak by email
-        keycloak_user = keycloak_admin.get_user_by_email(persona.correo)        
-        if not keycloak_user:
-            return {
-                'success': False,
-                'message': f'Usuario {persona.nombre} {persona.apellido} no encontrado en Keycloak.'
-            }
-        
-        # Use our internal reset system with Drive integration
-        success = send_reset_email_internal(persona, keycloak_user['id'])
-        
-        if success:
-            return {
-                'success': True,
-                'message': f'Email de configuración enviado a {persona.nombre} {persona.apellido} via Drive.',
-                'keycloak_user_id': keycloak_user['id']
-            }
-        else:
-            return {
-                'success': False,
-                'message': f'Error al enviar email a {persona.nombre} {persona.apellido}.'
-            }
-            
-    except Exception as e:
-        return {
-            'success': False,
-            'message': f'Error procesando {persona.nombre} {persona.apellido}: {str(e)}'
-        }
+tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
+drive_api = GoogleDriveAPI()
 
 def tribunal_login_required(f):
     @wraps(f)
@@ -672,17 +451,14 @@ def notificar_tribunal(concurso_id, documento_id):
         # Get only non-suplente members
         miembros = TribunalMiembro.query.filter(
             TribunalMiembro.concurso_id == concurso_id,
-            TribunalMiembro.rol != 'Suplente'
-        ).join(Persona).all()
-        
+            TribunalMiembro.rol != 'Suplente'        ).join(Persona).all()
         notificados = 0
         errores = []
-        
         for miembro in miembros:
             persona = miembro.persona
             
             # Use the Drive-based notification helper function
-            result = notify_tribunal_member_with_reset(persona, keycloak_admin)
+            result = password_reset_service.notify_tribunal_member_with_reset(persona, keycloak_admin, concurso_id)
             
             if result['success']:
                 # Update notification status
@@ -711,10 +487,14 @@ def notificar_tribunal(concurso_id, documento_id):
 @tribunal.route('/concurso/<int:concurso_id>/notificar-todos', methods=['POST'])
 @admin_required
 def notificar_todos_miembros(concurso_id):
-    """Notify all tribunal members with their credentials."""
+    """Notify all tribunal members who have NOT been notified yet."""
     try:
         concurso = Concurso.query.get_or_404(concurso_id)
-        miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
+        # Only get members who have NOT been notified yet
+        miembros = TribunalMiembro.query.filter_by(
+            concurso_id=concurso_id, 
+            notificado=False
+        ).join(Persona).all()
         
         # Initialize Keycloak admin client
         keycloak_admin = KeycloakAdminClient()
@@ -730,7 +510,7 @@ def notificar_todos_miembros(concurso_id):
             persona = miembro.persona
             
             # Use the new notification helper function
-            result = notify_tribunal_member_with_reset(persona, keycloak_admin)
+            result = password_reset_service.notify_tribunal_member_with_reset(persona, keycloak_admin, concurso_id)
             
             if result['success']:
                 # Update notification status
@@ -741,10 +521,12 @@ def notificar_todos_miembros(concurso_id):
                 errores.append(result['message'])
         
         db.session.commit()
-          # Show results
-        if notificados > 0:
-            flash(f'Emails de configuración de contraseña enviados exitosamente a {notificados} miembros del tribunal via Drive.', 'success')
         
+        # Show results
+        if notificados > 0:
+            flash(f'Emails enviados exitosamente a {notificados} miembros NO NOTIFICADOS del tribunal.', 'success')
+        elif len(miembros) == 0:
+            flash('No hay miembros sin notificar en este tribunal.', 'info')
         if errores:
             for error in errores:
                 flash(error, 'warning')
@@ -753,7 +535,7 @@ def notificar_todos_miembros(concurso_id):
         db.session.rollback()
         flash(f'Error al enviar credenciales: {str(e)}', 'danger')
     
-    return redirect(url_for('tribunal.index', concurso_id=concurso_id))
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 
 @tribunal.route('/<int:miembro_id>/notificar', methods=['POST'])
 @admin_required
@@ -763,15 +545,14 @@ def notificar_miembro(miembro_id):
         miembro = TribunalMiembro.query.get_or_404(miembro_id)
         persona = miembro.persona
         concurso = Concurso.query.get_or_404(miembro.concurso_id)
-
         if not persona.correo:
             flash(f'El miembro {persona.nombre} {persona.apellido} no tiene correo registrado.', 'warning')
-            return redirect(url_for('tribunal.index', concurso_id=concurso.id))
+            return redirect(url_for('concursos.ver', concurso_id=concurso.id))
           # Initialize Keycloak admin client
         keycloak_admin = KeycloakAdminClient()
         
         # Use the new notification helper function
-        result = notify_tribunal_member_with_reset(persona, keycloak_admin)
+        result = password_reset_service.notify_tribunal_member_with_reset(persona, keycloak_admin, concurso.id)
         
         if result['success']:
             # Update notification status
@@ -781,12 +562,11 @@ def notificar_miembro(miembro_id):
             flash(result['message'], 'success')
         else:
             flash(result['message'], 'danger')
-        
     except Exception as e:
         db.session.rollback()
         flash(f'Error al enviar credenciales: {str(e)}', 'danger')
     
-    return redirect(url_for('tribunal.index', concurso_id=concurso.id))
+    return redirect(url_for('concursos.ver', concurso_id=concurso.id))
 
 # Routes for tribunal member portal
 @tribunal.route('/acceso')
@@ -800,7 +580,7 @@ def reset_password(token):
     """Handle password reset with token validation and Keycloak integration."""
     
     # Verify the token
-    token_data = verify_reset_token(token)
+    token_data = password_reset_service.verify_reset_token(token)
     
     if not token_data['valid']:
         flash(f'Enlace de restablecimiento inválido o expirado: {token_data.get("error", "Token inválido")}', 'danger')
@@ -878,7 +658,7 @@ def activar_cuenta():
                 return render_template('tribunal/activar_cuenta.html')
             
             # Send password reset email using Drive integration
-            success = send_reset_email_internal(persona, keycloak_user['id'])
+            success = password_reset_service.send_reset_email_internal(persona, keycloak_user['id'])
             
             if success:
                 flash('Se ha enviado un enlace de activación a su correo electrónico.', 'success')
@@ -894,7 +674,7 @@ def activar_cuenta():
 @tribunal.route('/recuperar-password', methods=['GET', 'POST'])
 def recuperar_password():
     """Allow tribunal members to request a password reset link."""
-    if request.method == 'POST':
+    if request.method == 'POST':        
         dni = request.form.get('dni')
         correo = request.form.get('correo')
         
@@ -904,7 +684,8 @@ def recuperar_password():
         if not persona:
             flash('No se encontró una persona con esos datos en el sistema.', 'danger')
             return render_template('tribunal/recuperar_password.html')
-              # Check if this persona is assigned to any tribunal
+        
+        # Check if this persona is assigned to any tribunal
         miembro = TribunalMiembro.query.filter_by(persona_id=persona.id).first()
         if not miembro:
             flash('Esta persona no está asignada a ningún tribunal.', 'danger')
@@ -921,7 +702,7 @@ def recuperar_password():
                 return render_template('tribunal/recuperar_password.html')
             
             # Send password reset email using Drive integration
-            success = send_reset_email_internal(persona, keycloak_user['id'])
+            success = password_reset_service.send_reset_email_internal(persona, keycloak_user['id'])
             
             if success:
                 flash('Se ha enviado un enlace de restablecimiento de contraseña a su correo electrónico.', 'success')
@@ -2050,34 +1831,68 @@ def delete_member_api(concurso_id, miembro_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Error deleting tribunal member: {str(e)}')
-        return jsonify({
-            'success': False,
+        return jsonify({            'success': False,
             'message': f'Error interno: {str(e)}'
         }), 500
 
-def send_simple_reset_fallback(persona: Persona, keycloak_user_id: str) -> bool:
-    """Simple fallback method that generates token and logs it without Keycloak API calls."""
+@tribunal.route('/concurso/<int:concurso_id>/reenviar-todos', methods=['POST'])
+@admin_required
+def reenviar_todos_miembros(concurso_id):
+    """Resend notifications to ALL tribunal members (including already notified ones)."""
     try:
-        # Generate reset token
-        reset_token = generate_reset_token(keycloak_user_id)
+        concurso = Concurso.query.get_or_404(concurso_id)
+        # Get ALL members regardless of notification status
+        miembros = TribunalMiembro.query.filter_by(concurso_id=concurso_id).join(Persona).all()
         
-        # Build reset URL pointing to our app
-        reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+        # Initialize Keycloak admin client
+        keycloak_admin = KeycloakAdminClient()
         
-        # Log the information for manual testing
-        current_app.logger.info(f"Password reset fallback for {persona.correo}")
-        current_app.logger.info(f"Reset URL: {reset_url}")
-        current_app.logger.info(f"Token: {reset_token}")
+        notificados = 0
+        login_reminders = 0
+        config_emails = 0
+        errores = []
         
-        # In debug mode, show the link in the UI
-        if current_app.debug:
-            flash(f'Password reset link for {persona.nombre} {persona.apellido}: <a href="{reset_url}" target="_blank">Reset Password</a>', 'info')
+        for miembro in miembros:
+            # Skip suplentes
+            if miembro.rol.lower() == 'suplente':
+                continue
+                
+            persona = miembro.persona
+            
+            # Use the new notification helper function
+            result = password_reset_service.notify_tribunal_member_with_reset(persona, keycloak_admin, concurso_id)
+            
+            if result['success']:
+                # Update notification status
+                miembro.notificado = True
+                miembro.fecha_notificacion = datetime.utcnow()
+                notificados += 1
+                
+                # Count by email type
+                if result.get('email_type') == 'login_reminder':
+                    login_reminders += 1
+                else:
+                    config_emails += 1
+            else:
+                errores.append(result['message'])
         
-        # You can implement actual email sending here without Keycloak
-        # For example, using Flask-Mail or any other email service
+        db.session.commit()
         
-        return True
+        # Show detailed results
+        if notificados > 0:
+            message_parts = [f'Emails reenviados exitosamente a {notificados} miembros del tribunal:']
+            if login_reminders > 0:
+                message_parts.append(f'• {login_reminders} recordatorios de acceso (ya tenían contraseña)')
+            if config_emails > 0:
+                message_parts.append(f'• {config_emails} configuraciones de contraseña (necesitaban configurar)')
+            flash(' '.join(message_parts), 'success')
+        elif len(miembros) == 0:
+            flash('No hay miembros en este tribunal.', 'info')
         
+        if errores:
+            for error in errores:
+                flash(error, 'warning')
     except Exception as e:
-        current_app.logger.error(f"Error in fallback reset email: {e}")
-        return False
+        db.session.rollback()
+        flash(f'Error al reenviar credenciales: {str(e)}', 'danger')
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))

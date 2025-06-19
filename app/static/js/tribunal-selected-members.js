@@ -203,7 +203,7 @@ class TribunalSelectedMembersManager {
                 };
             case 'Titular':
                 return {
-                    can_add_tema: false,
+                    can_add_tema: true,
                     can_upload_file: false,
                     can_sign_file: true,
                     can_view_postulante_docs: true
