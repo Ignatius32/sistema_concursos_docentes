@@ -64,6 +64,26 @@
 <script src="{{ url_for('static', filename='js/tribunal-search.js') }}?v=3.0"></script>
 <script src="{{ url_for('static', filename='js/tribunal-unified-manager.js') }}?v=6.0"></script>
 
+<script>
+// Initialize the tribunal search manager with proper API URLs
+document.addEventListener('DOMContentLoaded', function() {
+    // Pass the correct API URLs to JavaScript
+    window.TRIBUNAL_API_CONFIG = {
+        buscarPersonasUrl: "{{ url_for('tribunal.buscar_personas') }}",
+        addMemberUrl: "{{ url_for('tribunal.add_single_member', concurso_id=concurso.id) }}",
+        editMemberUrl: "{{ url_for('tribunal.edit_member_api', concurso_id=concurso.id, miembro_id='__MIEMBRO_ID__') }}".replace('__MIEMBRO_ID__', ''),
+        deleteMemberUrl: "{{ url_for('tribunal.delete_member_api', concurso_id=concurso.id, miembro_id='__MIEMBRO_ID__') }}".replace('__MIEMBRO_ID__', ''),
+        concursoId: {{ concurso.id }},
+        basePath: "{{ url_for('tribunal.portal_concurso', concurso_id=concurso.id) }}".split('/concurso/')[0]
+    };
+    
+    // Initialize the search manager
+    if (window.TribunalSearchManager) {
+        window.tribunalSearchManager = new TribunalSearchManager({{ concurso.id }});
+    }
+});
+</script>
+
 {% endblock %}
 
 {% block styles %}

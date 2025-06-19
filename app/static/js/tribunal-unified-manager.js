@@ -26,9 +26,14 @@ class UnifiedTribunalMemberManager {
         } catch (error) {
             console.error('UnifiedTribunalMemberManager initialization error:', error);
         }
-    }getConcursoId() {
-        // Match the pattern /tribunal/concurso/{id}/agregar
-        const pathMatch = window.location.pathname.match(/\/tribunal\/concurso\/(\d+)/);
+    }    getConcursoId() {
+        // First try to get from the global config
+        if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.concursoId) {
+            return window.TRIBUNAL_API_CONFIG.concursoId;
+        }
+        
+        // Fallback: Match the pattern with base path consideration
+        const pathMatch = window.location.pathname.match(/\/concurso\/(\d+)/);
         return pathMatch ? pathMatch[1] : null;
     }
 
@@ -274,7 +279,12 @@ class UnifiedTribunalMemberManager {
     }    async saveNewMember(personaId, memberData) {
         console.log('Saving new member to server:', personaId, memberData);
         
-        const url = `/tribunal/concurso/${this.concursoId}/tribunal/add`;
+        // Use the API URL from the global configuration if available
+        let url = `/tribunal/concurso/${this.concursoId}/tribunal/add`;
+        if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.addMemberUrl) {
+            url = window.TRIBUNAL_API_CONFIG.addMemberUrl;
+        }
+        
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -297,7 +307,12 @@ class UnifiedTribunalMemberManager {
     }    async updateExistingMember(miembroId, memberData) {
         console.log('Updating existing member on server:', miembroId, memberData);
         
-        const url = `/tribunal/concurso/${this.concursoId}/tribunal/edit/${miembroId}`;
+        // Use the API URL from the global configuration if available
+        let url = `/tribunal/concurso/${this.concursoId}/tribunal/edit/${miembroId}`;
+        if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.editMemberUrl) {
+            url = window.TRIBUNAL_API_CONFIG.editMemberUrl + miembroId;
+        }
+        
         const response = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -316,7 +331,12 @@ class UnifiedTribunalMemberManager {
         return data;
     }    async deleteMemberFromServer(miembroId, card) {
         try {
-            const url = `/tribunal/concurso/${this.concursoId}/tribunal/delete/${miembroId}`;
+            // Use the API URL from the global configuration if available
+            let url = `/tribunal/concurso/${this.concursoId}/tribunal/delete/${miembroId}`;
+            if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.deleteMemberUrl) {
+                url = window.TRIBUNAL_API_CONFIG.deleteMemberUrl + miembroId;
+            }
+            
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {

@@ -52,11 +52,17 @@ class TribunalSearchManager {
             this.searchPersonas(query);
         }, 300);
     }
-    
-    async searchPersonas(query) {
+      async searchPersonas(query) {
         try {
             console.log('API call - Searching for:', query);
-            const url = `/tribunal/api/buscar-personas?q=${encodeURIComponent(query)}&concurso_id=${this.concursoId}&limit=20`;
+            
+            // Use the API URL from the global configuration if available
+            let baseUrl = '/tribunal/api/buscar-personas';
+            if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.buscarPersonasUrl) {
+                baseUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
+            }
+            
+            const url = `${baseUrl}?q=${encodeURIComponent(query)}&concurso_id=${this.concursoId}&limit=20`;
             console.log('API URL:', url);
             
             const response = await fetch(url);
