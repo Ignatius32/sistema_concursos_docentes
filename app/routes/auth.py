@@ -8,11 +8,6 @@ from app.services.password_reset_service import password_reset_service
 from datetime import datetime
 import logging
 
-# Import the Drive-based reset email function from the password reset service
-def get_send_reset_email_internal():
-    """Lazy import to avoid circular imports"""
-    return password_reset_service.send_reset_email_internal
-
 logger = logging.getLogger(__name__)
 auth = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -208,10 +203,8 @@ def reset_password():
                 # Don't reveal whether user exists or not for security
                 flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'info')
                 return render_template('auth/reset_password.html')
-            
-            # Use the Drive-based reset email system
-            send_reset_email_internal = get_send_reset_email_internal()
-            success = send_reset_email_internal(persona, keycloak_user['id'])
+              # Use the Drive-based password reset email system
+            success = password_reset_service.send_password_reset_email(persona, keycloak_user['id'])
             
             if success:
                 flash('Si el usuario existe en el sistema, recibirá un correo con instrucciones para restablecer su contraseña.', 'success')

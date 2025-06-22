@@ -120,8 +120,7 @@
                                                                             data-bs-toggle="modal" 
                                                                             data-bs-target="#pdfViewerModal{{ documento.id }}">
                                                                         <i class="bi bi-file-earmark-text"></i> Ver Documento
-                                                                    </button>
-                                                                    <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                                    </button>                                                                    <a href="{{ documento.get_document_url() }}" target="_blank" class="btn btn-sm btn-outline-secondary">
                                                                         <i class="bi bi-box-arrow-up-right"></i> Abrir en Drive
                                                                     </a>
                                                                 </div>
@@ -138,8 +137,7 @@
                                                                                 <iframe src="{{ url_for('tribunal.ver_documento_postulante', concurso_id=concurso.id, postulante_id=postulante.id, documento_id=documento.id) }}" 
                                                                                         style="width: 100%; height: 80vh;" frameborder="0"></iframe>
                                                                             </div>
-                                                                            <div class="modal-footer">
-                                                                                <a href="{{ documento.url }}" target="_blank" class="btn btn-primary">
+                                                                            <div class="modal-footer">                                                                                <a href="{{ documento.get_document_url() }}" target="_blank" class="btn btn-primary">
                                                                                     <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
                                                                                 </a>
                                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

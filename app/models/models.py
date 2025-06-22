@@ -272,10 +272,13 @@ class DocumentoConcurso(db.Model):
             # Documents with FIRMADO state are always visible
             if self.estado == 'FIRMADO':
                 return True
-                
-            # Documents in PENDIENTE DE FIRMA state are visible
+                  # Documents in PENDIENTE DE FIRMA state are visible if the member hasn't signed yet
             if self.estado == 'PENDIENTE DE FIRMA':
-                return True
+                # If no specific tribunal member provided, show the document
+                if miembro_tribunal is None:
+                    return True
+                # Check if this specific member has already signed
+                return not self.ya_firmado_por(miembro_tribunal.id)
                 
             # All other documents (typically BORRADOR) are not visible to tribunal
             return False
@@ -288,15 +291,16 @@ class DocumentoConcurso(db.Model):
             if self.estado not in rules:
                 return False
                 
-            # If no miembro_tribunal provided, we can't check role/claustro-specific rules
-            if not miembro_tribunal:
-                # Return True if there are rules for this state, meaning someone should see it
-                return bool(rules.get(self.estado))
+            # Get the rules for the current document state
+            estado_rules = rules[self.estado]
             
-            # Check if the member's role and claustro match the rules
-            state_rules = rules.get(self.estado, {})
-            allowed_roles = state_rules.get('roles', [])
-            allowed_claustros = state_rules.get('claustros', [])
+            # If no tribunal member is provided, we can't check role/claustro rules
+            if not miembro_tribunal:
+                return False
+                
+            # Check if the tribunal member's role and claustro are allowed
+            allowed_roles = estado_rules.get('roles', [])
+            allowed_claustros = estado_rules.get('claustros', [])
             
             # Document is visible if both role and claustro match the rules
             return (miembro_tribunal.rol in allowed_roles and 
@@ -305,6 +309,35 @@ class DocumentoConcurso(db.Model):
         except (json.JSONDecodeError, AttributeError, TypeError):
             # In case of any error parsing the rules, fall back to the document being invisible
             return False
+
+    def is_visible_to_public(self):
+        """
+        Determine if this document should be visible to the public based on configuration.
+        
+        Returns:
+            bool: True if the document should be visible to the public
+        """
+        # Import here to avoid circular imports
+        from app.models.models import DocumentTemplateConfig
+        
+        # Get the template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=self.tipo).first()
+        
+        # If no template configuration is found, fall back to basic visibility rules
+        if not template_config or not template_config.public_visibility_rules:
+            # Default rule: only show FIRMADO documents to public
+            return self.estado == 'FIRMADO'
+        
+        # Use the configuration-based visibility rules
+        try:
+            rules = json.loads(template_config.public_visibility_rules)
+            
+            # Check if the current state is visible to public
+            return rules.get(self.estado, False)
+                    
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            # In case of any error parsing the rules, fall back to showing only FIRMADO documents
+            return self.estado == 'FIRMADO'
 
     def get_friendly_name(self):
         """
@@ -323,6 +356,26 @@ class DocumentoConcurso(db.Model):
         # Join with spaces
         return ' '.join(words)
 
+    def get_template_display_name(self):
+        """
+        Get the display name from the template configuration, fallback to friendly name.
+        
+        Returns:
+            str: The configured display name or a generated friendly name
+        """
+        # Import here to avoid circular imports
+        from app.models.models import DocumentTemplateConfig
+        
+        # Get the template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=self.tipo).first()
+        
+        # If template config exists and has display name, use it
+        if template_config and template_config.display_name:
+            return template_config.display_name
+        
+        # Fallback to the friendly name method
+        return self.get_friendly_name()
+
     # Keep the property for backward compatibility, but make it read/write
     @property
     def drive_file_id(self):
@@ -337,6 +390,43 @@ class DocumentoConcurso(db.Model):
             return self.url.split('/d/')[1].split('/')[0]
         except (IndexError, AttributeError):
             return None
+
+    def get_document_url(self):
+        """
+        Get the correct document URL based on document state and available files.
+        Priority:
+        1. For PENDIENTE DE FIRMA or FIRMADO states: use file_id (documentos_firmados folder)
+        2. For BORRADOR state: use borrador_file_id (borradores folder)
+        3. Fallback to self.url if no file IDs are available
+        
+        Returns:
+            str: The appropriate Google Drive URL for the document
+        """
+        # For documents in signing process, prioritize the uploaded/signed version
+        if self.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] and self.file_id:
+            return f"https://drive.google.com/file/d/{self.file_id}/view"
+        
+        # For draft documents, use the borrador version
+        if self.estado == 'BORRADOR' and self.borrador_file_id:
+            return f"https://drive.google.com/file/d/{self.borrador_file_id}/view"
+        
+        # If the preferred file ID is not available, try the other one
+        if self.file_id:
+            return f"https://drive.google.com/file/d/{self.file_id}/view"
+        elif self.borrador_file_id:
+            return f"https://drive.google.com/file/d/{self.borrador_file_id}/view"
+        
+        # Fallback to the stored URL (for backward compatibility)
+        return self.url
+
+    def update_url_from_file_ids(self):
+        """
+        Update the URL field based on the current state and available file IDs.
+        This ensures backward compatibility while using the new file ID system.
+        """
+        new_url = self.get_document_url()
+        if new_url != self.url:
+            self.url = new_url
 
 class FirmaDocumento(db.Model):
     __tablename__ = 'firmas_documento'
@@ -512,7 +602,9 @@ class DocumentTemplateConfig(db.Model):
     # New fields for enhanced document template configuration
     concurso_visibility = db.Column(db.String(50), nullable=False, default='BOTH')  # REGULAR, INTERINO, BOTH
     is_unique_per_concurso = db.Column(db.Boolean, default=True, nullable=False)
-    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text    
+    tribunal_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text
+    # New field for public visibility rules
+    public_visibility_rules = db.Column(db.Text, nullable=True)  # JSON stored as text for public access
     # New fields for permission control
     admin_can_send_for_signature = db.Column(db.Boolean, default=True, nullable=False)
     tribunal_can_sign = db.Column(db.Boolean, default=False, nullable=False)
@@ -541,6 +633,21 @@ class DocumentTemplateConfig(db.Model):
         except json.JSONDecodeError:
             return {}
     
+    def get_public_visibility_rules(self):
+        """
+        Parse and return the public visibility rules as a Python dictionary.
+        
+        Returns:
+            dict: A dictionary with document states as keys and boolean values indicating visibility,
+                  or an empty dict if no rules are defined.
+        """
+        if not self.public_visibility_rules:
+            return {}
+        try:
+            return json.loads(self.public_visibility_rules)
+        except json.JSONDecodeError:
+            return {}
+    
     def set_tribunal_visibility_rules(self, rules_dict):
         """
         Set the tribunal visibility rules from a Python dictionary.
@@ -549,6 +656,16 @@ class DocumentTemplateConfig(db.Model):
             rules_dict (dict): A dictionary with document states as keys and rules for roles and claustros as values.
         """
         self.tribunal_visibility_rules = json.dumps(rules_dict)
+    
+    def set_public_visibility_rules(self, rules_dict):
+        """
+        Set the public visibility rules from a Python dictionary.
+        
+        Args:
+            rules_dict (dict): A dictionary with document states as keys and boolean values indicating visibility.
+        """
+        self.public_visibility_rules = json.dumps(rules_dict)
+    
     def is_visible_for_concurso_tipo(self, tipo_concurso):
         """
         Check if this template is available for the specified concurso type.

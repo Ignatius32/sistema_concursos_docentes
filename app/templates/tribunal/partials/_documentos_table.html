@@ -25,11 +25,16 @@
                         <span class="badge bg-success">
                             FIRMADO POR {{ documento.firma_count }} MIEMBRO{% if documento.firma_count > 1 %}S{% endif %} DEL TRIBUNAL
                         </span>
-                        {% endif %}
-                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                        {% endif %}                    {% elif documento.estado == 'PENDIENTE DE FIRMA' %}
+                    {% if documento.ya_firmado_por(miembro.id) %}
+                    <span class="badge bg-success">
+                        FIRMADO POR USTED {% if documento.firma_count > 1 %}({{ documento.firma_count }} firmas total){% endif %}
+                    </span>
+                    {% else %}
                     <span class="badge bg-info">
                         PENDIENTE DE FIRMA {% if documento.firma_count > 0 %}({{ documento.firma_count }} firma{% if documento.firma_count > 1 %}s{% endif %}){% endif %}
                     </span>
+                    {% endif %}
                     {% else %}
                     <span class="badge bg-warning">
                         {{ documento.estado }}
@@ -37,8 +42,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                    <div class="btn-group">                        <button type="button" class="btn btn-sm btn-outline-primary" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#pdfViewerModal{{ documento.id }}">
                             <i class="bi bi-file-earmark-text"></i> Ver Documento

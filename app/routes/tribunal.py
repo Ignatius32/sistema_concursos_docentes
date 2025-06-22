@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from functools import wraps
 import io
+import io
 
 tribunal = Blueprint('tribunal', __name__, url_prefix='/tribunal')
 drive_api = GoogleDriveAPI()
@@ -1095,11 +1096,10 @@ def subir_documento_presidente(concurso_id, documento_id):
             filename,
             file_data
         )
-        
-        # Update document status and store the file_id 
+          # Update document status and store the file_id 
         documento.estado = 'PENDIENTE DE FIRMA'
         documento.file_id = file_id  # Store the file_id for the uploaded version
-        documento.url = web_view_link
+        documento.update_url_from_file_ids()  # Update URL based on new state and file ID
         documento.firma_count = 0  # Reset firma count since this is a new document
           # Add entry to history
         historial = HistorialEstado(
@@ -1110,7 +1110,7 @@ def subir_documento_presidente(concurso_id, documento_id):
         db.session.add(historial)
         db.session.commit()
         
-        flash(f'Documento subido exitosamente. <a href="{web_view_link}" target="_blank" class="alert-link">Ver documento</a>. El documento está pendiente de firma.', 'success')
+        flash(f'Documento subido exitosamente. <a href="{documento.get_document_url()}" target="_blank" class="alert-link">Ver documento</a>. El documento está pendiente de firma.', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -1162,15 +1162,15 @@ def firmar_documento(concurso_id, documento_id):
         
         # Get the binary content from base64
         import base64
-        pdf_content = base64.b64decode(file_content_response['fileData'])
-        
-        # Add the signature using the PDF utility
+        pdf_content = base64.b64decode(file_content_response['fileData'])        # Add the signature using the PDF utility
+        current_app.logger.info(f"Adding signature for {miembro.persona.apellido}, {miembro.persona.nombre} - Role: {miembro.rol} - Current signature count: {documento.firma_count}")
         pdf_with_stamp = add_signature_stamp(
             pdf_content,
             miembro.persona.apellido,
             miembro.persona.nombre,
             miembro.persona.dni,
-            documento.firma_count
+            cargo=miembro.rol,  # Pass the tribunal member's role as cargo
+            signature_count=documento.firma_count  # Pass the current signature count
         )
         
         if not pdf_with_stamp:
@@ -1187,15 +1187,14 @@ def firmar_documento(concurso_id, documento_id):
         
         if not new_file_id:
             raise Exception("Error al guardar el documento firmado")
-        
-        # Update document with new file ID and URL if changed
+          # Update document with new file ID and URL if changed
         if new_file_id != documento.file_id:
             documento.file_id = new_file_id
-        if web_view_link:
-            documento.url = web_view_link
-        
-        # Increment signature count
+        # Update URL based on current state and file IDs
+        documento.update_url_from_file_ids()
+          # Increment signature count
         documento.firma_count += 1
+        current_app.logger.info(f"Signature added successfully. New signature count: {documento.firma_count}")
         
         # Add firma record
         firma = FirmaDocumento(
@@ -1203,27 +1202,40 @@ def firmar_documento(concurso_id, documento_id):
             miembro_id=miembro.id
         )  # fecha_firma will be set automatically by the default value
         db.session.add(firma)
+          # Count total number of non-suplente tribunal members
+        tribunal_titulares = TribunalMiembro.query.filter(
+            TribunalMiembro.concurso_id == concurso_id,
+            TribunalMiembro.rol != 'Suplente'
+        ).count()
         
-        # If document is not already marked as FIRMADO, update status once all tribunal members have signed
-        if documento.estado != 'FIRMADO':
-            tribunal_titulares = TribunalMiembro.query.filter(
-                TribunalMiembro.concurso_id == concurso_id,
-                TribunalMiembro.rol != 'Suplente'
-            ).count()
-            
-            if documento.firma_count >= tribunal_titulares:
+        # Check if document is fully signed now
+        if documento.firma_count >= tribunal_titulares:
+            # All required signatures collected - mark as FIRMADO
+            if documento.estado != 'FIRMADO':
                 documento.estado = 'FIRMADO'
                 
-                # Add entry to history
+                # Add entry to history for complete signing
                 historial = HistorialEstado(
                     concurso=concurso,
                     estado="DOCUMENTO_FIRMADO",
-                    observaciones=f"Documento {documento.tipo} completamente firmado"
+                    observaciones=f"Documento {documento.tipo} completamente firmado por {documento.firma_count} miembros del tribunal"
                 )
                 db.session.add(historial)
+        else:
+            # Document partially signed - add history entry but keep state as PENDIENTE DE FIRMA
+            historial = HistorialEstado(
+                concurso=concurso,
+                estado="DOCUMENTO_PARCIALMENTE_FIRMADO",                observaciones=f"Documento {documento.tipo} firmado por {miembro.persona.apellido}, {miembro.persona.nombre} ({documento.firma_count}/{tribunal_titulares} firmas)"
+            )
+            db.session.add(historial)
         
         db.session.commit()
-        flash('Documento firmado exitosamente.', 'success')
+        
+        # Provide informative flash message based on signing status
+        if documento.firma_count >= tribunal_titulares:
+            flash('Documento firmado exitosamente. El documento está ahora completamente firmado.', 'success')
+        else:
+            flash(f'Documento firmado exitosamente. Firmas actuales: {documento.firma_count}/{tribunal_titulares}.', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -1255,13 +1267,15 @@ def ver_documento(concurso_id, documento_id):
         # Verify the document belongs to this concurso
         if documento.concurso_id != concurso_id:
             flash('El documento no pertenece a este concurso.', 'danger')
-            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))
-            
-        # Get correct file_id based on document state
-        if documento.estado in ['PENDIENTE_DE_FIRMA', 'FIRMADO'] and documento.file_id:
+            return redirect(url_for('tribunal.portal_concurso', concurso_id=concurso_id))        # Get correct file_id based on document state
+        if documento.estado in ['PENDIENTE DE FIRMA', 'FIRMADO'] and documento.file_id:
             file_id = documento.file_id  # Use the signed/uploaded version
-        else:
+            current_app.logger.info(f"Using signed/uploaded file for document {documento.tipo} (estado: {documento.estado}): {file_id}")
+        elif documento.borrador_file_id:
             file_id = documento.borrador_file_id  # Use the draft version
+            current_app.logger.info(f"Using draft file for document {documento.tipo} (estado: {documento.estado}): {file_id}")
+        else:
+            raise Exception("No se encontró ningún archivo para este documento")
             
         # Get file content from Drive
         file_content_response = drive_api.get_file_content(file_id)

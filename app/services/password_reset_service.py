@@ -102,35 +102,35 @@ class PasswordResetService:
                 # HTML email body with unified style and concurso data
                 html_body = """
                 <!DOCTYPE html>
-                <html lang="es">
+                <html lang=\"es\">
                 <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta charset=\"UTF-8\">
+                    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
                     <title>Portal de Tribunal - Acceso</title>
                     <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
-                        .email-container { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 480px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+                        .email-container { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 480px; margin: 0 auto; }
                         .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px 20px; text-align: center; }
-                        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
-                        .header p { margin: 8px 0 0 0; opacity: 0.9; font-size: 16px; }
-                        .content { padding: 30px; }
-                        .greeting { font-size: 20px; color: #2c3e50; margin-bottom: 20px; font-weight: 500; }
-                        .concurso-info { background-color: #e8f5e8; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
-                        .concurso-info h4 { color: #28a745; margin: 0 0 15px 0; font-size: 16px; font-weight: 600; }
-                        .credentials { background-color: #f8f9fa; border: 2px solid #e9ecef; padding: 20px; border-radius: 6px; margin: 20px 0; }
-                        .credentials h4 { color: #495057; margin: 0 0 15px 0; font-size: 16px; }
-                        .button { display: inline-block; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: 600; font-size: 16px; transition: transform 0.2s; }
+                        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                        .header p { margin: 8px 0 0 0; opacity: 0.9; font-size: 15px; }
+                        .content { padding: 24px; }
+                        .greeting { font-size: 18px; color: #2c3e50; margin-bottom: 18px; font-weight: 500; }
+                        .concurso-info { background-color: #e8f5e8; border-left: 4px solid #28a745; padding: 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+                        .concurso-info h4 { color: #28a745; margin: 0 0 12px 0; font-size: 15px; font-weight: 600; }
+                        .credentials { background-color: #f8f9fa; border: 2px solid #e9ecef; padding: 16px; border-radius: 6px; margin: 16px 0; }
+                        .credentials h4 { color: #495057; margin: 0 0 12px 0; font-size: 15px; }
+                        .button { display: inline-block; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white !important; padding: 12px 22px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 600; font-size: 15px; transition: transform 0.2s; }
                         .button:hover { transform: translateY(-2px); }
-                        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 20px; border-radius: 6px; margin: 20px 0; }
+                        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 16px; border-radius: 6px; margin: 16px 0; }
                         .info-box strong { color: #0a4d55; }
-                        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #6c757d; border-top: 1px solid #e9ecef; }
+                        .footer { background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 13px; color: #6c757d; border-top: 1px solid #e9ecef; }
                         .footer strong { color: #495057; }
-                        .url-break { word-break: break-all; font-size: 12px; color: #6c757d; margin-top: 10px; }
-                        ul { padding-left: 18px; }
-                        li { margin-bottom: 8px; }
+                        .url-break { word-break: break-all; font-size: 11px; color: #6c757d; margin-top: 8px; }
+                        ul { padding-left: 16px; }
+                        li { margin-bottom: 7px; }
                     </style>
                 </head>
-                <body>                    <div class="email-container">
+                <body>                    <div class=\"email-container\">
                         <div class="header">
                             <h1>Portal de Tribunal</h1>
                             <p>Sistema de Concursos Docentes</p>
@@ -235,6 +235,127 @@ class PasswordResetService:
             current_app.logger.error(f"Error generating login reminder email: {e}")
             return False
 
+    def send_password_reset_email(self, persona: Persona, keycloak_user_id: str) -> bool:
+        """Send a simple password reset email for users who need to reset their password."""
+        try:
+            # Generate reset token
+            reset_token = self.generate_reset_token(keycloak_user_id)
+            
+            # Build reset URL pointing to our app
+            reset_url = url_for('tribunal.reset_password', token=reset_token, _external=True)
+            
+            # Use Google Drive email system
+            try:
+                # Simple subject for password reset
+                subject = "Restablecer Contraseña - Portal de Tribunal"
+                
+                # Simple HTML email body focused on password reset
+                html_body = """
+                <!DOCTYPE html>
+                <html lang=\"es\">
+                <head>
+                    <meta charset=\"UTF-8\">
+                    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+                    <title>Restablecer Contraseña</title>
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 480px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+                        .email-container { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 480px; margin: 0 auto; }
+                        .header { background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white; padding: 30px 20px; text-align: center; }
+                        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                        .header p { margin: 8px 0 0 0; opacity: 0.9; font-size: 15px; }
+                        .content { padding: 24px; }
+                        .greeting { font-size: 18px; color: #2c3e50; margin-bottom: 18px; font-weight: 500; }
+                        .button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white !important; padding: 12px 22px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 600; font-size: 15px; transition: transform 0.2s; }
+                        .button:hover { transform: translateY(-2px); }
+                        .warning-box { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 16px; border-radius: 6px; margin: 16px 0; }
+                        .warning-box strong { color: #7c4e00; }
+                        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 16px; border-radius: 6px; margin: 16px 0; }
+                        .info-box strong { color: #0a4d55; }
+                        .footer { background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 13px; color: #6c757d; border-top: 1px solid #e9ecef; }
+                        .footer strong { color: #495057; }
+                        .url-break { word-break: break-all; font-size: 11px; color: #6c757d; margin-top: 8px; }
+                        ul { padding-left: 16px; }
+                        li { margin-bottom: 7px; }
+                    </style>
+                </head>
+                <body>
+                    <div class=\"email-container\">
+                        <div class=\"header\">
+                            <h1>Restablecer Contraseña</h1>
+                            <p>Sistema de Concursos Docentes</p>
+                        </div>
+                        <div class=\"content\">
+                            <div class=\"greeting\">Hola <<nombre>> <<apellido>>,</div>
+                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta en el Portal de Tribunal.</p>
+                            <p>Si usted solicitó restablecer su contraseña, haga clic en el siguiente enlace:</p>
+                            <div style=\"text-align: center;\">
+                                <a href=\"<<reset_url>>\" class=\"button\">Restablecer Contraseña</a>
+                            </div>
+                            <div class=\"warning-box\">
+                                <strong>Importante:</strong>
+                                <ul>
+                                    <li>Este enlace es válido por <strong>24 horas</strong></li>
+                                    <li>Solo puede ser usado <strong>una vez</strong></li>
+                                    <li>Si no solicitó este restablecimiento, ignore este correo</li>
+                                </ul>
+                            </div>
+                            <div class=\"info-box\">
+                                <strong>Seguridad:</strong> Su contraseña actual permanece sin cambios hasta que complete el proceso de restablecimiento usando este enlace.
+                            </div>
+                            <p>Si no solicitó restablecer su contraseña o tiene alguna duda, puede ignorar este correo o contactar al administrador del sistema.</p>
+                        </div>
+                        <div class=\"footer\">
+                            <p><strong>Sistema de Concursos Docentes</strong></p>
+                            <p>Este es un mensaje automático, por favor no responda a este correo.</p>
+                            <div class=\"url-break\">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<reset_url>></div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                # Placeholders for email content
+                placeholders = {
+                    'nombre': persona.nombre,
+                    'apellido': persona.apellido,
+                    'reset_url': reset_url,
+                    'correo': persona.correo
+                }
+                
+                # Send email via Google Drive API
+                result = self.drive_api.send_email(
+                    to_email=persona.correo,
+                    subject=subject,
+                    html_body=html_body,
+                    sender_name="Sistema de Concursos Docentes",
+                    placeholders=placeholders
+                )
+                
+                current_app.logger.info(f"Password reset email sent successfully to {persona.correo} via Google Drive")
+                current_app.logger.info(f"Reset URL: {reset_url}")
+                
+                # Show success message in development
+                if current_app.debug:
+                    flash(f'Email de restablecimiento enviado a {persona.correo}. Reset URL: <a href="{reset_url}" target="_blank">{reset_url}</a>', 'info')
+                
+                return True
+                
+            except Exception as email_error:
+                current_app.logger.error(f"Failed to send password reset email via Google Drive: {email_error}")
+                
+                # Fallback: Log the URL for manual testing
+                current_app.logger.info(f"EMAIL FALLBACK - Password reset URL for {persona.correo}: {reset_url}")
+                current_app.logger.info(f"Reset token: {reset_token}")
+                
+                # In development, show the link in the UI as fallback
+                if current_app.debug:
+                    flash(f'Error enviando email, pero enlace generado: <a href="{reset_url}" target="_blank">Restablecer contraseña para {persona.correo}</a>', 'warning')
+                
+                return True  # Return True because token was generated successfully
+            
+        except Exception as e:
+            current_app.logger.error(f"Error generating password reset email: {e}")
+            return False
+
     def send_reset_email_internal(self, persona: Persona, keycloak_user_id: str, concurso_id: int = None) -> bool:
         """Send password reset email using Google Drive email system."""
         try:
@@ -260,54 +381,51 @@ class PasswordResetService:
                 # HTML email body with unified style and concurso data
                 html_body = """
                 <!DOCTYPE html>
-                <html lang="es">
+                <html lang=\"es\">
                 <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta charset=\"UTF-8\">
+                    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
                     <title>Portal de Tribunal - Configurar Acceso</title>
                     <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
-                        .email-container { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-                        .header { background: linear-gradient(135deg, #007bff 0%, #6610f2 100%); color: white; padding: 30px 20px; text-align: center; }
-                        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
-                        .header p { margin: 8px 0 0 0; opacity: 0.9; font-size: 16px; }
-                        .content { padding: 30px; }
-                        .greeting { font-size: 20px; color: #2c3e50; margin-bottom: 20px; font-weight: 500; }
-                        .concurso-info { background-color: #e7f1ff; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; border-radius: 0 4px 4px 0; }
-                        .concurso-info h4 { color: #007bff; margin: 0 0 15px 0; font-size: 16px; font-weight: 600; }
-                        .button { display: inline-block; background: linear-gradient(135deg, #007bff 0%, #6610f2 100%); color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: 600; font-size: 16px; transition: transform 0.2s; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 480px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+                        .email-container { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 480px; margin: 0 auto; }
+                        .header { background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white; padding: 30px 20px; text-align: center; }
+                        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                        .header p { margin: 8px 0 0 0; opacity: 0.9; font-size: 15px; }
+                        .content { padding: 24px; }
+                        .greeting { font-size: 18px; color: #2c3e50; margin-bottom: 18px; font-weight: 500; }
+                        .concurso-info { background-color: #e7f1ff; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+                        .concurso-info h4 { color: #2563eb; margin: 0 0 12px 0; font-size: 15px; font-weight: 600; }
+                        .button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white !important; padding: 12px 22px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 600; font-size: 15px; transition: transform 0.2s; }
                         .button:hover { transform: translateY(-2px); }
-                        .warning-box { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 20px; border-radius: 6px; margin: 20px 0; }
+                        .warning-box { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 16px; border-radius: 6px; margin: 16px 0; }
                         .warning-box strong { color: #7c4e00; }
-                        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 20px; border-radius: 6px; margin: 20px 0; }
+                        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 16px; border-radius: 6px; margin: 16px 0; }
                         .info-box strong { color: #0a4d55; }
-                        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #6c757d; border-top: 1px solid #e9ecef; }
+                        .footer { background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 13px; color: #6c757d; border-top: 1px solid #e9ecef; }
                         .footer strong { color: #495057; }
-                        .url-break { word-break: break-all; font-size: 12px; color: #6c757d; margin-top: 10px; }
-                        ul { padding-left: 18px; }
-                        li { margin-bottom: 8px; }
+                        .url-break { word-break: break-all; font-size: 11px; color: #6c757d; margin-top: 8px; }
+                        ul { padding-left: 16px; }
+                        li { margin-bottom: 7px; }
                     </style>
                 </head>
-                <body>                    <div class="email-container">
-                        <div class="header">
-                            <h1>Portal de Tribunal</h1>  
+                <body>
+                    <div class=\"email-container\">
+                        <div class=\"header\">
+                            <h1>Portal de Tribunal</h1>
                             <p>Sistema de Concursos Docentes</p>
                         </div>
-                        
-                        <div class="content">
-                            <div class="greeting">Hola <<nombre>> <<apellido>>,</div>
-                            
+                        <div class=\"content\">
+                            <div class=\"greeting\">Hola <<nombre>> <<apellido>>,</div>
                             <p>Ha sido designado(a) como <strong>miembro del tribunal</strong> para el siguiente concurso docente. Para acceder al Portal de Tribunal, necesita configurar su contraseña de acceso.</p>
-                            
                             <!-- Concurso Information Section -->
                             <<concurso_section>>
-                            
                             <p>Haga clic en el siguiente enlace para configurar su contraseña:</p>
-                              <div style="text-align: center;">
-                                <a href="<<reset_url>>" class="button">Configurar Contraseña</a>
+                            <div style=\"text-align: center;\">
+                                <a href=\"<<reset_url>>\" class=\"button\">Configurar Contraseña</a>
                             </div>
-                              <div class="warning-box">
-                                <strong>Importante - Configuracion de Acceso:</strong>
+                            <div class=\"warning-box\">
+                                <strong>Importante - Configuración de Acceso:</strong>
                                 <ul>
                                     <li>Este enlace es válido por <strong>24 horas</strong></li>
                                     <li>Solo puede ser usado <strong>una vez</strong></li>
@@ -315,8 +433,8 @@ class PasswordResetService:
                                     <li>Una vez configurada su contraseña, podrá acceder con su correo electrónico</li>
                                 </ul>
                             </div>
-                              <div class="info-box">
-                                <strong>Despues de configurar su contraseña:</strong>
+                            <div class=\"info-box\">
+                                <strong>Después de configurar su contraseña:</strong>
                                 <ul>
                                     <li>Podrá acceder al Portal de Tribunal las 24 horas</li>
                                     <li>Tendrá acceso a toda la información del concurso</li>
@@ -324,19 +442,17 @@ class PasswordResetService:
                                     <li>Recibirá notificaciones sobre el progreso del concurso</li>
                                 </ul>
                             </div>
-                            
                             <p>Si tiene problemas para acceder o no solicitó este acceso, contacte al administrador del sistema.</p>
                         </div>
-                        
-                        <div class="footer">
+                        <div class=\"footer\">
                             <p><strong>Sistema de Concursos Docentes</strong></p>
                             <p>Este es un mensaje automático, por favor no responda a este correo.</p>
-                            <div class="url-break">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<reset_url>></div>
+                            <div class=\"url-break\">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<reset_url>></div>
                         </div>
                     </div>
                 </body>
                 </html>
-                """                
+                """
                 # Build concurso info section
                 concurso_section = ""
                 if concurso_id and concurso_placeholders:

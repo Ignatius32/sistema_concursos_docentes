@@ -179,6 +179,23 @@ Editar Plantilla
                             <small class="form-text text-muted">JSON con reglas de visibilidad según estado, rol y claustro. <br>
                             Ejemplo: { "BORRADOR": {"roles": ["Presidente"], "claustros": ["Docente"]}, "FIRMADO": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "Estudiante"]} }</small>
                         </div>
+                    </div>                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            {{ form.public_visibility_rules.label(class="form-label") }}
+                            {{ form.public_visibility_rules(class="form-control code-editor") }}
+                            {% if form.public_visibility_rules.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.public_visibility_rules.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">JSON con reglas de visibilidad pública según estado del documento. <br>
+                            Ejemplo: { "BORRADOR": false, "PENDIENTE DE FIRMA": false, "FIRMADO": true }</small>
+                        </div>
                     </div>
                 </div>
                 

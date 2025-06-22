@@ -2,21 +2,290 @@
 
 {% block title %}Detalle de Concurso - {{ concurso.categoria_nombre }} - {{ super() }}{% endblock %}
 
+{% block styles %}
+<style>
+.public-hero {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.detail-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.detail-card .card-header {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 1.5rem;
+    border-radius: 15px 15px 0 0;
+}
+
+.detail-card .card-body {
+    padding: 2rem;
+}
+
+.info-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.info-table th {
+    background: #f8fafc;
+    color: #374151;
+    font-weight: 600;
+    border: none;
+    padding: 1rem;
+    width: 40%;
+}
+
+.info-table td {
+    background: white;
+    border: none;
+    padding: 1rem;
+    color: #1f2937;
+}
+
+.info-table tr {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.info-table tr:last-child {
+    border-bottom: none;
+}
+
+.status-badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-abierto {
+    background: #059669;
+    color: white;
+}
+
+.status-cerrado {
+    background: #d97706;
+    color: white;
+}
+
+.back-btn {
+    background: #6b7280;
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back-btn:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.instructivo-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 15px;
+    height: 100%;
+}
+
+.instructivo-card .card-header {
+    background: #2563eb;
+    border-radius: 13px 13px 0 0;
+}
+
+.documents-card, .asignaturas-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    background: #fff;
+    color: #1f2937;
+}
+
+.documents-card .card-header, .asignaturas-card .card-header {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 1.5rem;
+    border-radius: 15px 15px 0 0;
+}
+
+.documents-card .card-body, .asignaturas-card .card-body {
+    padding: 2rem;
+}
+
+.document-mini-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    height: 100%;
+    background: #f8fafc;
+    color: #1f2937;
+}
+
+.document-mini-card .card-title {
+    color: #2563eb;
+}
+
+.document-mini-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.btn-primary-custom {
+    background: #2563eb;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.btn-primary-custom:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-outline-custom {
+    background: transparent;
+    border: 2px solid #3b82f6;
+    color: #3b82f6;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.btn-outline-custom:hover {
+    background: #3b82f6;
+    color: white;
+    text-decoration: none;
+}
+
+.asignaturas-card {
+    border: 2px solid #3b82f6;
+    border-radius: 15px;
+    background: #fff;
+    margin-bottom: 2rem;
+    color: #1f2937;
+}
+
+.asignaturas-card .card-header {
+    background: #2563eb;
+    border-radius: 13px 13px 0 0;
+    color: #fff;
+}
+
+.section-divider {
+    height: 2px;
+    background: linear-gradient(90deg, #2563eb, #10b981, #7c3aed);
+    border: none;
+    border-radius: 2px;
+    margin: 2rem 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .public-hero {
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .detail-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-table th,
+    .info-table td {
+        padding: 0.75rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <a href="{{ url_for('public.index') }}" class="btn btn-secondary mb-3">
-            <i class="fas fa-arrow-left"></i> Volver al listado
-        </a>
-        <div class="card">
-            <div class="card-header bg-dark text-white">
-                <h2 class="mb-0">{{ concurso.categoria_nombre }} - {{ concurso.dedicacion }}</h2>
-            </div>
-            <div class="card-body">                <div class="row">
+<!-- Hero Section -->
+<div class="public-hero">
+    <div class="d-flex align-items-center justify-content-between flex-wrap">
+        <div>
+            <p>Selección de Personal Docente</p>
+            <h1 class="mb-2">{{ concurso.categoria_nombre }} {{ concurso.dedicacion }}</h1>
+            <p class="mb-1 opacity-90">
+                <i class="bi bi-building me-2"></i>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }} 
+            </p>
+            <p class="mb-1 opacity-80">
+                <i class="bi bi-compass me-2"></i>{{ concurso.area }}
+            </p>
+            {% if concurso.orientacion %}
+            <p class="mb-1 opacity-75">
+                <i class="bi bi-arrow-right me-2"></i>{{ concurso.orientacion }}
+            </p>
+            {% endif %}
+            <p class="mb-0 opacity-70" style="font-size: 0.9rem;">
+                <i class="bi bi-people me-1"></i>{{ concurso.cant_cargos }} cargo{{ 's' if concurso.cant_cargos != 1 else '' }}
+            </p>
+        </div>
+        <div>
+            <span class="status-badge status-{{ 'abierto' if concurso.estado_actual == 'ABIERTO' else 'cerrado' }}">
+                {{ concurso.estado_actual or 'ABIERTO' }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('public.index') }}" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Volver al listado
+    </a>
+</div>
+
+<!-- Main Content -->
+<div class="detail-card">
+    <div class="card-header">
+        <h3 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>Información de la Selección
+        </h3>
+    </div>
+    <div class="card-body"><div class="row">
                     <div class="col-12 col-lg-6 mb-4">
-                        <h4>Información del Concurso</h4>
+                        <h4>Información de la Selección</h4>
                         <div class="table-responsive">
-                            <table class="table table-bordered">
+                            <table class="table table-bordered info-table">
                                 <tr>
                                     <th width="40%">Departamento</th>
                                     <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
@@ -38,7 +307,7 @@
                                     <td>{{ concurso.dedicacion }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Tipo de Concurso</th>
+                                    <th>Tipo de Selección</th>
                                     <td>{{ concurso.tipo }}</td>
                                 </tr>
                                 <tr>
@@ -65,32 +334,44 @@
                                 </tr>
                             </table>
                         </div>
-                    </div>
-                    <div class="col-12 col-lg-6">
-                        <div class="card h-100">
-                            <div class="card-header bg-primary text-white">
-                                <h4 class="mb-0">Instructivo para Postulantes</h4>
+                    </div>                    <div class="col-12 col-lg-6">
+                        <div class="instructivo-card">
+                            <div class="card-header">
+                                <h4 class="mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>Instructivo para Postulantes
+                                </h4>
                             </div>
                             <div class="card-body">
                                 {% if instructivo %}
                                 <div class="mb-4">
-                                    <h5>Requisitos Generales</h5>
-                                    <p>{{ instructivo.base }}</p>
+                                    <h5 class="text-primary">
+                                        <i class="bi bi-check-circle me-1"></i>Requisitos Generales
+                                    </h5>
+                                    <p class="text-muted">{{ instructivo.base }}</p>
                                 </div>
                                 
                                 <div>
-                                    <h5>Requisitos por Dedicación: {{ concurso.dedicacion }}</h5>
-                                    <p>{{ instructivo.dedicacion }}</p>
+                                    <h5 class="text-primary">
+                                        <i class="bi bi-clock me-1"></i>Requisitos por Dedicación: {{ concurso.dedicacion }}
+                                    </h5>
+                                    <p class="text-muted">{{ instructivo.dedicacion }}</p>
                                 </div>
-                                
-                                <div class="alert alert-info mt-3">
-                                    <i class="fas fa-info-circle"></i> Para más información y para presentar su postulación, contacte a la Secretaría Académica.
+                                  <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
+                                    <i class="bi bi-info-circle me-2"></i>Para más información y para presentar su postulación, contacte a la Secretaría Académica.
                                 </div>
                                 {% else %}
-                                <div class="alert alert-warning">
-                                    <p>No hay instructivos específicos disponibles para este concurso. Por favor, contacte a la Secretaría Académica para más detalles.</p>
+                                <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>No hay instructivos específicos disponibles para este concurso. Por favor, contacte a la Secretaría Académica para más detalles.
                                 </div>
                                 {% endif %}
+                                
+                                <!-- Download Inscription Form Button -->
+                                <div class="mt-4 text-center">
+                                    <a href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}" 
+                                       class="btn btn-primary-custom">
+                                        <i class="bi bi-download me-2"></i>Descargar Formulario de Inscripción
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -100,17 +381,93 @@
     </div>
 </div>
 
-<!-- Asignaturas related to this concurso -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Asignaturas Relacionadas</h3>
+<!-- Section Divider -->
+<hr class="section-divider">
+
+<!-- Documents available to public -->
+{% if public_documents %}
+<div class="documents-card">
+    <div class="card-header">
+        <h3 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for document in public_documents %}
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="document-mini-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-primary fw-bold mb-3">
+                            <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
+                        </h6>
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            {% if document.drive_file_id %}
+                            <button type="button" 
+                                    class="btn-primary-custom" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#pdfViewerModal{{ document.id }}">
+                                <i class="bi bi-eye me-1"></i>Ver
+                            </button>                           
+
+                            {% endif %}
+                        </div>
+                        {% if document.fecha_creacion %}
+                        <div class="mt-auto">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                {% include 'shared/tarjetas_asignaturas.html' %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- PDF Viewer Modals for Public Documents -->
+{% for document in public_documents %}
+{% if document.drive_file_id %}
+<div class="modal fade" id="pdfViewerModal{{ document.id }}" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 15px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="background: #2563eb; color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>            <div class="modal-body p-0">
+                <iframe src="{{ url_for('public.ver_documento_publico', concurso_id=concurso.id, documento_id=document.id) }}" 
+                        style="width: 100%; height: 80vh;" frameborder="0"></iframe>
+            </div>            <div class="modal-footer" style="background: #f8fafc;">
+                <a href="{{ url_for('public.descargar_documento_publico', concurso_id=concurso.id, documento_id=document.id) }}" 
+                   class="btn-primary-custom">
+                    <i class="bi bi-download me-2"></i>Descargar
+                </a>
+                <button type="button" class="btn clear-btn" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+<!-- Section Divider -->
+<hr class="section-divider">
+
+<!-- Asignaturas related to this concurso -->
+<div class="asignaturas-card">
+    <div class="card-header">
+        <h3 class="mb-0">
+            <i class="bi bi-book me-2"></i>Asignaturas Relacionadas
+        </h3>
+    </div>
+    <div class="card-body">
+        {% include 'shared/tarjetas_asignaturas.html' %}
     </div>
 </div>
 {% endblock %}

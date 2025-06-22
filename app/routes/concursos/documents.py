@@ -300,10 +300,9 @@ def subir_documento_firmado(concurso_id, documento_id):
             concurso.documentos_firmados_folder_id,
             new_filename,
             file_data
-        )
-          # Update document record for the signed version
+        )        # Update document record for the signed version
         documento.file_id = file_id  # Store the file ID of the signed version
-        documento.url = web_view_link
+        documento.update_url_from_file_ids()  # Update URL based on state and file IDs
         documento.estado = 'FIRMADO'
         
         # Get template configuration for this document type
@@ -474,10 +473,9 @@ def nueva_version_documento(concurso_id, documento_id):
             file_name,
             file_data
         )
-        
-        # Update the current document URL and file ID
-        documento.url = web_view_link
+          # Update the current document URL and file ID
         documento.borrador_file_id = file_id
+        documento.update_url_from_file_ids()  # Update URL based on state and file IDs
         
         # Add entry to history with observaciones
         historial = HistorialEstado(

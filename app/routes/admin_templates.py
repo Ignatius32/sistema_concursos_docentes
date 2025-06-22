@@ -31,7 +31,7 @@ class TemplateForm(FlaskForm):
     uses_considerandos_builder = BooleanField('Usa Constructor de Considerandos')
     requires_tribunal_info = BooleanField('Requiere Información de Tribunal')
     is_active = BooleanField('Activo', default=True)
-    # New fields
+    # New fields    c
     concurso_visibility = SelectField('Visibilidad para Tipo de Concurso', 
                                      choices=[('BOTH', 'Ambos'), ('REGULAR', 'Regular'), ('INTERINO', 'Interino')],
                                      default='BOTH')
@@ -39,6 +39,9 @@ class TemplateForm(FlaskForm):
     tribunal_visibility_rules = TextAreaField('Reglas de Visibilidad para Tribunal', 
                                              validators=[validate_json],
                                              render_kw={"rows": 10, "placeholder": '{\n  "BORRADOR": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "No Docente"]},\n  "PENDIENTE DE FIRMA": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]},\n  "FIRMADO": {"roles": ["Presidente", "Titular", "Suplente"], "claustros": ["Docente", "No Docente", "Estudiante", "Graduado"]}\n}'})
+    public_visibility_rules = TextAreaField('Reglas de Visibilidad Pública', 
+                                           validators=[validate_json],
+                                           render_kw={"rows": 6, "placeholder": '{\n  "BORRADOR": false,\n  "PENDIENTE DE FIRMA": false,\n  "FIRMADO": true\n}'})
     # New permission fields
     admin_can_send_for_signature = BooleanField('Admin puede enviar para firma', default=True)
     tribunal_can_sign = BooleanField('Tribunal puede firmar', default=False)
@@ -83,10 +86,12 @@ def nuevo():
             concurso_visibility=form.concurso_visibility.data,
             is_unique_per_concurso=form.is_unique_per_concurso.data,
             tribunal_visibility_rules=form.tribunal_visibility_rules.data,
+            public_visibility_rules=form.public_visibility_rules.data,
             # New permission fields
             admin_can_send_for_signature=form.admin_can_send_for_signature.data,
             tribunal_can_sign=form.tribunal_can_sign.data,
             tribunal_can_upload_signed=form.tribunal_can_upload_signed.data,
+            admin_can_sign=form.admin_can_sign.data,
             # New estado and subestado fields
             estado_al_generar_borrador=form.estado_al_generar_borrador.data,
             subestado_al_generar_borrador=form.subestado_al_generar_borrador.data,

@@ -51,8 +51,7 @@
                             </td>
                             <td>{{ documento.creado.strftime('%d/%m/%Y %H:%M') }}</td>
                             <td>                        <!-- Botones de acciones -->
-                        <div class="btn-group">
-                            <a href="{{ documento.url }}" target="_blank" class="btn btn-sm btn-tribunal-accent">
+                        <div class="btn-group">                            <a href="{{ documento.get_document_url() }}" target="_blank" class="btn btn-sm btn-tribunal-accent">
                                 <i class="bi bi-file-earmark-text"></i> Abrir
                             </a>
                               {% if documento.tipo == 'ACTA_CONSTITUCION_TRIBUNAL_REGULAR' %}

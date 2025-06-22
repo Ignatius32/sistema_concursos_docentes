@@ -464,28 +464,53 @@ def editar(concurso_id):
 
 @concursos.route('/<int:concurso_id>/eliminar', methods=['POST'])
 @keycloak_login_required
+@admin_required
 def eliminar(concurso_id):
     """Delete a concurso and all its related data."""
+    from app.models.models import TemaSetTribunal
+    
     concurso = Concurso.query.get_or_404(concurso_id)
     
     try:
         # Delete Google Drive folder if it exists
         if concurso.drive_folder_id:
             drive_api.delete_folder(concurso.drive_folder_id)
-          # Delete all related data
+        
+        # Delete all related data in correct order to avoid foreign key constraints
+        
+        # 1. Delete tema set tribunal records first (if sustanciacion exists)
+        if concurso.sustanciacion:
+            TemaSetTribunal.query.filter_by(sustanciacion_id=concurso.sustanciacion.id).delete()
+        
+        # 2. Delete tribunal member assignments and their folders
+        for miembro in concurso.asignaciones_tribunal:
+            if miembro.drive_folder_id:
+                try:
+                    drive_api.delete_folder(miembro.drive_folder_id)
+                except Exception as e:
+                    print(f"Warning: Could not delete tribunal member folder: {str(e)}")
         concurso.asignaciones_tribunal.delete()
+        
+        # 3. Delete postulantes and their folders
         for postulante in concurso.postulantes:
             if postulante.drive_folder_id:
-                drive_api.delete_folder(postulante.drive_folder_id)
+                try:
+                    drive_api.delete_folder(postulante.drive_folder_id)
+                except Exception as e:
+                    print(f"Warning: Could not delete postulante folder: {str(e)}")
         concurso.postulantes.delete()
+        
+        # 4. Delete other related records
         concurso.documentos.delete()
         concurso.historial_estados.delete()
-        if concurso.sustanciacion:
-            db.session.delete(concurso.sustanciacion)
         concurso.impugnaciones.delete()
         concurso.recusaciones.delete()
         
-        # Delete the concurso
+        # 5. Delete sustanciacion (after temas_set_tribunal are deleted)
+        if concurso.sustanciacion:
+            db.session.delete(concurso.sustanciacion)
+        
+        # 6. Finally, delete the concurso
         db.session.delete(concurso)
         db.session.commit()
         

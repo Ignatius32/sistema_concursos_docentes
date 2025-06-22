@@ -53,17 +53,11 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, cargo=None, signatur
             if pdf_bytes is None:
                 raise ValueError("Failed to convert byte array to PDF bytes")
         else:
-            pdf_bytes = pdf_content
-
-        # Create PDF reader
+            pdf_bytes = pdf_content        # Create PDF reader
         existing_pdf = PdfReader(io.BytesIO(pdf_bytes))
         output = PdfWriter()
         
-        # Get page size from first page
-        page = existing_pdf.pages[0]
-        page_width = float(page.mediabox.width)
-        page_height = float(page.mediabox.height)
-          # Create timestamp
+        # Create timestamp
         timestamp = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         
         # Prepare stamp text
@@ -87,8 +81,10 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, cargo=None, signatur
         
         # Add each page with a stamp
         for i in range(len(existing_pdf.pages)):
-            # Get the page
+            # Get the page and its dimensions (each page can have different dimensions)
             page = existing_pdf.pages[i]
+            page_width = float(page.mediabox.width)
+            page_height = float(page.mediabox.height)
             
             # Create stamp template for this page
             packet = io.BytesIO()
@@ -97,37 +93,48 @@ def add_signature_stamp(pdf_content, apellido, nombre, dni, cargo=None, signatur
             
             # Calculate position based on signature count
             # Each signature will be placed higher than the previous one
-            y_position = 20 + (12 * signature_count)
+            # Increase spacing to avoid overlapping
+            y_position = 25 + (15 * signature_count)  # Increased spacing from 12 to 15
             
-            # Maximum of 10 signatures before wrapping to second column
-            if signature_count >= 10:
+            # Get text width for positioning
+            text_width = can.stringWidth(stamp_text, "Helvetica", 8)
+            
+            # Maximum of 8 signatures before wrapping to second column (reduced from 10)
+            if signature_count >= 8:
                 # Start a second column on the left side
-                column = 1 + (signature_count // 10)
-                row = signature_count % 10
-                y_position = 20 + (12 * row)
-                text_width = can.stringWidth(stamp_text, "Helvetica", 8)
-                x_position = page_width - text_width - 50 - (column * 200)  # Move left for each column
+                column = signature_count // 8
+                row = signature_count % 8
+                y_position = 25 + (15 * row)
+                x_position = page_width - text_width - 60 - (column * 250)  # Increased column spacing
             else:
                 # Add text at bottom of page
-                text_width = can.stringWidth(stamp_text, "Helvetica", 8)
-                x_position = page_width - text_width - 50  # 50 points from right margin
+                x_position = page_width - text_width - 60  # Increased margin from 50 to 60
             
-            # Add background for better visibility
-            border_width = text_width + 10
-            border_height = 12
+            # Ensure signature doesn't go off the page
+            if x_position < 10:
+                x_position = 10
+            if y_position > page_height - 30:
+                y_position = page_height - 30
+              # Add background for better visibility
+            border_width = text_width + 15  # Increased padding from 10 to 15
+            border_height = 15  # Increased from 12 to 15
             
             # Draw a filled rectangle with light background
-            can.setFillColorRGB(0.95, 0.95, 0.95)  # Light gray background
-            can.rect(x_position - 5, y_position - 2, border_width, border_height, fill=True)
+            can.setFillColorRGB(0.9, 0.9, 0.9)  # Slightly darker gray for better visibility
+            can.rect(x_position - 7, y_position - 3, border_width, border_height, fill=True)
             
-            # Draw border
-            can.setStrokeColorRGB(0.8, 0.8, 0.8)  # Light gray border
-            can.rect(x_position - 5, y_position - 2, border_width, border_height)
-            
-            # Draw text
+            # Draw border with thicker line
+            can.setStrokeColorRGB(0.6, 0.6, 0.6)  # Darker border for better visibility
+            can.setLineWidth(1)  # Thicker border line
+            can.rect(x_position - 7, y_position - 3, border_width, border_height)
+              # Draw text with bold font for better visibility
             can.setFillColorRGB(0, 0, 0)  # Black text
-            can.drawString(x_position, y_position, stamp_text)
+            can.setFont("Helvetica-Bold", 8)  # Changed to bold font
+            can.drawString(x_position - 2, y_position + 1, stamp_text)  # Adjusted positioning
             can.save()
+            
+            # Log signature placement for debugging
+            logger.info(f"Page {i+1}: Placing signature #{signature_count + 1} at position ({x_position - 2}, {y_position + 1}) for {apellido}, {nombre}")
             
             # Move to beginning of the BytesIO buffer
             packet.seek(0)
@@ -528,4 +535,44 @@ def create_placeholder_document(doc_type):
         
     except Exception as e:
         logger.error(f"Error creating placeholder document: {str(e)}")
+        return None
+
+def generate_formulario_inscripcion_pdf(concurso, placeholders):
+    """Generate a PDF inscription form for a specific concurso.
+    
+    Args:
+        concurso: Concurso object with competition information
+        placeholders (dict): Dictionary with resolved placeholders from placeholder_resolver
+        
+    Returns:
+        bytes: PDF content as bytes
+    """
+    try:
+        from app.templates.pdf_templates.formulario_inscripcion import FormularioInscripcionTemplate
+        
+        # Prepare concurso data dictionary
+        concurso_data = {
+            'id': concurso.id,
+            'departamento': concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A',
+            'area': concurso.area or '',
+            'orientacion': concurso.orientacion or '',
+            'categoria': concurso.categoria or '',
+            'categoria_nombre': concurso.categoria_nombre or '',
+            'dedicacion': concurso.dedicacion or '',
+            'tipo': concurso.tipo or '',
+            'cant_cargos': concurso.cant_cargos or 1,
+            'cierre_inscripcion': concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido',
+            'expediente': concurso.expediente or '',
+            'estado_actual': concurso.estado_actual or 'ABIERTO'
+        }
+        
+        # Create template instance and generate PDF
+        template = FormularioInscripcionTemplate()
+        pdf_content = template.generate_pdf(concurso_data, placeholders)
+        
+        logger.info(f"Successfully generated inscription form PDF for concurso {concurso.id}")
+        return pdf_content
+        
+    except Exception as e:
+        logger.error(f"Error generating inscription form PDF: {str(e)}")
         return None

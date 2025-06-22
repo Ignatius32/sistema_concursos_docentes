@@ -42,7 +42,8 @@ class KeycloakConfig:
         base_url = cls.KEYCLOAK_SERVER_URL.rstrip('/')
         return {
             'issuer': f"{base_url}/realms/{cls.KEYCLOAK_REALM}",
-            'authorization_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/auth",            'token_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/token",
+            'authorization_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/auth",            
+            'token_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/token",
             'userinfo_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/userinfo",
             'end_session_endpoint': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/logout",
             'jwks_uri': f"{base_url}/realms/{cls.KEYCLOAK_REALM}/protocol/openid-connect/certs",
