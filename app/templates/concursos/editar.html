@@ -8,8 +8,15 @@
         <h2 class="mb-0">Editar Concurso #{{ concurso.id }}</h2>
     </div>    <div class="card-body">
         <form method="POST" enctype="multipart/form-data">
+
+            <!-- Sección: Datos principales -->
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-12">
+                    <h4 class="mt-2 mb-3">Datos principales del concurso</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label for="tipo" class="form-label">Tipo de Concurso</label>
                     <select class="form-select" id="tipo" name="tipo" required>
                         <option value="">Seleccione...</option>
@@ -17,8 +24,7 @@
                         <option value="Interino" {% if concurso.tipo == 'Interino' %}selected{% endif %}>Interino</option>
                     </select>
                 </div>
-                
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
                     <select class="form-select" id="cerrado_abierto" name="cerrado_abierto" required>
                         <option value="">Seleccione...</option>
@@ -26,10 +32,16 @@
                         <option value="Cerrado" {% if concurso.cerrado_abierto == 'Cerrado' %}selected{% endif %}>Cerrado</option>
                     </select>
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
+                    <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="{{ concurso.cant_cargos }}">
+                </div>
             </div>
 
+
+            <!-- Grupo: Departamento, Área, Orientación -->
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="departamento_id" class="form-label">Departamento</label>
                     <select class="form-select" id="departamento_id" name="departamento_id" required>
                         <option value="">Seleccione...</option>
@@ -38,26 +50,25 @@
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="area" class="form-label">Área</label>
                     <select class="form-select" id="area" name="area" required>
                         <option value="">Seleccione un departamento primero...</option>
                         <option value="{{ concurso.area }}" selected>{{ concurso.area }}</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="orientacion" class="form-label">Orientación</label>
                     <select class="form-select" id="orientacion" name="orientacion" required>
                         <option value="">Seleccione un área primero...</option>
                         <option value="{{ concurso.orientacion }}" selected>{{ concurso.orientacion }}</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="col-md-6 mb-3">
+            <!-- Grupo: Categoría, Dedicación, Localización -->
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label for="categoria" class="form-label">Categoría</label>
                     <select class="form-select" id="categoria" name="categoria" required onchange="updateCategoriaNombre(this)">
                         <option value="">Seleccione...</option>
@@ -68,8 +79,7 @@
                     </select>
                     <input type="hidden" name="categoria_nombre" id="categoria_nombre" value="{{ concurso.categoria_nombre }}">
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="dedicacion" class="form-label">Dedicación</label>
                     <select class="form-select" id="dedicacion" name="dedicacion" required>
                         <option value="">Seleccione...</option>
@@ -79,51 +89,47 @@
                         <option value="Abierta" {% if concurso.dedicacion == 'Abierta' %}selected{% endif %}>Abierta</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
-                    <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="{{ concurso.cant_cargos }}">
-                </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="localizacion" class="form-label">Localización</label>
                     <input type="text" class="form-control" id="localizacion" name="localizacion" required value="{{ concurso.localizacion }}">
                 </div>
             </div>
 
-            <div class="row">                <div class="col-md-6 mb-3">
+
+            <!-- Grupo: Asignaturas y Expediente -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label for="asignaturas" class="form-label">Asignaturas</label>
                     <input type="text" class="form-control" id="asignaturas" name="asignaturas" value="{{ concurso.asignaturas }}" placeholder="Opcional">
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label for="expediente" class="form-label">Expediente</label>
+                    <input type="text" class="form-control" id="expediente" name="expediente" value="{{ concurso.expediente }}" placeholder="Opcional">
+                </div>
             </div>
 
-            <!-- Resolution number fields moved here -->
+
+            <!-- Grupo: Resoluciones y Fechas -->
             <div class="row">
                 <div class="col-md-4 mb-3" id="nro_res_llamado_interino_group" {% if concurso.tipo != 'Interino' %}style="display:none;"{% endif %}>
                     <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
                     <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino" value="{{ concurso.nro_res_llamado_interino or '' }}">
                 </div>
-
                 <div class="col-md-4 mb-3" id="nro_res_llamado_regular_group" {% if concurso.tipo != 'Regular' %}style="display:none;"{% endif %}>
                     <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
                     <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular" value="{{ concurso.nro_res_llamado_regular or '' }}">
                 </div>
-
                 <div class="col-md-4 mb-3" id="nro_res_tribunal_regular_group" {% if concurso.tipo != 'Regular' %}style="display:none;"{% endif %}>
                     <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
                     <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular" value="{{ concurso.nro_res_tribunal_regular or '' }}">
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion" 
                            value="{{ concurso.cierre_inscripcion.strftime('%Y-%m-%d') if concurso.cierre_inscripcion }}">
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="vencimiento" class="form-label">Fecha de Vencimiento</label>
                     <input type="date" class="form-control" id="vencimiento" name="vencimiento"
@@ -131,11 +137,13 @@
                 </div>
             </div>
 
+
+            <!-- Sección: Datos de vacante -->
             <div class="row">
                 <div class="col-12">
                     <h4 class="mt-4 mb-3">Datos de vacante</h4>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="origen_vacante" class="form-label">Origen de Vacante</label>
                     <select class="form-select" id="origen_vacante" name="origen_vacante">
                         <option value="">Seleccione...</option>
@@ -143,13 +151,16 @@
                         <option value="RENUNCIA" {% if concurso.origen_vacante == 'RENUNCIA' %}selected{% endif %}>RENUNCIA</option>
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
                     <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" 
                            value="{{ concurso.docente_vacante }}" placeholder="Opcional">
                 </div>
-
+                <div class="col-md-4 mb-3">
+                    <label for="id_designacion_mocovi" class="form-label">ID Designación MOCOVI</label>
+                    <input type="text" class="form-control" id="id_designacion_mocovi" name="id_designacion_mocovi" 
+                           value="{{ concurso.id_designacion_mocovi }}" placeholder="Opcional">
+                </div>
                 <div class="col-md-6 mb-3">
                     <label for="categoria_vacante" class="form-label">Categoría de la vacante</label>
                     <select class="form-select" id="categoria_vacante" name="categoria_vacante">
@@ -159,7 +170,6 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="dedicacion_vacante" class="form-label">Dedicación de la vacante</label>
                     <select class="form-select" id="dedicacion_vacante" name="dedicacion_vacante">
@@ -169,87 +179,89 @@
                         <option value="Exclusiva" {% if concurso.dedicacion_vacante == 'Exclusiva' %}selected{% endif %}>Exclusiva</option>
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="id_designacion_mocovi" class="form-label">ID Designación MOCOVI</label>
-                    <input type="text" class="form-control" id="id_designacion_mocovi" name="id_designacion_mocovi" 
-                           value="{{ concurso.id_designacion_mocovi }}" placeholder="Opcional">
-                </div>
             </div>
 
-            <!-- Sustanciacion de Concurso section -->
-            <h4 class="mt-4 mb-3">Sustanciación de Concurso</h4>
+
+            <!-- Sección: Sustanciación de Concurso -->
             <div class="row">
-                <!-- Constitución del Jurado section -->
+                <div class="col-12">
+                    <h4 class="mt-4 mb-3">Sustanciación de Concurso</h4>
+                </div>
+                <!-- Constitución del Jurado -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Constitución del Jurado</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_fecha" class="form-label">Fecha de Constitución del Tribunal</label>
                     <input type="datetime-local" class="form-control" id="constitucion_fecha" name="constitucion_fecha"
                           value="{{ concurso.sustanciacion.constitucion_fecha.strftime('%Y-%m-%dT%H:%M') if concurso.sustanciacion and concurso.sustanciacion.constitucion_fecha }}">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_lugar" class="form-label">Lugar</label>
                     <input type="text" class="form-control" id="constitucion_lugar" name="constitucion_lugar"
                           value="{{ concurso.sustanciacion.constitucion_lugar if concurso.sustanciacion and concurso.sustanciacion.constitucion_lugar }}">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_virtual_link" class="form-label">Enlace a Reunión Virtual</label>
                     <input type="text" class="form-control" id="constitucion_virtual_link" name="constitucion_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx"
                           value="{{ concurso.sustanciacion.constitucion_virtual_link if concurso.sustanciacion and concurso.sustanciacion.constitucion_virtual_link }}">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="constitucion_observaciones" class="form-label">Observaciones</label>
-                    <textarea class="form-control" id="constitucion_observaciones" name="constitucion_observaciones" rows="3">{{ concurso.sustanciacion.constitucion_observaciones if concurso.sustanciacion and concurso.sustanciacion.constitucion_observaciones }}</textarea>
+                    <textarea class="form-control" id="constitucion_observaciones" name="constitucion_observaciones" rows="2">{{ concurso.sustanciacion.constitucion_observaciones if concurso.sustanciacion and concurso.sustanciacion.constitucion_observaciones }}</textarea>
                 </div>
 
-                <!-- Sorteo de Tema section -->
+                <!-- Sorteo de Tema -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Sorteo de Tema</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_fecha" class="form-label">Fecha de Sorteo de Tema</label>
                     <input type="datetime-local" class="form-control" id="sorteo_fecha" name="sorteo_fecha"
                           value="{{ concurso.sustanciacion.sorteo_fecha.strftime('%Y-%m-%dT%H:%M') if concurso.sustanciacion and concurso.sustanciacion.sorteo_fecha }}">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_lugar" class="form-label">Lugar del Sorteo</label>
                     <input type="text" class="form-control" id="sorteo_lugar" name="sorteo_lugar"
                           value="{{ concurso.sustanciacion.sorteo_lugar if concurso.sustanciacion and concurso.sustanciacion.sorteo_lugar }}">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_virtual_link" class="form-label">Enlace a Reunión Virtual del Sorteo</label>
                     <input type="text" class="form-control" id="sorteo_virtual_link" name="sorteo_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx"
                           value="{{ concurso.sustanciacion.sorteo_virtual_link if concurso.sustanciacion and concurso.sustanciacion.sorteo_virtual_link }}">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="sorteo_observaciones" class="form-label">Observaciones del Sorteo</label>
-                    <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="3">{{ concurso.sustanciacion.sorteo_observaciones if concurso.sustanciacion and concurso.sustanciacion.sorteo_observaciones }}</textarea>
+                    <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="2">{{ concurso.sustanciacion.sorteo_observaciones if concurso.sustanciacion and concurso.sustanciacion.sorteo_observaciones }}</textarea>
+                </div>
+                <div class="col-md-12 mb-3">
+                    <label for="temas_exposicion" class="form-label">Temas de Exposición</label>
+                    <div id="temas-container" class="mb-2"></div>
+                    <input type="hidden" id="temas_exposicion" name="temas_exposicion" value="{{ concurso.sustanciacion.temas_exposicion if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion }}">
                 </div>
 
-                <!-- Exposición section -->
+                <!-- Exposición -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Exposición</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_fecha" class="form-label">Fecha de Exposición</label>
                     <input type="datetime-local" class="form-control" id="exposicion_fecha" name="exposicion_fecha"
                           value="{{ concurso.sustanciacion.exposicion_fecha.strftime('%Y-%m-%dT%H:%M') if concurso.sustanciacion and concurso.sustanciacion.exposicion_fecha }}">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_lugar" class="form-label">Lugar de la Exposición</label>
                     <input type="text" class="form-control" id="exposicion_lugar" name="exposicion_lugar"
                           value="{{ concurso.sustanciacion.exposicion_lugar if concurso.sustanciacion and concurso.sustanciacion.exposicion_lugar }}">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_virtual_link" class="form-label">Enlace a Reunión Virtual de la Exposición</label>
                     <input type="text" class="form-control" id="exposicion_virtual_link" name="exposicion_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx"
                           value="{{ concurso.sustanciacion.exposicion_virtual_link if concurso.sustanciacion and concurso.sustanciacion.exposicion_virtual_link }}">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="exposicion_observaciones" class="form-label">Observaciones de la Exposición</label>
-                    <textarea class="form-control" id="exposicion_observaciones" name="exposicion_observaciones" rows="3">{{ concurso.sustanciacion.exposicion_observaciones if concurso.sustanciacion and concurso.sustanciacion.exposicion_observaciones }}</textarea>
+                    <textarea class="form-control" id="exposicion_observaciones" name="exposicion_observaciones" rows="2">{{ concurso.sustanciacion.exposicion_observaciones if concurso.sustanciacion and concurso.sustanciacion.exposicion_observaciones }}</textarea>
                 </div>
             </div>
 

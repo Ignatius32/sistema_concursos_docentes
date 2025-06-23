@@ -9,8 +9,15 @@
     </div>
     <div class="card-body">
         <form method="POST">
+
+            <!-- Sección: Datos principales -->
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-12">
+                    <h4 class="mt-2 mb-3">Datos principales del concurso</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label for="tipo" class="form-label">Tipo de Concurso</label>
                     <select class="form-select" id="tipo" name="tipo" required>
                         <option value="">Seleccione...</option>
@@ -18,10 +25,7 @@
                         <option value="Interino">Interino</option>
                     </select>
                 </div>
-            </div>
-                
-            <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="cerrado_abierto" class="form-label">Cerrado/Abierto</label>
                     <select class="form-select" id="cerrado_abierto" name="cerrado_abierto" required>
                         <option value="">Seleccione...</option>
@@ -29,10 +33,16 @@
                         <option value="Cerrado">Cerrado</option>
                     </select>
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
+                    <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="1">
+                </div>
             </div>
 
+
+            <!-- Grupo: Departamento, Área, Orientación -->
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="departamento_id" class="form-label">Departamento</label>
                     <select class="form-select" id="departamento_id" name="departamento_id" required>
                         <option value="">Seleccione...</option>
@@ -41,24 +51,23 @@
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="area" class="form-label">Área</label>
                     <select class="form-select" id="area" name="area" required disabled>
                         <option value="">Seleccione un departamento primero...</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="orientacion" class="form-label">Orientación</label>
                     <select class="form-select" id="orientacion" name="orientacion" required disabled>
                         <option value="">Seleccione un área primero...</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="col-md-6 mb-3">
+            <!-- Grupo: Categoría, Dedicación, Localización -->
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label for="categoria" class="form-label">Categoría</label>
                     <select class="form-select" id="categoria" name="categoria" required onchange="updateCategoriaNombre(this)">
                         <option value="">Seleccione...</option>
@@ -69,8 +78,7 @@
                     </select>
                     <input type="hidden" name="categoria_nombre" id="categoria_nombre">
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="dedicacion" class="form-label">Dedicación</label>
                     <select class="form-select" id="dedicacion" name="dedicacion" required>
                         <option value="">Seleccione...</option>
@@ -80,65 +88,59 @@
                         <option value="Abierta">Abierta</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="cant_cargos" class="form-label">Cantidad de Cargos</label>
-                    <input type="number" class="form-control" id="cant_cargos" name="cant_cargos" required min="1" value="1">
-                </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="localizacion" class="form-label">Localización</label>
                     <input type="text" class="form-control" id="localizacion" name="localizacion" required>
                 </div>
             </div>
 
+
+            <!-- Grupo: Asignaturas y Expediente -->
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="asignaturas" class="form-label">Asignaturas</label>
                     <input type="text" class="form-control" id="asignaturas" name="asignaturas" placeholder="Opcional">
-                </div>                <div class="col-md-6 mb-3">
+                </div>
+                <div class="col-md-6 mb-3">
                     <label for="expediente" class="form-label">Expediente</label>
                     <input type="text" class="form-control" id="expediente" name="expediente" placeholder="Opcional">
                 </div>
             </div>
 
-            <!-- Resolution number fields moved here -->
+
+            <!-- Grupo: Resoluciones y Fechas -->
             <div class="row">
                 <div class="col-md-4 mb-3" id="nro_res_llamado_interino_group" style="display:none;">
                     <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
                     <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino">
                 </div>
-
                 <div class="col-md-4 mb-3" id="nro_res_llamado_regular_group" style="display:none;">
                     <label for="nro_res_llamado_regular" class="form-label">N° Res. Llamado Regular</label>
                     <input type="text" class="form-control" id="nro_res_llamado_regular" name="nro_res_llamado_regular">
                 </div>
-
                 <div class="col-md-4 mb-3" id="nro_res_tribunal_regular_group" style="display:none;">
                     <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
                     <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular">
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="cierre_inscripcion" class="form-label">Fecha de Cierre de Inscripción</label>
                     <input type="date" class="form-control" id="cierre_inscripcion" name="cierre_inscripcion">
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="vencimiento" class="form-label">Fecha de Vencimiento</label>
                     <input type="date" class="form-control" id="vencimiento" name="vencimiento">
                 </div>
             </div>
 
+
+            <!-- Sección: Datos de vacante -->
             <div class="row">
                 <div class="col-12">
                     <h4 class="mt-4 mb-3">Datos de vacante</h4>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="origen_vacante" class="form-label">Origen de Vacante</label>
                     <select class="form-select" id="origen_vacante" name="origen_vacante">
                         <option value="">Seleccione...</option>
@@ -146,12 +148,14 @@
                         <option value="RENUNCIA">RENUNCIA</option>
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="docente_vacante" class="form-label">Docente que genera vacante</label>
                     <input type="text" class="form-control" id="docente_vacante" name="docente_vacante" placeholder="Opcional">
                 </div>
-
+                <div class="col-md-4 mb-3">
+                    <label for="id_designacion_mocovi" class="form-label">ID Designación MOCOVI</label>
+                    <input type="text" class="form-control" id="id_designacion_mocovi" name="id_designacion_mocovi" placeholder="Opcional">
+                </div>
                 <div class="col-md-6 mb-3">
                     <label for="categoria_vacante" class="form-label">Categoría de la vacante</label>
                     <select class="form-select" id="categoria_vacante" name="categoria_vacante">
@@ -161,7 +165,6 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label for="dedicacion_vacante" class="form-label">Dedicación de la vacante</label>
                     <select class="form-select" id="dedicacion_vacante" name="dedicacion_vacante">
@@ -171,91 +174,80 @@
                         <option value="Exclusiva">Exclusiva</option>
                     </select>
                 </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="id_designacion_mocovi" class="form-label">ID Designación MOCOVI</label>
-                    <input type="text" class="form-control" id="id_designacion_mocovi" name="id_designacion_mocovi" placeholder="Opcional">
-                </div>
             </div>
 
-            <!-- Sustanciacion de Concurso section -->
-            <h4 class="mt-4 mb-3">Sustanciación de Concurso</h4>
+
+            <!-- Sección: Sustanciación de Concurso -->
             <div class="row">
-                <!-- Constitución del Jurado section -->
+                <div class="col-12">
+                    <h4 class="mt-4 mb-3">Sustanciación de Concurso</h4>
+                </div>
+                <!-- Constitución del Jurado -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Constitución del Jurado</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_fecha" class="form-label">Fecha de Constitución del Tribunal</label>
                     <input type="datetime-local" class="form-control" id="constitucion_fecha" name="constitucion_fecha">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_lugar" class="form-label">Lugar</label>
                     <input type="text" class="form-control" id="constitucion_lugar" name="constitucion_lugar">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="constitucion_virtual_link" class="form-label">Enlace a Reunión Virtual</label>
                     <input type="text" class="form-control" id="constitucion_virtual_link" name="constitucion_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="constitucion_observaciones" class="form-label">Observaciones</label>
-                    <textarea class="form-control" id="constitucion_observaciones" name="constitucion_observaciones" rows="3"></textarea>
+                    <textarea class="form-control" id="constitucion_observaciones" name="constitucion_observaciones" rows="2"></textarea>
                 </div>
 
-                <!-- Sorteo de Tema section -->
+                <!-- Sorteo de Tema -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Sorteo de Tema</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_fecha" class="form-label">Fecha de Sorteo de Tema</label>
                     <input type="datetime-local" class="form-control" id="sorteo_fecha" name="sorteo_fecha">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_lugar" class="form-label">Lugar del Sorteo</label>
                     <input type="text" class="form-control" id="sorteo_lugar" name="sorteo_lugar">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="sorteo_virtual_link" class="form-label">Enlace a Reunión Virtual del Sorteo</label>
                     <input type="text" class="form-control" id="sorteo_virtual_link" name="sorteo_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="sorteo_observaciones" class="form-label">Observaciones del Sorteo</label>
-                    <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="3"></textarea>
+                    <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="2"></textarea>
                 </div>
-                
                 <div class="col-md-12 mb-3">
                     <label for="temas_exposicion" class="form-label">Temas de Exposición</label>
-                    <div id="temas-container" class="mb-2">
-                        <!-- Temas will be displayed here as separate items -->
-                    </div>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="nuevo-tema" placeholder="Escriba un nuevo tema y presione '+ Agregar'">
-                        <button class="btn btn-outline-secondary" type="button" id="btn-add-tema">+ Agregar</button>
-                    </div>
-                    <!-- Hidden textarea to store concatenated temas for form submission -->
+                    <div id="temas-container" class="mb-2"></div>
                     <input type="hidden" id="temas_exposicion" name="temas_exposicion">
-                    <small class="form-text text-muted">Agregue los temas uno por uno. Puede eliminar cualquier tema haciendo clic en la X.</small>
                 </div>
 
-                <!-- Exposición section -->
+                <!-- Exposición -->
                 <div class="col-12">
                     <h5 class="bg-light p-2 rounded">Exposición</h5>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_fecha" class="form-label">Fecha de Exposición</label>
                     <input type="datetime-local" class="form-control" id="exposicion_fecha" name="exposicion_fecha">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_lugar" class="form-label">Lugar de la Exposición</label>
                     <input type="text" class="form-control" id="exposicion_lugar" name="exposicion_lugar">
                 </div>
-                <div class="col-md-12 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="exposicion_virtual_link" class="form-label">Enlace a Reunión Virtual de la Exposición</label>
                     <input type="text" class="form-control" id="exposicion_virtual_link" name="exposicion_virtual_link" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                 </div>
                 <div class="col-md-12 mb-3">
                     <label for="exposicion_observaciones" class="form-label">Observaciones de la Exposición</label>
-                    <textarea class="form-control" id="exposicion_observaciones" name="exposicion_observaciones" rows="3"></textarea>
+                    <textarea class="form-control" id="exposicion_observaciones" name="exposicion_observaciones" rows="2"></textarea>
                 </div>
             </div>
 
