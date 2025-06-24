@@ -8,17 +8,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Considerandos Management</h4>
+                    <h4 class="mb-0">Administración de Considerandos</h4>
                     <a href="{{ url_for('admin_api_data.considerandos_new') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Considerando
+                        <i class="fas fa-plus"></i> Agregar Nuevo Considerando
                     </a>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>About Considerandos:</strong> These are document templates used for generating resolutions and other legal documents. 
-                        They replace the external Google Script API that was previously used.
-                    </div>
+
                     
                     {% if considerandos %}
                     <div class="table-responsive">
@@ -78,10 +74,10 @@
                     {% else %}
                     <div class="text-center py-5">
                         <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No considerandos found</h5>
-                        <p class="text-muted">Start by adding your first considerando template.</p>
+                        <h5 class="text-muted">No se encontraron considerandos</h5>
+                        <p class="text-muted">Comienza agregando tu primera plantilla de considerando.</p>
                         <a href="{{ url_for('admin_api_data.considerandos_new') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Add First Considerando
+                            <i class="fas fa-plus"></i> Agregar Primer Considerando
                         </a>
                     </div>
                     {% endif %}
@@ -96,19 +92,17 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="deleteModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the considerando "<strong id="deleteItemName"></strong>"?</p>
-                <p class="text-muted">This action cannot be undone.</p>
+                <p>¿Estás seguro de que deseas eliminar el considerando "<strong id="deleteItemName"></strong>"?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <form id="deleteForm" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
                 </form>
             </div>
         </div>
@@ -133,7 +127,8 @@
 function confirmDelete(itemName, itemId) {
     document.getElementById('deleteItemName').textContent = itemName;
     document.getElementById('deleteForm').action = "{{ url_for('admin_api_data.considerandos_delete', id=0) }}".replace('0', itemId);
-    $('#deleteModal').modal('show');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
 }
 </script>
 {% endblock %}

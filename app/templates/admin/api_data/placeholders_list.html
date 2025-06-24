@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Marcadores Disponibles{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-tags"></i> Marcadores Disponibles
+                    </h4>
+                    <p class="text-muted mb-0 mt-2">
+                        Lista completa de marcadores disponibles para usar en plantillas de documentos y notificaciones.
+                        Utiliza el formato <code>&lt;&lt;nombre_marcador&gt;&gt;</code> en tus plantillas.
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Uso:</strong> Copia el nombre del marcador y úsalo en tus plantillas con el formato 
+                        <code>&lt;&lt;nombre_marcador&gt;&gt;</code>. Por ejemplo: <code>&lt;&lt;id_concurso&gt;&gt;</code>
+                    </div>
+
+                    <!-- Search box -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="searchPlaceholders" placeholder="Buscar placeholder...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder categories -->
+                    {% for category_key, category_data in placeholder_info.items() %}
+                    <div class="card mb-3 placeholder-category">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <button class="btn btn-link text-decoration-none" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ category_key }}" aria-expanded="true" 
+                                        aria-controls="collapse{{ category_key }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                    {{ category_data.name }}
+                                    <span class="badge bg-secondary ms-2">{{ category_data.placeholders|length }}</span>
+                                </button>
+                            </h5>
+                        </div>
+                        <div id="collapse{{ category_key }}" class="collapse show">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="30%">Placeholder</th>
+                                                <th width="50%">Descripción</th>
+                                                <th width="20%">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for placeholder_name, description in category_data.placeholders.items() %}
+                                            <tr class="placeholder-row">
+                                                <td>
+                                                    <code class="placeholder-name">&lt;&lt;{{ placeholder_name }}&gt;&gt;</code>
+                                                </td>
+                                                <td class="placeholder-description">{{ description }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary copy-placeholder" 
+                                                            data-placeholder="{{ placeholder_name }}" 
+                                                            title="Copiar placeholder">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for copy feedback -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="copyToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto">Copiado</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Placeholder copiado al portapapeles
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('searchPlaceholders');
+    const placeholderRows = document.querySelectorAll('.placeholder-row');
+    const categories = document.querySelectorAll('.placeholder-category');
+
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        let visibleCategories = new Set();
+
+        placeholderRows.forEach(row => {
+            const placeholderName = row.querySelector('.placeholder-name').textContent.toLowerCase();
+            const placeholderDesc = row.querySelector('.placeholder-description').textContent.toLowerCase();
+            
+            if (placeholderName.includes(searchTerm) || placeholderDesc.includes(searchTerm)) {
+                row.style.display = '';
+                // Find the parent category
+                const category = row.closest('.placeholder-category');
+                if (category) {
+                    visibleCategories.add(category);
+                }
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide categories based on whether they have visible rows
+        categories.forEach(category => {
+            if (visibleCategories.has(category)) {
+                category.style.display = '';
+                // Expand the category if it has matching results
+                const collapse = category.querySelector('.collapse');
+                if (collapse && !collapse.classList.contains('show')) {
+                    new bootstrap.Collapse(collapse, { toggle: true });
+                }
+            } else {
+                category.style.display = searchTerm ? 'none' : '';
+            }
+        });
+    });
+
+    // Copy functionality
+    const copyButtons = document.querySelectorAll('.copy-placeholder');
+    const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+
+    copyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const placeholderName = this.getAttribute('data-placeholder');
+            const placeholderText = `<<${placeholderName}>>`;
+            
+            navigator.clipboard.writeText(placeholderText).then(function() {
+                toast.show();
+            }).catch(function() {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = placeholderText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                toast.show();
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

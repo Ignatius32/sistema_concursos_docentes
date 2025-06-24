@@ -6,6 +6,7 @@ Provides CRUD operations for data that was previously fetched from external APIs
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.models.models import db, Considerandos, DepartamentoHead
 from app.utils.keycloak_auth import admin_required
+from app.services.placeholder_resolver import get_core_placeholders
 import json
 
 # Create a blueprint for admin API data management routes
@@ -104,7 +105,7 @@ def considerandos_edit(id):
                                      considerando=considerando,
                                      data={'document_type': document_type, 'visibility': visibility, 
                                            'considerandos_data': considerandos_json})
-              # Parse JSON data
+            # Parse JSON data
             try:
                 considerandos_data = json.loads(considerandos_json) if considerandos_json else {}
             except json.JSONDecodeError as e:
@@ -127,7 +128,8 @@ def considerandos_edit(id):
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating considerando: {str(e)}', 'error')
-      # For GET request, prepare data for form
+    
+    # For GET request, prepare data for form
     data = {
         'document_type': considerando.document_type,
         'visibility': considerando.visibility,
@@ -295,3 +297,101 @@ def api_departamento_heads_list():
     """API endpoint to get all departamento heads as JSON."""
     heads = DepartamentoHead.query.filter_by(is_active=True).all()
     return jsonify([h.to_dict() for h in heads])
+
+@admin_api_data_bp.route('/placeholders')
+@admin_required
+def placeholders_list():
+    """List all available placeholders with descriptions and examples."""
+    
+    # Define placeholder categories and descriptions
+    placeholder_info = {
+        'concurso_general': {
+            'name': 'Información General del Concurso',
+            'placeholders': {
+                'id_concurso': 'ID único del concurso',
+                'expediente': 'Número de expediente',
+                'tipo_concurso': 'Tipo de concurso (Regular, Interino, etc.)',
+                'area': 'Área académica',
+                'orientacion': 'Orientación específica',
+                'categoria_codigo': 'Código de la categoría (Profesor, JTP, etc.)',
+                'categoria_nombre': 'Nombre completo de la categoría',
+                'dedicacion': 'Tipo de dedicación (Exclusiva, Parcial, Simple)',
+                'cant_cargos_numero': 'Número de cargos (como número)',
+                'cant_cargos_texto': 'Descripción textual de los cargos',
+                'descripcion_cargo': 'Descripción completa del cargo',
+                'departamento_nombre': 'Nombre del departamento',
+                'origen_vacante': 'Origen de la vacante',
+                'docente_que_genera_vacante': 'Docente que genera la vacante',
+                'licencia': 'Información de licencia (si aplica)',
+                'tkd': 'Código TKD'
+            }
+        },
+        'resoluciones': {
+            'name': 'Números de Resoluciones',
+            'placeholders': {
+                'nro_res_llamado': 'Número de resoluciones asociadas al llamado',
+                'nro_res_tribunal': 'Número de resoluciones asociadas al tribunal',
+                'nro_res_otras': 'Otras resoluciones'
+            }
+        },
+        'fechas': {
+            'name': 'Fechas',
+            'placeholders': {
+                'fecha_actual': 'Fecha actual (formato DD/MM/YYYY)',
+                'yyyy': 'Año actual',
+                'cierre_inscripcion_fecha': 'Fecha de cierre de inscripción'
+            }
+        },
+        'departamento': {
+            'name': 'Responsable de Departamento',
+            'placeholders': {
+                'resp_departamento': 'Nombre del responsable del departamento',
+                'prefijo_resp_departamento': 'Prefijo del responsable (Dr., Mg., etc.)'
+            }
+        },
+        'tribunal': {
+            'name': 'Tribunal',
+            'placeholders': {
+                'tribunal_presidente': 'Presidente del tribunal',
+                'tribunal_titulares_lista': 'Lista de miembros titulares',
+                'tribunal_suplentes_lista': 'Lista de miembros suplentes',
+                'tribunal_titular_docente_lista': 'Lista de titulares docentes',
+                'tribunal_titular_estudiante_lista': 'Lista de titulares estudiantes',
+                'tribunal_suplente_docente_lista': 'Lista de suplentes docentes',
+                'tribunal_suplente_estudiante_lista': 'Lista de suplentes estudiantes'
+            }
+        },
+        'postulantes': {
+            'name': 'Postulantes',
+            'placeholders': {
+                'postulantes_lista_completa': 'Lista completa de postulantes',
+                'postulantes_activos_lista': 'Lista de postulantes activos'
+            }
+        },
+        'sustanciacion': {
+            'name': 'Sustanciación',
+            'placeholders': {
+                'constitucion_fecha': 'Fecha de constitución del tribunal',
+                'constitucion_lugar': 'Lugar de constitución del tribunal',
+                'constitucion_virtual_link': 'Link virtual para constitución',
+                'sorteo_fecha': 'Fecha del sorteo',
+                'sorteo_lugar': 'Lugar del sorteo',
+                'sorteo_virtual_link': 'Link virtual para sorteo',
+                'exposicion_fecha': 'Fecha de exposición',
+                'exposicion_lugar': 'Lugar de exposición',
+                'exposicion_virtual_link': 'Link virtual para exposición',
+                'temas_exposicion': 'Temas de exposición (formato raw)',
+                'temas_todos': 'Temas formateados con encabezado',
+                'temas_sorteados': 'Temas sorteados formateados'
+            }
+        },
+        'notificaciones': {
+            'name': 'Notificaciones',
+            'placeholders': {
+                'nombre_concurso_notificacion': 'Nombre del concurso para notificaciones',
+                'nombre_destinatario': 'Nombre del destinatario (requiere persona_id)'
+            }
+        }
+    }
+    
+    return render_template('admin/api_data/placeholders_list.html', placeholder_info=placeholder_info)
