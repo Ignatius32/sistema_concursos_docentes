@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if considerando else 'Add' }} Considerando{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ 'Edit' if considerando else 'Add New' }} Considerando</h4>
+                    <a href="{{ url_for('admin_api_data.considerandos_list') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Tip:</strong> The considerandos data should be valid JSON. Use the structure from the existing templates.
+                        Document types typically include: RESOLUCION_LLAMADO_INTERINO, RESOLUCION_LLAMADO_REGULAR, etc.
+                    </div>
+                    
+                    <form method="POST" class="needs-validation" novalidate>                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="document_type" class="form-label">Document Type *</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="document_type" 
+                                           name="document_type" 
+                                           value="{{ data.document_type if data else '' }}"
+                                           required
+                                           placeholder="e.g., RESOLUCION_LLAMADO_REGULAR">
+                                    <div class="invalid-feedback">
+                                        Please provide a valid document type.
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Use uppercase with underscores (e.g., RESOLUCION_LLAMADO_REGULAR)
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="visibility" class="form-label">Visibility *</label>
+                                    <select class="form-control" id="visibility" name="visibility" required>
+                                        <option value="">Select visibility</option>
+                                        <option value="regular" {{ 'selected' if data and data.visibility == 'regular' else '' }}>Regular</option>
+                                        <option value="interino" {{ 'selected' if data and data.visibility == 'interino' else '' }}>Interino</option>
+                                        <option value="both" {{ 'selected' if data and data.visibility == 'both' else '' }}>Both</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        Please select a visibility option.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="considerandos_data" class="form-label">Considerandos Data (JSON) *</label>
+                            <textarea class="form-control" 
+                                      id="considerandos_data" 
+                                      name="considerandos_data" 
+                                      rows="20" 
+                                      required
+                                      placeholder='Enter JSON data, e.g.:
+{
+  "considerando1": {
+    "tema": "Content here..."
+  },
+  "considerando2": {
+    "opcion_a": "Option A content...",
+    "opcion_b": "Option B content..."
+  }
+}'>{{ data.considerandos_data if data else '' }}</textarea>
+                            <div class="invalid-feedback">
+                                Please provide valid JSON data for considerandos.
+                            </div>
+                            <small class="form-text text-muted">
+                                Enter the considerandos structure as valid JSON. Use the format from existing templates.
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="btn-group" role="group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ 'Update' if considerando else 'Create' }} Considerando
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="validateJSON()">
+                                    <i class="fas fa-check"></i> Validate JSON
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Bootstrap form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+function validateJSON() {
+    const textarea = document.getElementById('considerandos_data');
+    const jsonText = textarea.value.trim();
+    
+    if (!jsonText) {
+        alert('Please enter some JSON data first.');
+        return;
+    }
+    
+    try {
+        JSON.parse(jsonText);
+        alert('✓ JSON is valid!');
+        textarea.classList.remove('is-invalid');
+        textarea.classList.add('is-valid');
+    } catch (e) {
+        alert('✗ Invalid JSON: ' + e.message);
+        textarea.classList.remove('is-valid');
+        textarea.classList.add('is-invalid');
+    }
+}
+
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('considerandos_data');
+    
+    // Function to resize textarea
+    function resizeTextarea() {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+    
+    // Initial resize
+    if (textarea.value) {
+        resizeTextarea();
+    }
+    
+    // Resize on input
+    textarea.addEventListener('input', resizeTextarea);
+});
+</script>
+{% endblock %}

@@ -46,14 +46,16 @@ class TemplateForm(FlaskForm):
     admin_can_send_for_signature = BooleanField('Admin puede enviar para firma', default=True)
     tribunal_can_sign = BooleanField('Tribunal puede firmar', default=False)
     tribunal_can_upload_signed = BooleanField('Tribunal puede subir firmado', default=False)
-    admin_can_sign = BooleanField('Administración puede firmar', default=False)
-    # New fields for estado and subestado control
+    admin_can_sign = BooleanField('Administración puede firmar', default=False)    # New fields for estado and subestado control
     estado_al_generar_borrador = StringField('Estado al generar documento borrador', validators=[Length(max=50)])
     subestado_al_generar_borrador = TextAreaField('Subestado al generar documento borrador', 
                                                 render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})
     estado_al_subir_firmado = StringField('Estado al subir firmado', validators=[Length(max=50)])
     subestado_al_subir_firmado = TextAreaField('Subestado al subir firmado', 
-                                             render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})
+                                             render_kw={"rows": 3, "placeholder": 'Valor que se agregará a subestado'})    # New document properties fields
+    subida_directa = BooleanField('Permite subida directa', default=False)
+    es_res = BooleanField('Es una resolución', default=False)
+    parentesco = StringField('Parentesco', validators=[Length(max=255)])
     submit = SubmitField('Guardar')
 
 # Access control decorator - now using Keycloak auth directly in routes
@@ -91,12 +93,14 @@ def nuevo():
             admin_can_send_for_signature=form.admin_can_send_for_signature.data,
             tribunal_can_sign=form.tribunal_can_sign.data,
             tribunal_can_upload_signed=form.tribunal_can_upload_signed.data,
-            admin_can_sign=form.admin_can_sign.data,
-            # New estado and subestado fields
+            admin_can_sign=form.admin_can_sign.data,            # New estado and subestado fields
             estado_al_generar_borrador=form.estado_al_generar_borrador.data,
             subestado_al_generar_borrador=form.subestado_al_generar_borrador.data,
             estado_al_subir_firmado=form.estado_al_subir_firmado.data,
-            subestado_al_subir_firmado=form.subestado_al_subir_firmado.data
+            subestado_al_subir_firmado=form.subestado_al_subir_firmado.data,            # New document properties fields
+            subida_directa=form.subida_directa.data,
+            es_res=form.es_res.data,
+            parentesco=form.parentesco.data
         )
         db.session.add(template)
         try:

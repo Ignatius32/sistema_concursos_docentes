@@ -25,251 +25,320 @@ Editar Plantilla
             
             <form method="POST" class="needs-validation" novalidate>
                 {{ form.csrf_token }}
-                  <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.display_name.label(class="form-label") }}
-                            {{ form.display_name(class="form-control", placeholder="Nombre para mostrar") }}
-                            {% if form.display_name.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.display_name.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Nombre descriptivo de la plantilla</small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.google_doc_id.label(class="form-label") }}
-                            {{ form.google_doc_id(class="form-control", placeholder="ID del documento de Google") }}
-                            {% if form.google_doc_id.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.google_doc_id.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">ID del documento de Google Docs que sirve como plantilla</small>
-                        </div>
-                    </div>
-                </div>
-                  <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            {{ form.document_type_key.label(class="form-label") }}
-                            {{ form.document_type_key(class="form-control", placeholder="Clave para el sistema") }}
-                            {% if form.document_type_key.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.document_type_key.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Clave única para identificar el tipo de documento en el sistema (ej: RESOLUCION_LLAMADO_REGULAR)</small>
-                        </div>
-                    </div>
-                </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.uses_considerandos_builder(class="form-check-input") }}
-                            {{ form.uses_considerandos_builder.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si la plantilla usa el constructor de considerandos</div>
-                        </div>
+                <!-- Basic Template Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información Básica</h5>
                     </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.requires_tribunal_info(class="form-check-input") }}
-                            {{ form.requires_tribunal_info.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si la plantilla requiere información del tribunal</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.is_active(class="form-check-input") }}
-                            {{ form.is_active.label(class="form-check-label") }}
-                            <div class="form-text">Desmarcar para desactivar temporalmente esta plantilla</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- New fields for enhanced template configuration -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.concurso_visibility.label(class="form-label") }}
-                            {{ form.concurso_visibility(class="form-select") }}
-                            {% if form.concurso_visibility.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.concurso_visibility.errors %}
-                                {{ error }}
-                                {% endfor %}
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.display_name.label(class="form-label") }}
+                                    {{ form.display_name(class="form-control", placeholder="Nombre para mostrar") }}
+                                    {% if form.display_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.display_name.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Nombre descriptivo de la plantilla</small>
+                                </div>
                             </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Especifica para qué tipos de concurso está disponible esta plantilla</small>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.document_type_key.label(class="form-label") }}
+                                    {{ form.document_type_key(class="form-control", placeholder="Clave para el sistema") }}
+                                    {% if form.document_type_key.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.document_type_key.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Clave única para identificar el tipo de documento (ej: RESOLUCION_LLAMADO_REGULAR)</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-check mt-4">
-                            {{ form.is_unique_per_concurso(class="form-check-input") }}
-                            {{ form.is_unique_per_concurso.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si solo se puede generar un documento de este tipo por concurso</div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    {{ form.google_doc_id.label(class="form-label") }}
+                                    {{ form.google_doc_id(class="form-control", placeholder="ID del documento de Google") }}
+                                    {% if form.google_doc_id.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.google_doc_id.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        ID del documento de Google Docs que sirve como plantilla.<br>
+                                        <strong>Cómo obtener el ID:</strong> En la URL del documento, copia la parte entre <code>/d/</code> y <code>/edit</code><br>
+                                        <strong>Ejemplo:</strong> <code>https://docs.google.com/document/d/<span class="text-primary">1Eg0N5s4H_wGEHUZClYZs-jF4ED2pjHbT-KsUoSSLOX8</span>/edit</code>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.concurso_visibility.label(class="form-label") }}
+                                    {{ form.concurso_visibility(class="form-select") }}
+                                    {% if form.concurso_visibility.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.concurso_visibility.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Especifica para qué tipos de concurso está disponible esta plantilla</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    {{ form.is_active(class="form-check-input") }}
+                                    {{ form.is_active.label(class="form-check-label") }}
+                                    <div class="form-text">Desmarcar para desactivar temporalmente esta plantilla</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Permission control fields -->
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <h4 class="mt-3 mb-2">Permisos de Documento</h4>
+                <!-- Document Behavior -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Comportamiento del Documento</h5>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.admin_can_send_for_signature(class="form-check-input") }}
-                            {{ form.admin_can_send_for_signature.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si el administrador puede enviar este documento para firma</div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.requires_tribunal_info(class="form-check-input") }}
+                                    {{ form.requires_tribunal_info.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si la plantilla requiere información del tribunal</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.is_unique_per_concurso(class="form-check-input") }}
+                                    {{ form.is_unique_per_concurso.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si solo se puede generar un documento de este tipo por concurso</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.subida_directa(class="form-check-input") }}
+                                    {{ form.subida_directa.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si este tipo de documento permite subida directa</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.tribunal_can_sign(class="form-check-input") }}
-                            {{ form.tribunal_can_sign.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si los miembros del tribunal pueden firmar este documento</div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.es_res(class="form-check-input", id="es_res_checkbox") }}
+                                    {{ form.es_res.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si este documento es una resolución (automáticamente usa constructor de considerandos)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    {{ form.parentesco.label(class="form-label") }}
+                                    {{ form.parentesco(class="form-control", placeholder="Ej: Padre, Madre, Hijo, etc.") }}
+                                    {% if form.parentesco.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.parentesco.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Especificar relación de parentesco si aplica</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                      <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.tribunal_can_upload_signed(class="form-check-input") }}
-                            {{ form.tribunal_can_upload_signed.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si los miembros del tribunal pueden subir este documento ya firmado</div>
+                        
+                        <!-- Hidden field for uses_considerandos_builder -->
+                        <div style="display: none;">
+                            {{ form.uses_considerandos_builder(id="uses_considerandos_hidden") }}
                         </div>
                     </div>
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.admin_can_sign(class="form-check-input") }}
-                            {{ form.admin_can_sign.label(class="form-check-label") }}
-                            <div class="form-text">Marcar si la administración puede firmar este documento</div>
+                <!-- Permissions -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Permisos de Documento</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.admin_can_send_for_signature(class="form-check-input") }}
+                                    {{ form.admin_can_send_for_signature.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si el administrador puede enviar este documento para firma</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.admin_can_sign(class="form-check-input") }}
+                                    {{ form.admin_can_sign.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si la administración puede firmar este documento</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.tribunal_can_sign(class="form-check-input") }}
+                                    {{ form.tribunal_can_sign.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si los miembros del tribunal pueden firmar este documento</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.tribunal_can_upload_signed(class="form-check-input") }}
+                                    {{ form.tribunal_can_upload_signed.label(class="form-check-label") }}
+                                    <div class="form-text">Marcar si los miembros del tribunal pueden subir este documento ya firmado</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            {{ form.tribunal_visibility_rules.label(class="form-label") }}
-                            {{ form.tribunal_visibility_rules(class="form-control code-editor") }}
-                            {% if form.tribunal_visibility_rules.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.tribunal_visibility_rules.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">JSON con reglas de visibilidad según estado, rol y claustro. <br>
-                            Ejemplo: { "BORRADOR": {"roles": ["Presidente"], "claustros": ["Docente"]}, "FIRMADO": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "Estudiante"]} }</small>
-                        </div>
-                    </div>                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            {{ form.public_visibility_rules.label(class="form-label") }}
-                            {{ form.public_visibility_rules(class="form-control code-editor") }}
-                            {% if form.public_visibility_rules.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.public_visibility_rules.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">JSON con reglas de visibilidad pública según estado del documento. <br>
-                            Ejemplo: { "BORRADOR": false, "PENDIENTE DE FIRMA": false, "FIRMADO": true }</small>
-                        </div>
+                <!-- Visibility Rules -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-eye"></i> Reglas de Visibilidad</h5>
                     </div>
-                </div>
-                
-                <!-- Estado y Subestado Fields -->
-                <div class="row mt-4 mb-3">
-                    <div class="col-12">
-                        <h4 class="mt-3 mb-2">Control de Estado y Subestado</h4>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.estado_al_generar_borrador.label(class="form-label") }}
-                            {{ form.estado_al_generar_borrador(class="form-control", placeholder="Ej: EN_PROCESO") }}
-                            {% if form.estado_al_generar_borrador.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.estado_al_generar_borrador.errors %}
-                                {{ error }}
-                                {% endfor %}
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    {{ form.tribunal_visibility_rules.label(class="form-label") }}
+                                    {{ form.tribunal_visibility_rules(class="form-control code-editor") }}
+                                    {% if form.tribunal_visibility_rules.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.tribunal_visibility_rules.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">JSON con reglas de visibilidad según estado, rol y claustro. <br>
+                                    Ejemplo: { "BORRADOR": {"roles": ["Presidente"], "claustros": ["Docente"]}, "FIRMADO": {"roles": ["Presidente", "Titular"], "claustros": ["Docente", "Estudiante"]} }</small>
+                                </div>
                             </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Estado que se aplicará al concurso cuando se genere un borrador (dejar vacío para no modificar)</small>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.subestado_al_generar_borrador.label(class="form-label") }}
-                            {{ form.subestado_al_generar_borrador(class="form-control", placeholder="Valor a agregar al subestado") }}
-                            {% if form.subestado_al_generar_borrador.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.subestado_al_generar_borrador.errors %}
-                                {{ error }}
-                                {% endfor %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    {{ form.public_visibility_rules.label(class="form-label") }}
+                                    {{ form.public_visibility_rules(class="form-control code-editor") }}
+                                    {% if form.public_visibility_rules.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.public_visibility_rules.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">JSON con reglas de visibilidad pública según estado del documento. <br>
+                                    Ejemplo: { "BORRADOR": false, "PENDIENTE DE FIRMA": false, "FIRMADO": true }</small>
+                                </div>
                             </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Valor que se añadirá al subestado cuando se genere un borrador (dejar vacío para no modificar)</small>
                         </div>
                     </div>
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.estado_al_subir_firmado.label(class="form-label") }}
-                            {{ form.estado_al_subir_firmado(class="form-control", placeholder="Ej: COMPLETADO") }}
-                            {% if form.estado_al_subir_firmado.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.estado_al_subir_firmado.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Estado que se aplicará al concurso cuando se suba el documento firmado (dejar vacío para no modificar)</small>
-                        </div>
+                <!-- State Management -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Control de Estado y Subestado</h5>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.subestado_al_subir_firmado.label(class="form-label") }}
-                            {{ form.subestado_al_subir_firmado(class="form-control", placeholder="Valor a agregar al subestado") }}
-                            {% if form.subestado_al_subir_firmado.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.subestado_al_subir_firmado.errors %}
-                                {{ error }}
-                                {% endfor %}
+                    <div class="card-body">
+                        <h6 class="text-muted mb-3">Al generar borrador:</h6>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.estado_al_generar_borrador.label(class="form-label") }}
+                                    {{ form.estado_al_generar_borrador(class="form-control", placeholder="Ej: EN_PROCESO") }}
+                                    {% if form.estado_al_generar_borrador.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.estado_al_generar_borrador.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Estado que se aplicará al concurso (dejar vacío para no modificar)</small>
+                                </div>
                             </div>
-                            {% endif %}
-                            <small class="form-text text-muted">Valor que se añadirá al subestado cuando se suba el documento firmado (dejar vacío para no modificar)</small>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.subestado_al_generar_borrador.label(class="form-label") }}
+                                    {{ form.subestado_al_generar_borrador(class="form-control", placeholder="Valor a agregar al subestado") }}
+                                    {% if form.subestado_al_generar_borrador.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.subestado_al_generar_borrador.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Valor que se añadirá al subestado (dejar vacío para no modificar)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h6 class="text-muted mb-3">Al subir documento firmado:</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.estado_al_subir_firmado.label(class="form-label") }}
+                                    {{ form.estado_al_subir_firmado(class="form-control", placeholder="Ej: COMPLETADO") }}
+                                    {% if form.estado_al_subir_firmado.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.estado_al_subir_firmado.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Estado que se aplicará al concurso (dejar vacío para no modificar)</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.subestado_al_subir_firmado.label(class="form-label") }}
+                                    {{ form.subestado_al_subir_firmado(class="form-control", placeholder="Valor a agregar al subestado") }}
+                                    {% if form.subestado_al_subir_firmado.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.subestado_al_subir_firmado.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Valor que se añadirá al subestado (dejar vacío para no modificar)</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
+                <!-- Action Buttons -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-between">
@@ -284,4 +353,22 @@ Editar Plantilla
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const esResCheckbox = document.getElementById('es_res_checkbox');
+    const usesConsiderandosCheckbox = document.getElementById('uses_considerandos_hidden');
+    
+    // Function to sync the checkboxes
+    function syncConsiderandos() {
+        usesConsiderandosCheckbox.checked = esResCheckbox.checked;
+    }
+    
+    // Initial sync
+    syncConsiderandos();
+    
+    // Sync when es_res changes
+    esResCheckbox.addEventListener('change', syncConsiderandos);
+});
+</script>
 {% endblock %}

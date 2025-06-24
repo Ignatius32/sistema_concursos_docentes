@@ -1,15 +1,44 @@
 """
 API service utilities for external API interactions.
 Contains functions for fetching data from external APIs used in the application.
+Updated to use local database instead of external APIs for considerandos and departamento heads.
 """
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 import json
+import time
+import traceback
 from flask import current_app
+from datetime import datetime, timedelta
 
-# URL to fetch considerandos options
+# Import local models for database access
+from app.models.models import Considerandos, DepartamentoHead
+
+# Simple in-memory cache with expiration
+_api_cache = {}
+_cache_expiry = {}
+
+def _get_cached_data(cache_key, expiry_minutes=10):
+    """Get data from cache if it exists and hasn't expired."""
+    if cache_key in _api_cache and cache_key in _cache_expiry:
+        if datetime.now() < _cache_expiry[cache_key]:
+            current_app.logger.info(f"[API] Using cached data for {cache_key}")
+            return _api_cache[cache_key]
+        else:
+            # Expired, remove from cache
+            del _api_cache[cache_key]
+            del _cache_expiry[cache_key]
+    return None
+
+def _set_cached_data(cache_key, data, expiry_minutes=10):
+    """Store data in cache with expiration."""
+    _api_cache[cache_key] = data
+    _cache_expiry[cache_key] = datetime.now() + timedelta(minutes=expiry_minutes)
+    current_app.logger.info(f"[API] Cached data for {cache_key} (expires in {expiry_minutes} minutes)")
+
+# LEGACY URL to fetch considerandos options
 CONSIDERANDOS_API_URL = "https://script.google.com/macros/s/AKfycbz48ziHckZ-Ir6_gmXnUZF_S42AapQLnvpjktJXTnSbD1ps1lWimgkrxTzLXyiH_Eorlw/exec"
-# URL to fetch departamento heads data
+# LEGACY URL to fetch departamento heads data
 DEPTO_HEADS_API_URL = "https://script.google.com/macros/s/AKfycbyWU4h92lRGefLzLRSS82JhytafKIZl0jey3DuuoiCUicQcVf_1u1vzZzx7mI-0HTOg4w/exec"
 # URL to fetch asignaturas data
 ASIGNATURAS_API_URL = "https://huayca.crub.uncoma.edu.ar/catedras/1.0/rest/materias"
@@ -20,9 +49,8 @@ PROGRAMA_DOWNLOAD_URL = "https://huayca.crub.uncoma.edu.ar/programas/download/pr
 
 def get_considerandos_data(document_type, tipo_concurso=None):
     """
-    Fetch considerandos data from the API for a specific document type.
-    This function now only retrieves the actual content of considerandos options,
-    as visibility and uniqueness checks are now handled by DocumentTemplateConfig.
+    Fetch considerandos data from the local database for a specific document type.
+    This function now uses local database instead of external API.
     
     Args:
         document_type (str): Type of document to get considerandos for (e.g., 'RESOLUCION_LLAMADO_TRIBUNAL')
@@ -33,36 +61,52 @@ def get_considerandos_data(document_type, tipo_concurso=None):
                      or None if error or not found
     """
     try:
-        response = requests.get(CONSIDERANDOS_API_URL)
-        if response.status_code != 200:
-            return None
+        current_app.logger.info(f"[LOCAL DB] Fetching considerandos for document_type: {document_type}")
         
-        data = response.json()
-        for item in data:
-            if item.get('document_type') == document_type:
-                # Return the item with considerandos data
-                return item
-                
-        return None
+        # Query local database
+        considerando = Considerandos.query.filter_by(
+            document_type=document_type,
+            is_active=True
+        ).first()
+        
+        if considerando:
+            current_app.logger.info(f"[LOCAL DB] Found considerando for document_type: {document_type}")
+            # Return data in the same format as the external API
+            return considerando.to_dict()
+        else:
+            current_app.logger.warning(f"[LOCAL DB] No considerando found for document_type: {document_type}")
+            return None
+            
     except Exception as e:
-        print(f"Error fetching considerandos data: {str(e)}")
+        current_app.logger.error(f"[LOCAL DB] Error fetching considerandos data: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
         return None
 
 def get_departamento_heads_data():
     """
-    Fetch departamento heads data from the API.
+    Fetch departamento heads data from the local database.
+    This function now uses local database instead of external API.
     
     Returns:
         list or None: List of departamento heads or None if error
     """
     try:
-        response = requests.get(DEPTO_HEADS_API_URL)
-        if response.status_code != 200:
-            return None
+        current_app.logger.info(f"[LOCAL DB] Fetching departamento heads data")
         
-        return response.json()
+        # Query local database
+        heads = DepartamentoHead.query.filter_by(is_active=True).order_by(DepartamentoHead.departamento).all()
+        
+        if heads:
+            current_app.logger.info(f"[LOCAL DB] Found {len(heads)} departamento heads")
+            # Return data in the same format as the external API
+            return [head.to_dict() for head in heads]
+        else:
+            current_app.logger.warning(f"[LOCAL DB] No departamento heads found")
+            return []
+            
     except Exception as e:
-        print(f"Error fetching departamento heads data: {str(e)}")
+        current_app.logger.error(f"[LOCAL DB] Error fetching departamento heads data: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
         return None
 
 def get_asignaturas_from_external_api(departamento, area, orientacion_concurso):

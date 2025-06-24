@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Departamento Heads Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Departamento Heads Management</h4>
+                    <a href="{{ url_for('admin_api_data.departamento_heads_new') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Departamento Head
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>About Departamento Heads:</strong> This data contains information about department heads, 
+                        their contact details, and gender-appropriate prefixes for use in official documents. 
+                        This replaces the external Google Script API that was previously used.
+                    </div>
+                    
+                    {% if heads %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Departamento</th>
+                                    <th>Responsable</th>
+                                    <th>Correo</th>
+                                    <th>Prefijo</th>
+                                    <th>Creado</th>
+                                    <th>Actualizado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for head in heads %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ head.departamento }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if head.responsable %}
+                                            {{ head.responsable }}
+                                        {% else %}
+                                            <span class="text-muted"><em>No assigned</em></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if head.correo %}
+                                            <a href="mailto:{{ head.correo }}">{{ head.correo }}</a>
+                                        {% else %}
+                                            <span class="text-muted"><em>No email</em></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if head.prefijo %}
+                                            <span class="badge badge-secondary">{{ head.prefijo }}</span>
+                                        {% else %}
+                                            <span class="text-muted"><em>No prefix</em></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ head.created_at.strftime('%Y-%m-%d %H:%M') if head.created_at else 'N/A' }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ head.updated_at.strftime('%Y-%m-%d %H:%M') if head.updated_at else 'N/A' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('admin_api_data.departamento_heads_edit', id=head.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    onclick="confirmDelete('{{ head.departamento }}', {{ head.id }})"
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No departamento heads found</h5>
+                        <p class="text-muted">Start by adding department head information.</p>
+                        <a href="{{ url_for('admin_api_data.departamento_heads_new') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add First Departamento Head
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the departamento head for "<strong id="deleteItemName"></strong>"?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted {
+        color: #6c757d !important; /* Adjusted for better readability */
+    }
+    .table-dark th {
+        color: black !important; /* Table headers font color */
+    }
+    .badge {
+        color: black !important; /* Visibility column font color */
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(itemName, itemId) {
+    document.getElementById('deleteItemName').textContent = itemName;
+    document.getElementById('deleteForm').action = "{{ url_for('admin_api_data.departamento_heads_delete', id=0) }}".replace('0', itemId);
+    $('#deleteModal').modal('show');
+}
+</script>
+{% endblock %}

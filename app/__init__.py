@@ -155,7 +155,12 @@ def create_app():
     # Register admin sync blueprint
     from app.routes.admin_sync import admin_sync_bp
     app.register_blueprint(admin_sync_bp)
-      # Register notifications blueprint
+      
+    # Register admin API data blueprint
+    from app.routes.admin_api_data import admin_api_data_bp
+    app.register_blueprint(admin_api_data_bp)
+    
+    # Register notifications blueprint
     from app.routes.notifications import notifications_bp
     app.register_blueprint(notifications_bp)
     

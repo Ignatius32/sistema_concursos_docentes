@@ -1,0 +1,118 @@
+[
+  {
+    "document_type": "RESOLUCION_LLAMADO_INTERINO",
+    "visibility": "interino",
+    "unique": 1,
+    "considerandos": {
+      "considerando1": {
+        "tema": ""
+      },
+      "considerando2": {
+        "renuncia": "- Que <<Docente_que_genera_vacante>> renunció a su cargo en esa orientación; ",
+        "licencia": "- Que <<Docente_que_genera_vacante>> solicitó  <<licencia>> a su cargo en esa orientación;"
+      },
+      "considerando3": {
+        "opcion_a": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>>  responsable del Departameto de <<departamento>>, los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_b": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_c": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>>, no hay docentes en el área/orientación en condiciones de tomar el cargo por CCT;"
+      },
+      "considerando4": {
+        "opcion_a": "Que <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> presentó una solicitud de llamado a selección para la cobertura de <<descripcion_cargo>> y propuso un tribunal para entender en esta;"
+      },
+      "considerando5": {
+        "comision_academica": "- Que la Comisión de Asuntos Académicos del dia <<fecha_comision_academica>> recomienda aprobar el llamado a selección y tribunal propuesto;"
+      },
+      "considerando6": {
+        "tratamiento_directo_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> trató y aprobó por unanimidad el llamado a selección y el tribunal propuesto;",
+        "aprobacion_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> <<despacho_consejo_directivo>>;"
+      }
+    }
+  },
+  {
+    "document_type": "RESOLUCION_LLAMADO_REGULAR",
+    "visibility": "regular",
+    "unique": 1,
+    "considerandos": {
+      "considerando1": {
+        "tema": "Que el mismo tramita la solicitud de llamado a concurso docente para cubrir <<descripcion_cargo>> en el Departamento de <<departamento>>, Área <<Area>>, Orientación: <<Orientacion>>; "
+      },
+      "considerando2": {
+        "renuncia": "- Queeee <<Docente_que_genera_vacante>> renunció a su cargo en esa orientación <<TKD>>; ",
+        "licencia": "- Que <<Docente_que_genera_vacante>> solicitó  <<licencia>> a su cargo en esa orientación;"
+      },
+      "considerando3": {
+        "opcion_a": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>>  responsable del Departameto de <<departamento>>, los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_b": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_c": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>>, no hay docentes en el área/orientación en condiciones de tomar el cargo por CCT;"
+      },
+      "considerando4": {
+        "opcion_a": "Que <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> presentó una solicitud de llamado a selección para la cobertura de <<descripcion_cargo>> y propuso un tribunal para entender en esta;"
+      },
+      "considerando5": {
+        "comision_academica": "- Que la Comisión de Asuntos Académicos del dia <<fecha_comision_academica>> recomienda aprobar el llamado a selección y tribunal propuesto;"
+      },
+      "considerando6": {
+        "tratamiento_directo_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> trató y aprobó por unanimidad el llamado a selección y el tribunal propuesto;",
+        "aprobacion_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> <<despacho_consejo_directivo>>;"
+      }
+    }
+  },
+  {
+    "document_type": "RESOLUCION_TRIBUNAL_REGULAR",
+    "visibility": "regular",
+    "unique": 1,
+    "considerandos": {
+      "considerando1": {
+        "tema": ""
+      },
+      "considerando2": {
+        "renuncia": "- What<<Docente_que_genera_vacante>> renunció a su cargo en esa orientación; ",
+        "licencia": "- Que <<Docente_que_genera_vacante>> solicitó  <<licencia>> a su cargo en esa orientación;"
+      },
+      "considerando3": {
+        "opcion_a": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>>  responsable del Departameto de <<departamento>>, los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_b": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> los docentes del área/orientación, en condiciones de tomar el cargo por CCT, no aceptaron el ofrecimiento;",
+        "opcion_c": "Que, de acuerdo a lo informado por <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>>, no hay docentes en el área/orientación en condiciones de tomar el cargo por CCT;"
+      },
+      "considerando4": {
+        "opcion_a": "Que <<prefijo_resp_departamento>> <<resp_departamento>> responsable del Departamento de <<departamento>> presentó una solicitud de llamado a selección para la cobertura de <<descripcion_cargo>> y propuso un tribunal para entender en esta;"
+      },
+      "considerando5": {
+        "comision_academica": "- Que la Comisión de Asuntos Académicos del dia <<fecha_comision_academica>> recomienda aprobar el llamado a selección y tribunal propuesto;"
+      },
+      "considerando6": {
+        "tratamiento_directo_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> trató y aprobó por unanimidad el llamado a selección y el tribunal propuesto;",
+        "aprobacion_cd": "- Que, el Consejo Directivo trató el expediente en su <<sesion_consejo_directivo>> del día <<fecha_consejo_directivo>> <<despacho_consejo_directivo>>;"
+      }
+    }
+  },
+  {
+    "document_type": "ACTA_CONSTITUCION_TRIBUNAL_REGULAR",
+    "visibility": "regular,interino",
+    "unique": 1,
+    "considerandos": {
+      "considerando1": {
+        "tema": ""
+      },
+      "considerando2": {
+        "renuncia": "",
+        "licencia": ""
+      },
+      "considerando3": {
+        "opcion_a": "",
+        "opcion_b": "",
+        "opcion_c": ""
+      },
+      "considerando4": {
+        "opcion_a": ""
+      },
+      "considerando5": {
+        "comision_academica": ""
+      },
+      "considerando6": {
+        "tratamiento_directo_cd": "",
+        "aprobacion_cd": ""
+      }
+    }
+  }
+]

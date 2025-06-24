@@ -125,9 +125,15 @@ class Concurso(db.Model):
     nota_centro_estudiantes_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Centro Estudiantes
     nota_consulta_depto_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Consulta a Depto. Académico
 
-    nro_res_llamado_interino = db.Column(db.String(50), nullable=True)
-    nro_res_llamado_regular = db.Column(db.String(50), nullable=True)
-    nro_res_tribunal_regular = db.Column(db.String(50), nullable=True)
+    #THIS IS LEGACY FIELDS FROM OLD IMPLEMENTATION
+    nro_res_llamado_interino = db.Column(db.String(255), nullable=True)
+    nro_res_llamado_regular = db.Column(db.String(255), nullable=True)
+    nro_res_tribunal_regular = db.Column(db.String(255), nullable=True)
+
+    #NEW FIELDS TO REGISTER DATA FROM  RES
+    nro_res_llamado = db.Column(db.String(255), nullable=True)
+    nro_res_tribunal = db.Column(db.String(255), nullable=True)
+    nro_res_otras = db.Column(db.String(255), nullable=True)
 
     # New fields for committee and council information
     fecha_comision_academica = db.Column(db.Date, nullable=True)    
@@ -135,6 +141,9 @@ class Concurso(db.Model):
     sesion_consejo_directivo = db.Column(db.String(100), nullable=True)
     fecha_consejo_directivo = db.Column(db.Date, nullable=True)    
     despacho_consejo_directivo = db.Column(db.String(255), nullable=True)
+
+
+
     tkd = db.Column(db.String(100), nullable=True)
     tkd_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for TKD document
     nota_solicitud_sac_file_id = db.Column(db.String(100), nullable=True)  # Google Drive file ID for Nota Solicitud SAC
@@ -225,7 +234,13 @@ class DocumentoConcurso(db.Model):
     firma_count = db.Column(db.Integer, nullable=False, default=0)
     # Separate file IDs for borrador and firmado versions
     borrador_file_id = db.Column(db.String(100), nullable=True)  # ID of the draft file in borradores folder
-    file_id = db.Column(db.String(100), nullable=True)  # ID of the uploaded/signed file in documentos_firmados folder
+    file_id = db.Column(db.String(100), nullable=True)  # ID of the uploaded/signed file in documentos_firmados folder    
+    nro_res = db.Column(db.String(100), nullable=True)
+    tipo_res = db.Column(db.String(100), nullable=True)
+    fecha_res = db.Column(db.Date, nullable=True)
+    articulado = db.Column(db.String(255), nullable=True)
+    subida_directa = db.Column(db.Boolean, default=False, nullable=False)
+
 
     firmas = db.relationship('FirmaDocumento', 
                            back_populates='documento_concurso',
@@ -352,8 +367,7 @@ class DocumentoConcurso(db.Model):
         
         # Convert each word to title case (first letter uppercase, rest lowercase)
         words = [word.title() for word in words]
-        
-        # Join with spaces
+          # Join with spaces
         return ' '.join(words)
 
     def get_template_display_name(self):
@@ -372,8 +386,7 @@ class DocumentoConcurso(db.Model):
         # If template config exists and has display name, use it
         if template_config and template_config.display_name:
             return template_config.display_name
-        
-        # Fallback to the friendly name method
+          # Fallback to the friendly name method
         return self.get_friendly_name()
 
     # Keep the property for backward compatibility, but make it read/write
@@ -609,12 +622,14 @@ class DocumentTemplateConfig(db.Model):
     admin_can_send_for_signature = db.Column(db.Boolean, default=True, nullable=False)
     tribunal_can_sign = db.Column(db.Boolean, default=False, nullable=False)
     tribunal_can_upload_signed = db.Column(db.Boolean, default=False, nullable=False)
-    admin_can_sign = db.Column(db.Boolean, default=False, nullable=False)
-    # New fields for estado and subestado control
+    admin_can_sign = db.Column(db.Boolean, default=False, nullable=False)    # New fields for estado and subestado control
     estado_al_generar_borrador = db.Column(db.String(50), nullable=True)
     subestado_al_generar_borrador = db.Column(db.Text, nullable=True)
     estado_al_subir_firmado = db.Column(db.String(50), nullable=True)
-    subestado_al_subir_firmado = db.Column(db.Text, nullable=True)
+    subestado_al_subir_firmado = db.Column(db.Text, nullable=True)    # New document properties fields
+    subida_directa = db.Column(db.Boolean, default=False, nullable=False)
+    es_res = db.Column(db.Boolean, default=False, nullable=False)
+    parentesco = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -694,6 +709,58 @@ class SorteoConfig(db.Model):
     __table_args__ = (
         db.UniqueConstraint('concurso_tipo', 'categoria_codigo', name='uq_sorteo_config_tipo_categoria'),
     )
+
+class Considerandos(db.Model):
+    """
+    Model to store considerandos data locally, replacing external API dependency.
+    """
+    __tablename__ = 'considerandos'
+    id = db.Column(db.Integer, primary_key=True)
+    document_type = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    visibility = db.Column(db.String(50), nullable=False)  # 'interino', 'regular', etc.
+    considerandos_data = db.Column(db.JSON, nullable=False)  # Store the complete considerandos structure
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Considerandos {self.document_type}>'
+    
+    def to_dict(self):
+        """Convert to dictionary format matching the external API response."""
+        return {
+            'document_type': self.document_type,
+            'visibility': self.visibility,
+            'considerandos': self.considerandos_data
+        }
+
+
+class DepartamentoHead(db.Model):
+    """
+    Model to store departamento heads data locally, replacing external API dependency.
+    """
+    __tablename__ = 'departamento_heads'
+    id = db.Column(db.Integer, primary_key=True)
+    departamento = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    responsable = db.Column(db.String(100), nullable=True)
+    correo = db.Column(db.String(100), nullable=True)
+    prefijo = db.Column(db.String(50), nullable=True)  # 'el Director', 'la Directora', etc.
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<DepartamentoHead {self.departamento}>'
+    
+    def to_dict(self):
+        """Convert to dictionary format matching the external API response."""
+        return {
+            'departamento': self.departamento,
+            'responsable': self.responsable or '',
+            'correo': self.correo or '',
+            'prefijo': self.prefijo or ''
+        }
+
 
 # Function to initialize the database with departments, areas, and orientations from JSON
 def init_db_from_json(app, json_data):

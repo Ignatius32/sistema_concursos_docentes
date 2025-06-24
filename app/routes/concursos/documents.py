@@ -1,4 +1,4 @@
-from flask import redirect, url_for, flash, request, render_template
+from flask import redirect, url_for, flash, request, render_template, current_app
 from app.utils.keycloak_auth import keycloak_login_required, admin_required, get_current_username
 from datetime import datetime
 from app.models.models import db, Concurso, Departamento, DocumentoConcurso, HistorialEstado, DocumentTemplateConfig
@@ -7,6 +7,32 @@ from app.helpers.api_services import get_considerandos_data, get_departamento_he
 from app.document_generation.document_generator import generar_documento_desde_template
 import json
 from . import concursos, drive_api
+
+def update_concurso_resolution_number(concurso, template_config, documento):
+    """
+    Update the corresponding resolution number field in the concurso based on document parentesco.
+    
+    Args:
+        concurso: The Concurso instance
+        template_config: The DocumentTemplateConfig instance  
+        documento: The DocumentoConcurso instance with resolution info
+    """
+    if not template_config.es_res or not template_config.parentesco:
+        return
+    
+    if not documento.tipo_res or not documento.nro_res:
+        return
+    
+    # Construct the full resolution string
+    res_string = f"{documento.tipo_res} {documento.nro_res}"
+    
+    # Update the appropriate field based on parentesco
+    if template_config.parentesco == "LLAMADO":
+        concurso.nro_res_llamado = res_string
+    elif template_config.parentesco == "TRIBUNAL":
+        concurso.nro_res_tribunal = res_string
+    else:
+        concurso.nro_res_otras = res_string
 
 @concursos.route('/<int:concurso_id>/generar-resolucion-llamado-tribunal', methods=['GET'])
 @keycloak_login_required
@@ -88,12 +114,20 @@ def considerandos_builder(concurso_id):
     """
     Handle the considerandos builder interface.
     """
+    import time
     from app.models.models import DocumentTemplateConfig
     
+    start_time = time.time()
+    current_app.logger.debug(f"[CONSIDERANDOS] Starting considerandos_builder for concurso_id: {concurso_id}")
+    
+    step_start = time.time()
     concurso = Concurso.query.get_or_404(concurso_id)
+    current_app.logger.debug(f"[CONSIDERANDOS] Concurso query took: {time.time() - step_start:.3f}s")
     
     # Get the departamento object
+    step_start = time.time()
     departamento = Departamento.query.get(concurso.departamento_id) if concurso.departamento_id else None
+    current_app.logger.debug(f"[CONSIDERANDOS] Departamento query took: {time.time() - step_start:.3f}s")
     
     # Get document type key and template Google ID from query parameters
     document_type_key = request.args.get('document_type_key')
@@ -104,24 +138,35 @@ def considerandos_builder(concurso_id):
         document_type_key = request.args.get('document_type')
     if not template_google_id and request.args.get('template_name'):
         template_google_id = request.args.get('template_name')
-    
-    # Get all placeholders from the centralized resolver
+      # Get all placeholders from the centralized resolver
+    step_start = time.time()
     placeholders = get_core_placeholders(concurso_id)
+    current_app.logger.debug(f"[CONSIDERANDOS] get_core_placeholders took: {time.time() - step_start:.3f}s")
     
     # Get the cargo description from the placeholders
     descripcion_cargo = placeholders['descripcion_cargo']
     
     if not document_type_key or not template_google_id:
         flash('Tipo de documento o plantilla no especificados', 'danger')
-        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
-    # Fetch considerandos options from the API (still needed for the actual text options)
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))    # Fetch considerandos options from the API (still needed for the actual text options)
+    step_start = time.time()
     considerandos_data = get_considerandos_data(document_type_key, concurso.tipo)
+    elapsed_considerandos = time.time() - step_start
+    current_app.logger.debug(f"[CONSIDERANDOS] get_considerandos_data took: {elapsed_considerandos:.3f}s")
     
-    # Fetch departamento heads data
+    # Fetch departamento heads data (with fallback if it times out)
+    step_start = time.time()
     departamento_heads = get_departamento_heads_data()
+    elapsed_dept_heads = time.time() - step_start
+    current_app.logger.debug(f"[CONSIDERANDOS] get_departamento_heads_data took: {elapsed_dept_heads:.3f}s")
     
+    # If department heads data fails, continue without it (graceful degradation)
+    if departamento_heads is None:
+        current_app.logger.warning(f"[CONSIDERANDOS] Department heads API failed, continuing without this data")
+        departamento_heads = []
+        
     if considerandos_data is None:
+        current_app.logger.error(f"[CONSIDERANDOS] Considerandos API failed - this is critical")
         error_message = 'No se pudieron cargar los considerandos. Por favor, inténtelo de nuevo más tarde.'
         return render_template(
             'concursos/considerandos_builder.html', 
@@ -211,8 +256,8 @@ def considerandos_builder(concurso_id):
             flash(message, 'danger')
             
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
-    # Display the considerandos form
+      # Display the considerandos form
+    current_app.logger.debug(f"[CONSIDERANDOS] Total considerandos_builder took: {time.time() - start_time:.3f}s")
     return render_template(
         'concursos/considerandos_builder.html',
         concurso=concurso,
@@ -300,10 +345,31 @@ def subir_documento_firmado(concurso_id, documento_id):
             concurso.documentos_firmados_folder_id,
             new_filename,
             file_data
-        )        # Update document record for the signed version
+        )        # Get template configuration for this document type
+        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
+          # If it's a resolution, handle resolution-specific fields
+        if template_config and template_config.es_res:
+            documento.nro_res = request.form.get('numero_resolucion')
+            documento.tipo_res = request.form.get('tipo_resolucion')
+            fecha_res_str = request.form.get('fecha_resolucion')
+            if fecha_res_str:
+                try:
+                    documento.fecha_res = datetime.strptime(fecha_res_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Formato de fecha inválido.', 'danger')
+                    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            documento.articulado = request.form.get('articulado')
+            
+            # Update concurso resolution number based on parentesco
+            update_concurso_resolution_number(concurso, template_config, documento)
+        
+        # Update document record for the signed version
         documento.file_id = file_id  # Store the file ID of the signed version
         documento.update_url_from_file_ids()  # Update URL based on state and file IDs
         documento.estado = 'FIRMADO'
+        
+        # Update concurso resolution number fields if applicable
+        update_concurso_resolution_number(concurso, template_config, documento)
         
         # Get template configuration for this document type
         template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
@@ -835,36 +901,64 @@ def generar_documento(concurso_id, document_type_key):
         concurso_id: ID of the concurso
         document_type_key: The document type key as defined in DocumentTemplateConfig
     """
+    import time
+    start_time = time.time()
+    current_app.logger.info(f"[DOCUMENT_GEN] Starting document generation for concurso_id: {concurso_id}, document_type: {document_type_key}")
+    
     concurso = Concurso.query.get_or_404(concurso_id)
+    current_app.logger.info(f"[DOCUMENT_GEN] Concurso found: {concurso.expediente}")
     
     # Get the template configuration for this document type
+    step_start = time.time()
     template_config = DocumentTemplateConfig.query.filter_by(
         document_type_key=document_type_key,
         is_active=True
     ).first()
+    current_app.logger.debug(f"[DOCUMENT_GEN] Template config query took: {time.time() - step_start:.3f}s")
     
     if not template_config:
+        current_app.logger.error(f"[DOCUMENT_GEN] No template configuration found for document_type: {document_type_key}")
         flash('No se encontró una configuración válida para este tipo de documento.', 'danger')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
+        
+    # Log template configuration (Comportamiento del Documento fields)
+    current_app.logger.info(f"[DOCUMENT_GEN] Template Config for {document_type_key}:")
+    current_app.logger.info(f"  - Display Name: {template_config.display_name}")
+    current_app.logger.info(f"  - Uses Considerandos Builder: {template_config.uses_considerandos_builder}")
+    current_app.logger.info(f"  - Requires Tribunal Info: {template_config.requires_tribunal_info}")
+    current_app.logger.info(f"  - Is Unique Per Concurso: {template_config.is_unique_per_concurso}")
+    current_app.logger.info(f"  - Concurso Visibility: {template_config.concurso_visibility}")
+    current_app.logger.info(f"  - Subida Directa: {template_config.subida_directa}")
+    current_app.logger.info(f"  - Es Resolución: {template_config.es_res}")
+    current_app.logger.info(f"  - Parentesco: {template_config.parentesco}")
+    current_app.logger.info(f"  - Admin Can Send For Signature: {template_config.admin_can_send_for_signature}")
+    current_app.logger.info(f"  - Tribunal Can Sign: {template_config.tribunal_can_sign}")
+    current_app.logger.info(f"  - Google Doc ID: {template_config.google_doc_id}")
+
     # Check if the document should be visible for this concurso tipo
     if not template_config.is_visible_for_concurso_tipo(concurso.tipo):
+        current_app.logger.warning(f"[DOCUMENT_GEN] Document not visible for concurso tipo: {concurso.tipo}")
         flash('Este documento no está disponible para este tipo de concurso.', 'warning')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
+
     # Check uniqueness constraint if applicable
     if template_config.is_unique_per_concurso:
+        step_start = time.time()
         existing_document = DocumentoConcurso.query.filter_by(
             concurso_id=concurso_id,
             tipo=document_type_key
         ).first()
+        current_app.logger.debug(f"[DOCUMENT_GEN] Uniqueness check took: {time.time() - step_start:.3f}s")
         
         if existing_document:
+            current_app.logger.warning(f"[DOCUMENT_GEN] Unique document already exists: {existing_document.id}")
             flash(f'Ya existe un documento de tipo {template_config.display_name} para este concurso.', 'warning')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-    
+
     # If the template uses the considerandos builder, redirect to that route
     if template_config.uses_considerandos_builder:
+        elapsed = time.time() - start_time
+        current_app.logger.info(f"[DOCUMENT_GEN] Redirecting to considerandos builder after {elapsed:.3f}s")
         return redirect(url_for('concursos.considerandos_builder', 
                               concurso_id=concurso_id, 
                               document_type_key=document_type_key,
@@ -1049,4 +1143,127 @@ def admin_firmar_documento(concurso_id, documento_id):
         print(traceback.format_exc())
         flash(f'Error inesperado: {str(e)}', 'danger')
         return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@concursos.route('/<int:concurso_id>/crear-documento-subida-directa/<string:document_type_key>', methods=['POST'])
+@keycloak_login_required
+@admin_required
+def crear_documento_subida_directa(concurso_id, document_type_key):
+    """Create a document via direct upload for templates with subida_directa=True."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    # Get the template configuration for this document type
+    template_config = DocumentTemplateConfig.query.filter_by(
+        document_type_key=document_type_key,
+        is_active=True
+    ).first()
+    
+    if not template_config:
+        flash('No se encontró una configuración válida para este tipo de documento.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    # Check if subida_directa is enabled for this template
+    if not template_config.subida_directa:
+        flash('Este tipo de documento no permite subida directa.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    # Check uniqueness constraint if applicable
+    if template_config.is_unique_per_concurso:
+        existing_document = DocumentoConcurso.query.filter_by(
+            concurso_id=concurso_id,
+            tipo=document_type_key
+        ).first()
+        
+        if existing_document:
+            flash(f'Ya existe un documento de tipo {template_config.display_name} para este concurso.', 'warning')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    if not concurso.documentos_firmados_folder_id:
+        flash('El concurso no tiene una carpeta de documentos firmados asociada.', 'danger')
+        return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+    
+    try:
+        file = request.files.get('documento_firmado')
+        
+        if not file:
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Create the filename
+        original_filename = document_type_key.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
+        new_filename = f"{original_filename}_firmado.pdf"
+        
+        # Upload to documentos_firmados folder
+        file_data = file.read()
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id,
+            new_filename,
+            file_data
+        )
+          # Create new document record directly as FIRMADO
+        documento = DocumentoConcurso(
+            concurso_id=concurso_id,
+            tipo=document_type_key,
+            estado='FIRMADO',
+            file_id=file_id,
+            url=web_view_link,
+            subida_directa=True  # Mark as direct upload
+        )
+          # If it's a resolution, handle resolution-specific fields
+        if template_config.es_res:
+            documento.nro_res = request.form.get('numero_resolucion')
+            documento.tipo_res = request.form.get('tipo_resolucion')
+            fecha_res_str = request.form.get('fecha_resolucion')
+            if fecha_res_str:
+                try:
+                    documento.fecha_res = datetime.strptime(fecha_res_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Formato de fecha inválido.', 'danger')
+                    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            documento.articulado = request.form.get('articulado')
+            
+            # Update concurso resolution number based on parentesco
+            update_concurso_resolution_number(concurso, template_config, documento)
+        
+        db.session.add(documento)
+        
+        # Update concurso estado_actual and subestado if configured in template
+        if template_config.estado_al_subir_firmado:
+            concurso.estado_actual = template_config.estado_al_subir_firmado
+            
+        # Handle subestado
+        if template_config.subestado_al_subir_firmado:
+            if concurso.subestado:
+                try:
+                    subestado_values = json.loads(concurso.subestado)
+                    if not isinstance(subestado_values, list):
+                        subestado_values = [subestado_values]
+                    
+                    firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                    if firmado_subestado not in subestado_values:
+                        subestado_values.append(firmado_subestado)
+                        
+                    concurso.subestado = json.dumps(subestado_values)
+                except (json.JSONDecodeError, TypeError):
+                    firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                    concurso.subestado = json.dumps([firmado_subestado])
+            else:
+                firmado_subestado = f"firmado:{template_config.subestado_al_subir_firmado}"
+                concurso.subestado = json.dumps([firmado_subestado])
+        
+        # Add entry to history
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado="DOCUMENTO_SUBIDA_DIRECTA",
+            observaciones=f"Documento {document_type_key} creado por subida directa por {get_current_username()}"
+        )
+        db.session.add(historial)
+        
+        db.session.commit()
+        flash(f'Documento {template_config.display_name} subido exitosamente y marcado como firmado. <a href="{web_view_link}" target="_blank" class="alert-link">Ver documento</a>', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al subir el documento: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
 

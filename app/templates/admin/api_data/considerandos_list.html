@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Considerandos Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Considerandos Management</h4>
+                    <a href="{{ url_for('admin_api_data.considerandos_new') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Considerando
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>About Considerandos:</strong> These are document templates used for generating resolutions and other legal documents. 
+                        They replace the external Google Script API that was previously used.
+                    </div>
+                    
+                    {% if considerandos %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Tipo de Documento</th>
+                                    <th>Visibilidad</th>
+                                    <th>Considerandos</th>
+                                    <th>Creado</th>
+                                    <th>Actualizado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for considerando in considerandos %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ considerando.document_type }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ considerando.document_type.replace('_', ' ').title() }}</small>
+                                    </td>                                    <td>
+                                        <span class="badge badge-{{ 'success' if considerando.visibility == 'regular' else 'warning' }}">
+                                            {{ considerando.visibility.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info">
+                                            {{ considerando.considerandos_data|length if considerando.considerandos_data else 0 }} items
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ considerando.created_at.strftime('%Y-%m-%d %H:%M') if considerando.created_at else 'N/A' }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ considerando.updated_at.strftime('%Y-%m-%d %H:%M') if considerando.updated_at else 'N/A' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('admin_api_data.considerandos_edit', id=considerando.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    onclick="confirmDelete('{{ considerando.document_type }}', {{ considerando.id }})"
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No considerandos found</h5>
+                        <p class="text-muted">Start by adding your first considerando template.</p>
+                        <a href="{{ url_for('admin_api_data.considerandos_new') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add First Considerando
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the considerando "<strong id="deleteItemName"></strong>"?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted {
+        color: #6c757d !important; /* Adjusted for better readability */
+    }
+    .table-dark th {
+        color: black !important; /* Table headers font color */
+    }
+    .badge {
+        color: black !important; /* Visibility column font color */
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(itemName, itemId) {
+    document.getElementById('deleteItemName').textContent = itemName;
+    document.getElementById('deleteForm').action = "{{ url_for('admin_api_data.considerandos_delete', id=0) }}".replace('0', itemId);
+    $('#deleteModal').modal('show');
+}
+</script>
+{% endblock %}

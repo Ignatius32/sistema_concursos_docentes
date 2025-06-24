@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if head else 'Add' }} Departamento Head{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ 'Edit' if head else 'Add New' }} Departamento Head</h4>
+                    <a href="{{ url_for('admin_api_data.departamento_heads_list') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Tip:</strong> The prefix field should be gender-appropriate (e.g., "el Director", "la Directora") 
+                        for use in official documents.
+                    </div>
+                    
+                    <form method="POST" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="departamento" class="form-label">Departamento *</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="departamento" 
+                                           name="departamento" 
+                                           value="{{ data.departamento if data else '' }}"
+                                           required
+                                           placeholder="e.g., BIOLOGÍA GENERAL">
+                                    <div class="invalid-feedback">
+                                        Please provide a departamento name.
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Use uppercase for consistency with existing data
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="responsable" class="form-label">Responsable</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="responsable" 
+                                           name="responsable" 
+                                           value="{{ data.responsable if data else '' }}"
+                                           placeholder="e.g., Dr. Juan PÉREZ">
+                                    <small class="form-text text-muted">
+                                        Include title and full name (e.g., Dr., Dra., Prof.)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="correo" class="form-label">Correo</label>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           id="correo" 
+                                           name="correo" 
+                                           value="{{ data.correo if data else '' }}"
+                                           placeholder="e.g., departamento@comahue.edu.ar">
+                                    <div class="invalid-feedback">
+                                        Please provide a valid email address.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="prefijo" class="form-label">Prefijo</label>
+                                    <select class="form-control" id="prefijo" name="prefijo">
+                                        <option value="">Select prefix</option>
+                                        <option value="el Director" {{ 'selected' if data and data.prefijo == 'el Director' else '' }}>el Director</option>
+                                        <option value="la Directora" {{ 'selected' if data and data.prefijo == 'la Directora' else '' }}>la Directora</option>
+                                        <option value="el Delegado Departamental" {{ 'selected' if data and data.prefijo == 'el Delegado Departamental' else '' }}>el Delegado Departamental</option>
+                                        <option value="la Delegada Departamental" {{ 'selected' if data and data.prefijo == 'la Delegada Departamental' else '' }}>la Delegada Departamental</option>
+                                        <option value="el Responsable" {{ 'selected' if data and data.prefijo == 'el Responsable' else '' }}>el Responsable</option>
+                                        <option value="la Responsable" {{ 'selected' if data and data.prefijo == 'la Responsable' else '' }}>la Responsable</option>
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        Gender-appropriate prefix for official documents
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {{ 'Update' if head else 'Create' }} Departamento Head
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Bootstrap form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock %}

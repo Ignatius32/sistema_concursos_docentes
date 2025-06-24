@@ -126,14 +126,23 @@
                                 <li><a class="dropdown-item" href="{{ url_for('admin_personas.list_personas') }}">Administrar</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('admin_sync.sync_dashboard') }}">Sincronizar</a></li>
                             </ul>
-                        </li>
-                        <li class="nav-item dropdown">
+                        </li>                        <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="plantillasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Plantillas
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ url_for('notifications.list_notification_campaigns') }}">Notificaciones</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('admin_templates.index') }}">Documentos</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('notifications.list_notification_campaigns') }}">Notificaciones</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="datosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Datos
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('admin_api_data.considerandos_list') }}">Considerandos</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin_api_data.departamento_heads_list') }}">Responsables de Depto.</a></li>
                             </ul>
                         </li>
                     {% elif keycloak_is_tribunal %}

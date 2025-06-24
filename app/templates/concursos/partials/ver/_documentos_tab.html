@@ -7,10 +7,14 @@
                 <div class="btn-group">
                     <button type="button" class="btn btn-tribunal-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                         Generar Documento
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    </button>                    <ul class="dropdown-menu dropdown-menu-end">
                         {% for doc in available_documents %}
+                        {% set doc_config = template_configs_dict.get(doc.id) %}
+                        {% if doc_config and doc_config.subida_directa %}
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#generarSubidaDirectaModal{{ doc.id }}">{{ doc.name }}</a></li>
+                        {% else %}
                         <li><a class="dropdown-item" href="{{ doc.url }}">{{ doc.name }}</a></li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                 </div>
@@ -22,7 +26,7 @@
                 <table class="table table-striped table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th>Tipo</th>
+                            <th>Documento</th>
                             <th>Estado</th>
                             <th>Fecha Generación</th>
                             <th>Acciones</th>
@@ -30,9 +34,30 @@
                     </thead>
                     <tbody>
                         {% for documento in concurso.documentos|sort(attribute='creado', reverse=true) %}
-                        <tr>
-                            <td>
-                                {{ documento.get_friendly_name() }}
+                        <tr>                            <td>
+                                {{ documento.get_template_display_name() }}
+                                {% set t_config = template_configs_dict.get(documento.tipo) %}
+                                {% if t_config %}
+                                    {% if t_config.es_res and documento.nro_res %}
+                                        <br><small class="text-muted">                                        <span class="badge bg-info">
+                                            {% if documento.tipo_res %}{{ documento.tipo_res }} {% endif %}{{ documento.nro_res }}
+                                        </span>
+                                            {% if documento.fecha_res %}
+                                                <span class="text-muted ms-1">{{ documento.fecha_res.strftime('%d/%m/%Y') }}</span>
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                    {% if t_config.subida_directa %}
+                                        <span class="badge bg-secondary ms-1" title="Permite subida directa">
+                                            <i class="bi bi-upload"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if t_config.parentesco %}
+                                        <span class="badge bg-info ms-1" title="Documento con parentesco: {{ t_config.parentesco }}">
+                                            <i class="bi bi-info-circle"></i>
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td>
                                 {% if documento.estado == 'FIRMADO' %}
@@ -78,9 +103,7 @@
                                     data-bs-target="#enviarFirmaModal{{ documento.id }}">
                                 <i class="bi bi-envelope"></i> Enviar para firma
                             </button>
-                            {% endif %}
-                            
-                            {% if documento.estado != 'FIRMADO' and concurso.documentos_firmados_folder_id %}
+                            {% endif %}                            {% if documento.estado != 'FIRMADO' and concurso.documentos_firmados_folder_id %}
                             <button type="button" class="btn btn-sm btn-tribunal-success" 
                                     data-bs-toggle="modal" 
                                     data-bs-target="#subirFirmadoModal{{ documento.id }}">
@@ -139,8 +162,7 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Modal para subir documento firmado -->
+                          <!-- Modal para subir documento firmado -->
                         <div class="modal fade" id="subirFirmadoModal{{ documento.id }}" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -155,6 +177,78 @@
                                                 <label for="documento_firmado{{ documento.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
                                                 <input type="file" class="form-control" id="documento_firmado{{ documento.id }}" name="documento_firmado" required>
                                             </div>
+                                            
+                                            {% set t_config = template_configs_dict.get(documento.tipo) %}
+                                            {% if t_config and t_config.es_res %}
+                                            <!-- Resolution-specific fields -->
+                                            <hr>
+                                            <h6 class="mb-3">Información de Resolución</h6>                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="numero_resolucion{{ documento.id }}" class="form-label">Número de Resolución *</label>
+                                                        <input type="text" class="form-control" id="numero_resolucion{{ documento.id }}" 
+                                                               name="numero_resolucion" value="{{ documento.nro_res or '' }}" required
+                                                               placeholder="Ej: 123/2025">
+                                                    </div>
+                                                </div>                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="tipo_resolucion{{ documento.id }}" class="form-label">Tipo de Resolución *</label>
+                                                        <select class="form-control" id="tipo_resolucion{{ documento.id }}" name="tipo_resolucion" required>
+                                                            <option value="">Seleccione un tipo...</option>
+                                                            <optgroup label="Consejo Directivo CRUB">
+                                                                <option value="Resolución CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución CD CRUB' else '' }}>Resolución CD CRUB</option>
+                                                                <option value="Resolución Refrenda CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Refrenda CD CRUB' else '' }}>Resolución Refrenda CD CRUB</option>
+                                                                <option value="Resolución Rect. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Rect. CD CRUB' else '' }}>Resolución Rect. CD CRUB</option>
+                                                                <option value="Resolución Mod. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Mod. CD CRUB' else '' }}>Resolución Mod. CD CRUB</option>
+                                                                <option value="Resolución Ratif. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ratif. CD CRUB' else '' }}>Resolución Ratif. CD CRUB</option>
+                                                            </optgroup>
+                                                            <optgroup label="Decanato CRUB">
+                                                                <option value="Resolución Ad. Ref. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ad. Ref. CRUB' else '' }}>Resolución Ad. Ref. CRUB</option>
+                                                                <option value="Resolución CRUB" {{ 'selected' if documento.tipo_res == 'Resolución CRUB' else '' }}>Resolución CRUB</option>
+                                                                <option value="Resolución Ad. Ref. Rect. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ad. Ref. Rect. CRUB' else '' }}>Resolución Ad. Ref. Rect. CRUB</option>
+                                                                <option value="Resolución Ad. Ref. Mod. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ad. Ref. Mod. CRUB' else '' }}>Resolución Ad. Ref. Mod. CRUB</option>
+                                                                <option value="Resolución Ad. Ref. Ratif. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ad. Ref. Ratif. CRUB' else '' }}>Resolución Ad. Ref. Ratif. CRUB</option>
+                                                                <option value="Resolución Rect. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Rect. CRUB' else '' }}>Resolución Rect. CRUB</option>
+                                                                <option value="Resolución Mod. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Mod. CRUB' else '' }}>Resolución Mod. CRUB</option>
+                                                                <option value="Resolución Ratif. CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Ratif. CRUB' else '' }}>Resolución Ratif. CRUB</option>
+                                                            </optgroup>
+                                                            <optgroup label="Consejo Superior">
+                                                                <option value="Ordenanza" {{ 'selected' if documento.tipo_res == 'Ordenanza' else '' }}>Ordenanza</option>
+                                                                <option value="Ordenanza Rect. CD CRUB" {{ 'selected' if documento.tipo_res == 'Ordenanza Rect. CD CRUB' else '' }}>Ordenanza Rect. CD CRUB</option>
+                                                                <option value="Ordenanza Mod. CD CRUB" {{ 'selected' if documento.tipo_res == 'Ordenanza Mod. CD CRUB' else '' }}>Ordenanza Mod. CD CRUB</option>
+                                                                <option value="Ordenanza Ratif. CD CRUB" {{ 'selected' if documento.tipo_res == 'Ordenanza Ratif. CD CRUB' else '' }}>Ordenanza Ratif. CD CRUB</option>
+                                                            </optgroup>
+                                                            <optgroup label="Rectorado">
+                                                                <option value="Resolución Rectoral" {{ 'selected' if documento.tipo_res == 'Resolución Rectoral' else '' }}>Resolución Rectoral</option>
+                                                                <option value="Resolución Rectoral Rect. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Rectoral Rect. CD CRUB' else '' }}>Resolución Rectoral Rect. CD CRUB</option>
+                                                                <option value="Resolución Rectoral Mod. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Rectoral Mod. CD CRUB' else '' }}>Resolución Rectoral Mod. CD CRUB</option>
+                                                                <option value="Resolución Rectoral Ratif. CD CRUB" {{ 'selected' if documento.tipo_res == 'Resolución Rectoral Ratif. CD CRUB' else '' }}>Resolución Rectoral Ratif. CD CRUB</option>
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="mb-3">
+                                                        <label for="fecha_resolucion{{ documento.id }}" class="form-label">Fecha de Resolución *</label>
+                                                        <input type="date" class="form-control" id="fecha_resolucion{{ documento.id }}" 
+                                                               name="fecha_resolucion" value="{{ documento.fecha_res.strftime('%Y-%m-%d') if documento.fecha_res else '' }}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="articulado{{ documento.id }}" class="form-label">Articulado (opcional)</label>
+                                                <input type="text" class="form-control" id="articulado{{ documento.id }}" 
+                                                       name="articulado" value="{{ documento.articulado or '' }}"
+                                                       placeholder="Ej: Art. 15, inc. a)">
+                                                <small class="form-text text-muted">Referencia a artículos específicos si aplica</small>
+                                            </div>                                            {% if documento.tipo_res %}
+                                            <div class="alert alert-info">
+                                                <small><strong>Tipo de resolución:</strong> {{ documento.tipo_res }}</small>
+                                            </div>
+                                            {% endif %}
+                                            {% endif %}
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -242,11 +336,105 @@
                 </tr>                    {% else %}
                     <tr>
                         <td colspan="4" class="text-center">No hay documentos generados</td>
-                    </tr>
-                    {% endfor %}
+                    </tr>                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+    
+    <!-- Modals for direct upload documents -->
+    {% for doc in available_documents %}
+    {% set doc_config = template_configs_dict.get(doc.id) %}
+    {% if doc_config and doc_config.subida_directa %}
+    <div class="modal fade" id="generarSubidaDirectaModal{{ doc.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Subir {{ doc.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('concursos.crear_documento_subida_directa', concurso_id=concurso.id, document_type_key=doc.id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <p>Seleccione el archivo para subir como <strong>{{ doc.name }}</strong>. El documento será marcado como firmado directamente.</p>
+                        <div class="mb-3">
+                            <label for="documento_directo{{ doc.id }}" class="form-label">Archivo (PDF, DOC, DOCX)</label>
+                            <input type="file" class="form-control" id="documento_directo{{ doc.id }}" name="documento_firmado" required>
+                        </div>
+                        
+                        {% if doc_config.es_res %}
+                        <!-- Resolution-specific fields -->
+                        <hr>
+                        <h6 class="mb-3">Información de Resolución</h6>                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="numero_resolucion_directo{{ doc.id }}" class="form-label">Número de Resolución *</label>
+                                    <input type="text" class="form-control" id="numero_resolucion_directo{{ doc.id }}" 
+                                           name="numero_resolucion" required
+                                           placeholder="Ej: 123/2025">
+                                </div>
+                            </div>                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tipo_resolucion_directo{{ doc.id }}" class="form-label">Tipo de Resolución *</label>
+                                    <select class="form-control" id="tipo_resolucion_directo{{ doc.id }}" name="tipo_resolucion" required>
+                                        <option value="">Seleccione un tipo...</option>
+                                        <optgroup label="Consejo Directivo CRUB">
+                                            <option value="Resolución CD CRUB">Resolución CD CRUB</option>
+                                            <option value="Resolución Refrenda CD CRUB">Resolución Refrenda CD CRUB</option>
+                                            <option value="Resolución Rect. CD CRUB">Resolución Rect. CD CRUB</option>
+                                            <option value="Resolución Mod. CD CRUB">Resolución Mod. CD CRUB</option>
+                                            <option value="Resolución Ratif. CD CRUB">Resolución Ratif. CD CRUB</option>
+                                        </optgroup>
+                                        <optgroup label="Decanato CRUB">
+                                            <option value="Resolución Ad. Ref. CRUB">Resolución Ad. Ref. CRUB</option>
+                                            <option value="Resolución CRUB">Resolución CRUB</option>
+                                            <option value="Resolución Ad. Ref. Rect. CRUB">Resolución Ad. Ref. Rect. CRUB</option>
+                                            <option value="Resolución Ad. Ref. Mod. CRUB">Resolución Ad. Ref. Mod. CRUB</option>
+                                            <option value="Resolución Ad. Ref. Ratif. CRUB">Resolución Ad. Ref. Ratif. CRUB</option>
+                                            <option value="Resolución Rect. CRUB">Resolución Rect. CRUB</option>
+                                            <option value="Resolución Mod. CRUB">Resolución Mod. CRUB</option>
+                                            <option value="Resolución Ratif. CRUB">Resolución Ratif. CRUB</option>
+                                        </optgroup>
+                                        <optgroup label="Consejo Superior">
+                                            <option value="Ordenanza">Ordenanza</option>
+                                            <option value="Ordenanza Rect. CD CRUB">Ordenanza Rect. CD CRUB</option>
+                                            <option value="Ordenanza Mod. CD CRUB">Ordenanza Mod. CD CRUB</option>
+                                            <option value="Ordenanza Ratif. CD CRUB">Ordenanza Ratif. CD CRUB</option>
+                                        </optgroup>
+                                        <optgroup label="Rectorado">
+                                            <option value="Resolución Rectoral">Resolución Rectoral</option>
+                                            <option value="Resolución Rectoral Rect. CD CRUB">Resolución Rectoral Rect. CD CRUB</option>
+                                            <option value="Resolución Rectoral Mod. CD CRUB">Resolución Rectoral Mod. CD CRUB</option>
+                                            <option value="Resolución Rectoral Ratif. CD CRUB">Resolución Rectoral Ratif. CD CRUB</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="fecha_resolucion_directo{{ doc.id }}" class="form-label">Fecha de Resolución *</label>
+                                    <input type="date" class="form-control" id="fecha_resolucion_directo{{ doc.id }}" 
+                                           name="fecha_resolucion" required>
+                                </div>
+                            </div>
+                        </div>                        <div class="mb-3">
+                            <label for="articulado_directo{{ doc.id }}" class="form-label">Articulado (opcional)</label>
+                            <input type="text" class="form-control" id="articulado_directo{{ doc.id }}" 
+                                   name="articulado" placeholder="Ej: Art. 15, inc. a)">
+                            <small class="form-text text-muted">Referencia a artículos específicos si aplica</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Subir y Marcar como Firmado</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
 </div>
 </div>

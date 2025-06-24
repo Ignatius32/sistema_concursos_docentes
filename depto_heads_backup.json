@@ -1,0 +1,134 @@
+[
+  {
+    "departamento": "BIOLOGÍA GENERAL",
+    "responsable": "Dr. Eduardo ZATTARA",
+    "correo": "departamentobiologia@comahue-conicet.gob.ar",
+    "prefijo": "el Director"
+  },
+  {
+    "departamento": "BIOMÉDICO",
+    "responsable": "",
+    "correo": "",
+    "prefijo": ""
+  },
+  {
+    "departamento": "BOTÁNICA",
+    "responsable": "Dra. Vidal RUSSEL",
+    "correo": "vidalrussell@comahue-conicet.gob.ar",
+    "prefijo": "la Directora"
+  },
+  {
+    "departamento": "CIENCIAS POLÍTICAS Y SOCIALES",
+    "responsable": "",
+    "correo": "",
+    "prefijo": ""
+  },
+  {
+    "departamento": "COMPUTACIÓN APLICADA",
+    "responsable": "Prof. Esp. Inés ALDER",
+    "correo": "departamento.didacticacrub@gmail.com",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "DIDÁCTICA",
+    "responsable": "Prof. Esp. Inés ALDER",
+    "correo": "departamento.didacticacrub@gmail.com",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "ECOLOGÍA",
+    "responsable": "Dra. Marcela BASTIDAS NAVARRO",
+    "correo": "mbastidas@comahue-conicet.gob.ar",
+    "prefijo": "la Directora"
+  },
+  {
+    "departamento": "EDUCACIÓN FÍSICA",
+    "responsable": "Prof. Eduardo LÓPEZ",
+    "correo": "depto.educacionfisica.crub@gmail.com",
+    "prefijo": "el Director"
+  },
+  {
+    "departamento": "ENFERMERÍA",
+    "responsable": "Lic. Carolina SUÁREZ",
+    "correo": "coordinacionenfermeria_crub@hotmail.com",
+    "prefijo": "la Coordinadora de la Carrera responsable"
+  },
+  {
+    "departamento": "ESTADÍSTICA",
+    "responsable": "Dra. Gilda GARIBOTI",
+    "correo": "garibottig@comahue-conicet.gob.ar",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "EXPLOTACIÓN DE RECURSOS ACUÁTICOS",
+    "responsable": "Dr. Patricio Jorge MACCHI",
+    "correo": "patriciomacchi@yahoo.com.ar",
+    "prefijo": "el Director"
+  },
+  {
+    "departamento": "FILOSOFÍA",
+    "responsable": "",
+    "correo": "",
+    "prefijo": ""
+  },
+  {
+    "departamento": "FÍSICA",
+    "responsable": "Dra. Viviana ZIMMERMAN",
+    "correo": "fisica@crub.uncoma.edu.ar",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "GEOLOGÍA Y PETRÓLEO",
+    "responsable": "Dr. Gustavo VILLAROSA",
+    "correo": "gvillarosa@gmail.com",
+    "prefijo": "el Delegado Departamental"
+  },
+  {
+    "departamento": "IDIOMAS EXTRANJEROS CON PROPÓSITOS ESPECÍFICOS",
+    "responsable": "Prof. Cecilia RIVAS",
+    "correo": "mariacecilia.rivas@crub.uncoma.edu.ar",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "INGENIERÍA CIVIL",
+    "responsable": "",
+    "correo": "",
+    "prefijo": ""
+  },
+  {
+    "departamento": "MATEMÁTICA",
+    "responsable": "Prof. Martha FERRERO y Prof. Viviana RAMIREZ",
+    "correo": "departamento.matematica.crub@gmail.com",
+    "prefijo": "las Delegadas Departamentales"
+  },
+  {
+    "departamento": "MECÁNICA APLICADA",
+    "responsable": "",
+    "correo": "",
+    "prefijo": ""
+  },
+  {
+    "departamento": "POLÍTICA EDUCACIONAL",
+    "responsable": "Prof. Marisa FERNANDEZ",
+    "correo": "marisafernandezromero@yahoo.com.ar",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "PSICOLOGÍA",
+    "responsable": "Dr. Máximo TRENCH",
+    "correo": "maximo.trench@crub.uncoma.edu.ar",
+    "prefijo": "el Delegado Departamental"
+  },
+  {
+    "departamento": "QUÍMICA",
+    "responsable": " Dra. Daniela NICHELA",
+    "correo": "delegacion.quimica@crub.uncoma.edu.ar",
+    "prefijo": "la Delegada Departamental"
+  },
+  {
+    "departamento": "ZOOLOGÍA",
+    "responsable": "Dr. Marcelo KUN",
+    "correo": "departamento.zoologia@crub.uncoma.edu.ar",
+    "prefijo": "el Director"
+  }
+]
