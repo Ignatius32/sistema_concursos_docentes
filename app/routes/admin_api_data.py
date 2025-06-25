@@ -9,6 +9,42 @@ from app.utils.keycloak_auth import admin_required
 from app.services.placeholder_resolver import get_core_placeholders
 import json
 
+def decode_unicode_in_json(data):
+    """
+    Recursively decode Unicode escape sequences and fix UTF-8 encoding issues in JSON data.
+    Handles nested dictionaries, lists, and string values.
+    """
+    if isinstance(data, dict):
+        return {key: decode_unicode_in_json(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [decode_unicode_in_json(item) for item in data]
+    elif isinstance(data, str):
+        try:
+            # First try to fix UTF-8 mojibake (like renunciÃ³ -> renunció)
+            # This handles cases where UTF-8 was incorrectly decoded as Latin-1
+            if 'Ã' in data or 'Ã¡' in data or 'Ã©' in data or 'Ã­' in data or 'Ã³' in data or 'Ãº' in data or 'Ã±' in data:
+                try:
+                    fixed_data = data.encode('latin-1').decode('utf-8')
+                    data = fixed_data
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
+            
+            # Then try to decode Unicode escape sequences (like \u00e1 -> á)
+            if '\\u' in data:
+                try:
+                    # Handle Unicode escape sequences
+                    decoded_data = data.encode().decode('unicode-escape')
+                    data = decoded_data
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
+            
+            return data
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            # If all decoding fails, return original string
+            return data
+    else:
+        return data
+
 # Create a blueprint for admin API data management routes
 admin_api_data_bp = Blueprint('admin_api_data', __name__, url_prefix='/admin/api-data')
 
@@ -17,6 +53,16 @@ admin_api_data_bp = Blueprint('admin_api_data', __name__, url_prefix='/admin/api
 def considerandos_list():
     """List all considerandos."""
     considerandos = Considerandos.query.filter_by(is_active=True).order_by(Considerandos.document_type).all()
+    
+    # Decode Unicode characters in considerandos data for better readability
+    for considerando in considerandos:
+        if considerando.considerandos_data:
+            decoded_data = decode_unicode_in_json(considerando.considerandos_data)
+            # Format as pretty JSON string for display
+            considerando.considerandos_data_decoded = json.dumps(decoded_data, indent=2, ensure_ascii=False)
+        else:
+            considerando.considerandos_data_decoded = "{}"
+    
     return render_template('admin/api_data/considerandos_list.html', considerandos=considerandos)
 
 @admin_api_data_bp.route('/considerandos/new', methods=['GET', 'POST'])
@@ -130,10 +176,11 @@ def considerandos_edit(id):
             flash(f'Error updating considerando: {str(e)}', 'error')
     
     # For GET request, prepare data for form
+    decoded_data = decode_unicode_in_json(considerando.considerandos_data) if considerando.considerandos_data else {}
     data = {
         'document_type': considerando.document_type,
         'visibility': considerando.visibility,
-        'considerandos_data': json.dumps(considerando.considerandos_data, indent=2)
+        'considerandos_data': json.dumps(decoded_data, indent=2, ensure_ascii=False)
     }
     
     return render_template('admin/api_data/considerandos_form.html', considerando=considerando, data=data)

@@ -45,6 +45,15 @@
                                         <span class="badge badge-info">
                                             {{ considerando.considerandos_data|length if considerando.considerandos_data else 0 }} items
                                         </span>
+                                        {% if considerando.considerandos_data_decoded and considerando.considerandos_data_decoded != '{}' %}
+                                        <button type="button" class="btn btn-sm btn-outline-info ms-1" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse-{{ considerando.id }}" 
+                                                aria-expanded="false" 
+                                                title="View JSON data">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <small>{{ considerando.created_at.strftime('%Y-%m-%d %H:%M') if considerando.created_at else 'N/A' }}</small>
@@ -71,6 +80,18 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Collapsible JSON Data Views -->
+                    {% for considerando in considerandos %}
+                    {% if considerando.considerandos_data_decoded and considerando.considerandos_data_decoded != '{}' %}
+                    <div class="collapse mt-3" id="collapse-{{ considerando.id }}">
+                        <div class="card card-body">
+                            <h6>Considerandos Data for "{{ considerando.document_type }}":</h6>
+                            <pre class="bg-light p-3 rounded json-preview"><code>{{ considerando.considerandos_data_decoded | safe }}</code></pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
                     {% else %}
                     <div class="text-center py-5">
                         <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
@@ -118,6 +139,13 @@
     }
     .badge {
         color: black !important; /* Visibility column font color */
+    }
+    .json-preview {
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 0.9em;
+        white-space: pre-wrap;
+        word-break: break-word;
     }
 </style>
 {% endblock %}
