@@ -15,7 +15,17 @@
                 </li>
                 <li class="breadcrumb-item active" aria-current="page">Concurso #{{ concurso.id }}</li>
             </ol>            <div class="d-flex align-items-center">
+                {% if current_user.is_admin %}
+                <span class="badge badge-tribunal-primary me-2 cursor-pointer" 
+                      style="background-color: #2563eb !important; color: white !important;" 
+                      data-bs-toggle="modal" 
+                      data-bs-target="#editarEstadoModal"
+                      title="Clic para editar estado">
+                    Estado: {{ concurso.estado_actual }}
+                </span>
+                {% else %}
                 <span class="badge badge-tribunal-primary me-2" style="background-color: #2563eb !important; color: white !important;">Estado: {{ concurso.estado_actual }}</span>
+                {% endif %}
                 {% if concurso.subestado %}
                     {% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}
                     {% if subestado_values is iterable and (subestado_values is not string) %}
@@ -138,6 +148,64 @@
 <!-- Modal de confirmación de eliminación -->
 {% include 'concursos/partials/ver/_eliminar_concurso_modal.html' %}
 
+<!-- Modal para editar estado y subestado -->
+<div class="modal fade" id="editarEstadoModal" tabindex="-1" aria-labelledby="editarEstadoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarEstadoModalLabel">
+                    <i class="bi bi-pencil-square"></i> Editar Estado y Subestado
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="{{ url_for('concursos.actualizar_estado', concurso_id=concurso.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="estadoInput" class="form-label">Estado:</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="estadoInput" 
+                               name="estado" 
+                               value="{{ concurso.estado_actual }}" 
+                               required 
+                               placeholder="Ej: CREADO, EN_TRAMITE, FINALIZADO">
+                        <div class="form-text">Estado actual del concurso</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="subestadoInput" class="form-label">Subestado:</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="subestadoInput" 
+                               name="subestado" 
+                               value="{% if concurso.subestado %}{% set subestado_values = concurso.subestado|fromjson if concurso.subestado else [] %}{% if subestado_values is iterable and (subestado_values is not string) %}{{ subestado_values|join(', ') }}{% else %}{{ concurso.subestado }}{% endif %}{% endif %}" 
+                               placeholder="Ej: firmado:acta_cierre, en_revision, pendiente_tribunal">
+                        <div class="form-text">Subestados separados por comas. Use "firmado:" como prefijo para documentos firmados.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacionesInput" class="form-label">Observaciones (opcional):</label>
+                        <textarea class="form-control" 
+                                  id="observacionesInput" 
+                                  name="observaciones" 
+                                  rows="3" 
+                                  placeholder="Motivo del cambio de estado..."></textarea>
+                        <div class="form-text">Información adicional sobre el cambio</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Actualizar Estado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de confirmación de eliminación de temas -->
 {% include 'concursos/partials/ver/_reset_temas_modal.html' %}
 
@@ -175,6 +243,15 @@
 .badge-tribunal-warning { background-color: #d97706 !important; color: white !important; }
 .badge-tribunal-info { background-color: #0891b2 !important; color: white !important; }
 
+.cursor-pointer {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.cursor-pointer:hover {
+    opacity: 0.8;
+}
+
 .temas-list {
     display: flex;
     flex-wrap: wrap;
@@ -209,6 +286,38 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!tkdFileInput.files.length && !hasTkdFileId) {
                 e.preventDefault();
                 alert('Debe subir un archivo PDF para el TKD');
+                return false;
+            }
+        });
+    }
+    
+    // Handle estado modal opening
+    const editarEstadoModal = document.getElementById('editarEstadoModal');
+    if (editarEstadoModal) {
+        editarEstadoModal.addEventListener('show.bs.modal', function (event) {
+            // Reset the form when modal opens
+            const form = editarEstadoModal.querySelector('form');
+            const estadoInput = document.getElementById('estadoInput');
+            const subestadoInput = document.getElementById('subestadoInput');
+            const observacionesInput = document.getElementById('observacionesInput');
+            
+            // Focus on the estado input when modal opens
+            setTimeout(() => {
+                estadoInput.focus();
+                estadoInput.select();
+            }, 150);
+            
+            // Clear observaciones
+            observacionesInput.value = '';
+        });
+        
+        // Handle form submission validation
+        const estadoForm = editarEstadoModal.querySelector('form');
+        estadoForm.addEventListener('submit', function(e) {
+            const estadoValue = document.getElementById('estadoInput').value.trim();
+            if (!estadoValue) {
+                e.preventDefault();
+                alert('El estado es requerido');
                 return false;
             }
         });

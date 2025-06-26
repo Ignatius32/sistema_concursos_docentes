@@ -520,3 +520,63 @@ def eliminar(concurso_id):
         flash(f'Error al eliminar el concurso: {str(e)}', 'danger')
     
     return redirect(url_for('concursos.index'))
+
+@concursos.route('/<int:concurso_id>/actualizar_estado', methods=['POST'])
+@keycloak_login_required
+@admin_required
+def actualizar_estado(concurso_id):
+    """Update estado and subestado manually."""
+    import json
+    
+    concurso = Concurso.query.get_or_404(concurso_id)
+    
+    try:
+        # Get the new values from the form
+        nuevo_estado = request.form.get('estado', '').strip()
+        nuevo_subestado = request.form.get('subestado', '').strip()
+        observaciones = request.form.get('observaciones', '').strip()
+        
+        if not nuevo_estado:
+            flash('El estado es requerido.', 'danger')
+            return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+        
+        # Store original values for history
+        estado_anterior = concurso.estado_actual
+        subestado_anterior = concurso.subestado
+        
+        # Update estado
+        concurso.estado_actual = nuevo_estado
+        
+        # Handle subestado - if it's provided, store as JSON array
+        if nuevo_subestado:
+            # Split by comma and clean up
+            subestados_list = [s.strip() for s in nuevo_subestado.split(',') if s.strip()]
+            concurso.subestado = json.dumps(subestados_list) if subestados_list else None
+        else:
+            concurso.subestado = None
+        
+        # Create history entry
+        obs_text = f"Estado actualizado manualmente por {get_current_username()}"
+        if observaciones:
+            obs_text += f". Observaciones: {observaciones}"
+        if estado_anterior != nuevo_estado:
+            obs_text += f" (Estado anterior: {estado_anterior})"
+        if subestado_anterior != concurso.subestado:
+            obs_text += f" (Subestado anterior: {subestado_anterior or 'ninguno'})"
+            
+        historial = HistorialEstado(
+            concurso=concurso,
+            estado=nuevo_estado,
+            subestado_snapshot=concurso.subestado,
+            observaciones=obs_text
+        )
+        db.session.add(historial)
+        db.session.commit()
+        
+        flash('Estado y subestado actualizados exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar estado: {str(e)}', 'danger')
+    
+    return redirect(url_for('concursos.ver', concurso_id=concurso_id))

@@ -438,14 +438,19 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 )
                 db.session.add(log)
                 failed_count += 1
-        db.session.commit()        # Update concurso estado and subestado if configured
+        db.session.commit()
+        
+        # Update concurso estado and subestado if configured
+        current_app.logger.info(f"Checking estado update: sent_count={sent_count}, campaign.estado_al_enviar='{campaign.estado_al_enviar}'")
         if sent_count > 0 and campaign.estado_al_enviar:
             try:
+                current_app.logger.info(f"Updating concurso {concurso_id} estado from '{concurso.estado_actual}' to '{campaign.estado_al_enviar}'")
                 old_estado = concurso.estado_actual
                 old_subestado = concurso.subestado
                 
                 concurso.estado_actual = campaign.estado_al_enviar
                 if campaign.subestado_al_enviar:
+                    current_app.logger.info(f"Processing subestado update: current='{concurso.subestado}', adding='{campaign.subestado_al_enviar}'")
                     # Handle subestado accumulation
                     if concurso.subestado:
                         try:
@@ -461,12 +466,16 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                         if campaign.subestado_al_enviar not in subestado_values:
                             subestado_values.append(campaign.subestado_al_enviar)
                             concurso.subestado = json.dumps(subestado_values)
+                            current_app.logger.info(f"Updated subestado to: {concurso.subestado}")
+                        else:
+                            current_app.logger.info(f"Subestado '{campaign.subestado_al_enviar}' already exists, not adding")
                     else:
                         # If subestado is empty, initialize with a single value
                         concurso.subestado = json.dumps([campaign.subestado_al_enviar])
+                        current_app.logger.info(f"Initialized subestado with: {concurso.subestado}")
                 
                 # Create history entry for estado change
-                observaciones_parts = [f"Campaña de notificación '{campaign.titulo}' enviada exitosamente a {sent_count} destinatarios"]
+                observaciones_parts = [f"Campaña de notificación '{campaign.nombre_campana}' enviada exitosamente a {sent_count} destinatarios"]
                 if old_estado != campaign.estado_al_enviar:
                     observaciones_parts.append(f"Estado cambiado de '{old_estado}' a '{campaign.estado_al_enviar}'")
                 if campaign.subestado_al_enviar and old_subestado != concurso.subestado:
@@ -482,10 +491,12 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 db.session.add(historial)
                 
                 db.session.commit()
-                current_app.logger.info(f"Updated concurso {concurso_id} estado_actual to {campaign.estado_al_enviar}")
+                current_app.logger.info(f"Successfully updated concurso {concurso_id} estado_actual to '{campaign.estado_al_enviar}'")
             except Exception as e:
                 current_app.logger.error(f"Error updating concurso estado: {str(e)}")
                 db.session.rollback()
+        else:
+            current_app.logger.info(f"Estado update skipped: sent_count={sent_count}, estado_al_enviar='{campaign.estado_al_enviar}'")
         
         # Flash summary message
         attachment_count = len(attachment_file_ids) if attachment_file_ids else 0
@@ -506,3 +517,136 @@ def trigger_notification_campaign(concurso_id, campaign_id):
     
     # On success, redirect without opening the modal
     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+
+@notifications_bp.route('/concursos/<int:concurso_id>/notifications/campaigns/<int:campaign_id>/preview', methods=['GET'])
+@keycloak_login_required
+def preview_notification_campaign(concurso_id, campaign_id):
+    """Get preview data for a notification campaign."""
+    concurso = Concurso.query.get_or_404(concurso_id)
+    campaign = NotificationCampaign.query.get_or_404(campaign_id)
+    
+    try:
+        # Initialize set for unique email addresses
+        resolved_emails = set()
+        destination_names = {}  # Map of email -> name for personalization
+        
+        # Extract configuration from destinatarios_json
+        config = campaign.destinatarios_json
+        tribunal_destinatarios = config.get('tribunal_destinatarios', [])
+        otros_roles = config.get('otros_roles_destinatarios', [])
+        
+        # Process tribunal members based on role and claustro combinations
+        for tribunal_config in tribunal_destinatarios:
+            rol = tribunal_config.get('rol')
+            claustro = tribunal_config.get('claustro')
+            
+            if rol and claustro:
+                # Get matching tribunal members
+                miembros = TribunalMiembro.query.join(Persona).filter(
+                    TribunalMiembro.concurso_id == concurso_id,
+                    TribunalMiembro.rol == rol,
+                    TribunalMiembro.claustro == claustro
+                ).all()
+                
+                for m in miembros:
+                    if m.persona and m.persona.correo:
+                        resolved_emails.add(m.persona.correo)
+                        destination_names[m.persona.correo] = f"{m.persona.nombre} {m.persona.apellido}"
+        
+        # Process other roles to resolve emails
+        if 'postulantes' in otros_roles:
+            postulantes = Postulante.query.filter_by(concurso_id=concurso_id).all()
+            for p in postulantes:
+                if p.correo:
+                    resolved_emails.add(p.correo)
+                    destination_names[p.correo] = f"{p.nombre} {p.apellido}"
+        
+        if 'jefe_departamento' in otros_roles:
+            try:
+                departamento_nombre = concurso.departamento_rel.nombre if concurso.departamento_rel else ""
+                # Get department heads data from API
+                dept_heads_data = get_departamento_heads_data()
+                
+                if dept_heads_data:
+                    for head in dept_heads_data:
+                        if head.get('departamento') == departamento_nombre:
+                            head_email = head.get('email')
+                            if head_email:
+                                resolved_emails.add(head_email)
+                                destination_names[head_email] = head.get('nombre', 'Jefe de Departamento')
+            except Exception as e:
+                current_app.logger.warning(f"Could not get department head data: {e}")
+        
+        # Add static emails
+        static_emails = config.get('emails_estaticos', [])
+        for email in static_emails:
+            resolved_emails.add(email)
+            if email not in destination_names:
+                destination_names[email] = email  # Use email as name if no name available
+        
+        # Get core placeholders for preview
+        placeholders = get_core_placeholders(concurso_id)
+        
+        # Replace placeholders in subject and body
+        preview_subject = replace_text_with_placeholders(campaign.asunto_email, placeholders)
+        preview_body = replace_text_with_placeholders(campaign.cuerpo_email_html, placeholders)
+        
+        # Get document attachments info
+        document_attachments = []
+        if campaign.documentos_adjuntos_config:
+            for doc_config in campaign.documentos_adjuntos_config:
+                doc_tipo = doc_config.get('tipo')
+                doc_version = doc_config.get('version')
+                
+                # Get document if it exists
+                documento = DocumentoConcurso.query.filter_by(
+                    concurso_id=concurso_id,
+                    tipo=doc_tipo
+                ).order_by(DocumentoConcurso.id.desc()).first()
+                
+                # Get template config name for display
+                template_config = DocumentTemplateConfig.query.filter_by(
+                    document_type_key=doc_tipo,
+                    is_active=True
+                ).first()
+                template_name = template_config.display_name if template_config else doc_tipo
+                
+                document_attachments.append({
+                    'tipo': doc_tipo,
+                    'version': doc_version,
+                    'template_name': template_name,
+                    'exists': documento is not None,
+                    'filename': f"{template_name}_{concurso.expediente}.pdf" if documento else f"{template_name}_NO_GENERADO.pdf"
+                })
+        
+        # Get custom attachments info
+        custom_attachments = []
+        if campaign.adjuntos_personalizados:
+            for attachment_id in campaign.adjuntos_personalizados:
+                custom_attachments.append({
+                    'id': attachment_id,
+                    'name': f'Adjunto personalizado ({attachment_id[:10]}...)',
+                    'exists': True  # Assume it exists, will be verified when sending
+                })
+        
+        preview_data = {
+            'campaign_name': campaign.nombre_campana,
+            'subject': preview_subject,
+            'body_html': preview_body,
+            'recipients': [{'email': email, 'name': destination_names.get(email, email)} for email in sorted(resolved_emails)],
+            'recipient_count': len(resolved_emails),
+            'document_attachments': document_attachments,
+            'custom_attachments': custom_attachments,
+            'estado_change': {
+                'estado_actual': concurso.estado_actual,
+                'nuevo_estado': campaign.estado_al_enviar,
+                'subestado_actual': concurso.subestado,
+                'nuevo_subestado': campaign.subestado_al_enviar
+            } if campaign.estado_al_enviar else None
+        }
+        
+        return jsonify(preview_data)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating notification preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
