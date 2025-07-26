@@ -505,6 +505,22 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('form').addEventListener('submit', function(e) {
         updateTemasInput();
         console.log('Form submission temas value:', temasInput.value);
+        
+        // Get the submit button
+        const submitButton = document.querySelector('button[type="submit"]');
+        
+        // Disable the submit button to prevent double submission
+        if (submitButton) {
+            submitButton.disabled = true;
+            const originalText = submitButton.textContent;
+            const loadingText = 'Guardando cambios...';
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${loadingText}`;
+        }
+        
+        // Show Google Drive loading spinner since we might be updating folder names
+        if (window.GoogleDriveLoading) {
+            window.GoogleDriveLoading.show('Actualizando información del concurso...', 'Sincronizando cambios');
+        }
     });
 
     // Add fields visibility handling based on tipo

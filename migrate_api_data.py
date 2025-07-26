@@ -45,7 +45,7 @@ def migrate_considerandos_data():
             considerando = Considerandos(
                 document_type=item['document_type'],
                 visibility=item['visibility'],
-                unique=item['unique'],
+ 
                 considerandos_data=item['considerandos']
             )
             db.session.add(considerando)

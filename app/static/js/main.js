@@ -116,13 +116,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Loading overlay functions
+// Google Drive loading functions (replaced by google-drive-loading.js)
+// These are kept for backward compatibility but now use the Google Drive loading system
 function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('active');
+    if (window.GoogleDriveLoading) {
+        window.GoogleDriveLoading.show();
+    }
 }
 
 function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
+    if (window.GoogleDriveLoading) {
+        window.GoogleDriveLoading.hide();
+    }
 }
 
 // Handle postulante document upload
@@ -146,13 +151,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto submit form when file is selected
     fileInput?.addEventListener('change', function() {
         if (this.files.length > 0) {
-            showLoading(); // Show loading overlay before submitting
+            if (window.GoogleDriveLoading) {
+                window.GoogleDriveLoading.showFileUpload();
+            }
             documentForm?.submit();
         }
     });
 
     // Add loading overlay for form submissions
     documentForm?.addEventListener('submit', function() {
-        showLoading();
+        if (window.GoogleDriveLoading) {
+            window.GoogleDriveLoading.showFileUpload();
+        }
     });
 });

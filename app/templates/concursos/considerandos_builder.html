@@ -545,6 +545,19 @@ document.addEventListener('DOMContentLoaded', function() {
         considerandosForm.addEventListener('submit', function(e) {
             // Final update of the order before submitting
             updateConsiderandosOrder();
+            
+            // Get the submit button and disable it
+            const submitButton = document.getElementById('submitButton');
+            if (submitButton) {
+                submitButton.disabled = true;
+                const originalText = submitButton.textContent;
+                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Generando documento...`;
+            }
+            
+            // Show Google Drive loading spinner since we'll be generating a document
+            if (window.GoogleDriveLoading) {
+                window.GoogleDriveLoading.showDocumentGeneration();
+            }
         });
     }
     

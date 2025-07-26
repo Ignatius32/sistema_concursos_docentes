@@ -1,0 +1,167 @@
+<!-- 
+Example template showing how to use the JSON Editor module
+Copy this pattern for any form that needs JSON editing capabilities
+-->
+
+{% extends "base.html" %}
+
+{% block title %}JSON Editor Example{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">JSON Editor Example</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> This is an example of how to use the modular JSON editor in your forms.
+                    </div>
+                    
+                    <form method="POST" class="needs-validation" novalidate>
+                        <!-- Basic JSON field with auto-initialization -->
+                        <div class="form-group">
+                            <label for="basic-json" class="form-label">Basic JSON Field *</label>
+                            <textarea class="form-control" 
+                                      id="basic-json" 
+                                      name="basic_json" 
+                                      required
+                                      data-json-editor
+                                      data-json-editor-placeholder='Enter JSON data, e.g.:
+{
+  "key": "value",
+  "number": 123,
+  "boolean": true
+}'>{{ data.basic_json if data else '' }}</textarea>
+                            <div class="invalid-feedback">
+                                Please provide valid JSON data.
+                            </div>
+                            <small class="form-text text-muted">
+                                This field automatically initializes the JSON editor with default settings.
+                            </small>
+                        </div>
+                        
+                        <!-- Advanced JSON field with custom options -->
+                        <div class="form-group">
+                            <label for="advanced-json" class="form-label">Advanced JSON Field</label>
+                            <textarea class="form-control" 
+                                      id="advanced-json" 
+                                      name="advanced_json" 
+                                      data-json-editor
+                                      data-json-editor-tab-size="4"
+                                      data-json-editor-placeholder="Enter configuration data...">{{ data.advanced_json if data else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                This field uses 4-space indentation and custom placeholder text.
+                            </small>
+                        </div>
+                        
+                        <!-- Regular text field for comparison -->
+                        <div class="form-group">
+                            <label for="regular-field" class="form-label">Regular Text Field</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="regular-field" 
+                                   name="regular_field" 
+                                   value="{{ data.regular_field if data else '' }}"
+                                   placeholder="This is a regular input field">
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Submit Example
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="demonstrateAPI()">
+                                <i class="fas fa-code"></i> Test API Methods
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include the JSON Editor module -->
+<script src="{{ url_for('static', filename='js/json-editor.js') }}"></script>
+
+<script>
+// Bootstrap form validation with JSON editor integration
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                // Custom validation for JSON fields
+                const jsonTextareas = form.querySelectorAll('textarea[data-json-editor]');
+                let allValid = true;
+                
+                jsonTextareas.forEach(textarea => {
+                    const content = textarea.value.trim();
+                    if (content && textarea.hasAttribute('required')) {
+                        try {
+                            JSON.parse(content);
+                            textarea.setCustomValidity('');
+                        } catch (e) {
+                            textarea.setCustomValidity('Invalid JSON syntax: ' + e.message);
+                            allValid = false;
+                        }
+                    }
+                });
+                
+                if (!allValid || form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Example function to demonstrate API usage
+function demonstrateAPI() {
+    // Example of manual editor initialization (if needed)
+    // Note: editors are already auto-initialized via data-json-editor attribute
+    
+    // You can access editors by their textarea ID if you need programmatic control
+    const basicEditor = new JSONEditor('basic-json');
+    
+    // Demonstrate API methods
+    console.log('Current value:', basicEditor.getValue());
+    console.log('Is valid:', basicEditor.isValid());
+    
+    // Example: Set a sample JSON structure
+    const sampleData = {
+        example: "This is sample data",
+        array: [1, 2, 3],
+        nested: {
+            property: "value",
+            active: true
+        }
+    };
+    
+    if (confirm('Set sample data in the basic JSON field?')) {
+        basicEditor.setValue(JSON.stringify(sampleData, null, 2));
+    }
+}
+
+// Example of accessing editor instances after initialization
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        // Check if editors were initialized successfully
+        const basicTextarea = document.getElementById('basic-json');
+        const advancedTextarea = document.getElementById('advanced-json');
+        
+        if (basicTextarea.style.display === 'none') {
+            console.log('JSON editors initialized successfully');
+        }
+    }, 100);
+});
+</script>
+{% endblock %}

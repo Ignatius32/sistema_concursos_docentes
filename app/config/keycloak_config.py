@@ -9,7 +9,7 @@ class KeycloakConfig:
     """Keycloak configuration class."""
     
     # Keycloak Server Configuration
-    _server_url_raw = os.environ.get('KEYCLOAK_SERVER_URL', 'https://huayca.crub.uncoma.edu.ar/auth/')
+    _server_url_raw = os.environ.get('KEYCLOAK_SERVER_URL', 'https://huayca.crub.uncoma.edu.ar/keycloak/')
     KEYCLOAK_SERVER_URL: str = _server_url_raw.rstrip('/') + '/'  # Ensure trailing slash
     KEYCLOAK_REALM: str = os.environ.get('KEYCLOAK_REALM', 'CRUB')
     

@@ -253,7 +253,8 @@
 
             <div class="text-end">
                 <a href="{{ url_for('concursos.index') }}" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Crear Concurso</button>
+                <button type="submit" class="btn btn-primary" id="btn-crear-concurso" 
+                        data-loading-text="Creando concurso...">Crear Concurso</button>
             </div>
         </form>
     </div>
@@ -515,6 +516,25 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('form').addEventListener('submit', function(e) {
         updateTemasInput();
         console.log('Form submission temas value:', temasInput.value);
+        
+        // Get the submit button
+        const submitButton = document.getElementById('btn-crear-concurso');
+        
+        // Disable the submit button to prevent double submission
+        if (submitButton) {
+            submitButton.disabled = true;
+            const originalText = submitButton.textContent;
+            const loadingText = submitButton.dataset.loadingText || 'Procesando...';
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${loadingText}`;
+            
+            // Store original text for potential restoration
+            submitButton.dataset.originalText = originalText;
+        }
+        
+        // Show Google Drive loading spinner since we'll be creating folders
+        if (window.GoogleDriveLoading) {
+            window.GoogleDriveLoading.showFolderCreation();
+        }
     });
 });
 </script>

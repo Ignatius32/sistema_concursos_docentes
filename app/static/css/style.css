@@ -429,7 +429,4 @@ body {
     color: #ea580c;
 }
 
-/* Loading overlay */
-.loading-overlay {
-    /* This style should be completed if it's being used */
-}
+/* Google Drive loading styles are now handled inline by the JavaScript */

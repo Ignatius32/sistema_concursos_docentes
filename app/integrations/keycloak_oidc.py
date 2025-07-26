@@ -259,9 +259,14 @@ class KeycloakOIDCClient:
         This uses the Resource Owner Password Credentials (ROPC) flow.
         """
         try:
+            logger.info(f"Attempting direct authentication for user: {username}")
+            
             # Get token endpoint from OIDC configuration
             oidc_config = KeycloakConfig.get_oidc_config()
             token_endpoint = oidc_config['token_endpoint']
+            
+            logger.debug(f"Token endpoint: {token_endpoint}")
+            logger.debug(f"Client ID: {KeycloakConfig.KEYCLOAK_CLIENT_ID}")
             
             # Prepare the token request
             token_data = {
@@ -274,6 +279,10 @@ class KeycloakOIDCClient:
             }
             
             # Make the token request
+            logger.debug("Making token request to Keycloak...")
+            logger.debug(f"Request URL: {token_endpoint}")
+            logger.debug(f"Request data: {token_data}")
+            
             response = requests.post(
                 token_endpoint,
                 data=token_data,
@@ -281,30 +290,78 @@ class KeycloakOIDCClient:
                 timeout=10
             )
             
+            logger.info(f"Keycloak response status: {response.status_code}")
+            
+            # Log response details for debugging
+            if response.status_code != 200:
+                logger.error(f"Keycloak authentication failed")
+                logger.error(f"Response status: {response.status_code}")
+                logger.error(f"Response headers: {dict(response.headers)}")
+                logger.error(f"Response body: {response.text}")
+                return False
+            
             if response.status_code == 200:
                 token = response.json()
+                logger.info("Token received successfully")
+                logger.debug(f"Token keys: {list(token.keys())}")
                 
                 # Store token in session
                 session['keycloak_token'] = token
+                session.permanent = True
+                logger.info("Token stored in session")
                 
                 # Log successful authentication
                 logger.info(f"User {username} authenticated successfully via direct login")
                 
                 # Load user info
+                logger.debug("Loading user info...")
                 self._load_user_info()
                 
-                return True
-            else:
-                # Log authentication failure
-                logger.warning(f"Authentication failed for user {username}: {response.status_code}")
-                if response.status_code == 401:
-                    logger.info("Invalid username or password")
+                # Verify that user info was loaded
+                from flask import g
+                if g.get('is_authenticated', False):
+                    logger.info("User info loaded successfully")
+                    user_info = g.get('oidc_user_info', {})
+                    logger.info(f"Authenticated user: {user_info.get('preferred_username', 'unknown')}")
+                    return True
                 else:
-                    logger.error(f"Token endpoint error: {response.text}")
+                    logger.error("Failed to load user info after token authentication")
+                    return False
+                
+            else:
+                # Log authentication failure with detailed error info
+                try:
+                    error_data = response.json()
+                    error_type = error_data.get('error', 'unknown')
+                    error_desc = error_data.get('error_description', 'No description')
+                    logger.warning(f"Authentication failed for user {username}: {response.status_code}")
+                    logger.warning(f"Error type: {error_type}")
+                    logger.warning(f"Error description: {error_desc}")
+                    
+                    if response.status_code == 401:
+                        if error_type == 'invalid_grant':
+                            logger.info("Invalid username or password")
+                        else:
+                            logger.warning(f"Unexpected 401 error: {error_type} - {error_desc}")
+                    elif response.status_code == 400:
+                        if error_type == 'unsupported_grant_type':
+                            logger.error("ROPC flow is disabled in Keycloak client")
+                        else:
+                            logger.error(f"Bad request: {error_type} - {error_desc}")
+                            
+                except ValueError:
+                    # Response is not JSON
+                    logger.error(f"Non-JSON error response: {response.text}")
+                
                 return False
                 
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error during authentication: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Error during direct authentication: {e}")
+            logger.error(f"Unexpected error during direct authentication: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
     def reset_password(self, username_or_email: str) -> Dict[str, Any]:

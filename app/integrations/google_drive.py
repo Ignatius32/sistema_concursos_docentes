@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timezone
 import base64
 import logging
+from ..helpers.google_drive_loading import GoogleDriveLoadingManager
 
 # Set up logger for debugging
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ class GoogleDriveAPI:
         if not self.secure_token:
             raise ValueError("GOOGLE_DRIVE_SECURE_TOKEN environment variable is not set")
 
+    @GoogleDriveLoadingManager.with_loading('folder_creation', 'Creando estructura de carpetas en Google Drive')
     def create_concurso_folder(self, concurso_id, departamento, area, orientacion, categoria, dedicacion):
         """Create a folder in Google Drive for a new concurso."""
         timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
@@ -68,6 +70,7 @@ class GoogleDriveAPI:
             'tribunalFolderId': subfolder_ids['tribunalFolderId']
         }
 
+    @GoogleDriveLoadingManager.with_loading('folder_creation', 'Creando carpeta para postulante')
     def create_postulante_folder(self, concurso_folder_id, dni, apellido, nombre, categoria, dedicacion):
         """Create a folder in Google Drive for a postulante inside a concurso folder."""
         folder_name = f"{apellido}_{nombre}_{dni}_{categoria}_{dedicacion}"
@@ -88,6 +91,7 @@ class GoogleDriveAPI:
 
         return folder_data.get('folderId')    
     
+    @GoogleDriveLoadingManager.with_loading('document_generation', 'Generando documento desde plantilla')
     def create_document_from_template(self, template_name, data, folder_id, file_name):
         """
         Create a document from a template in Google Drive.
@@ -120,6 +124,7 @@ class GoogleDriveAPI:
             raise Exception(f"Error from Google Drive API: {doc_data.get('message')}")
             
         return doc_data.get('fileId'), doc_data.get('webViewLink')    
+    @GoogleDriveLoadingManager.with_loading('file_upload', 'Subiendo documento a Google Drive')
     def upload_document(self, folder_id, file_name, file_data, mime_type='application/octet-stream'):
         """
         Upload a document to Google Drive in the specified folder.
@@ -151,6 +156,7 @@ class GoogleDriveAPI:
 
         return upload_data.get('fileId'), upload_data.get('webViewLink')
 
+    @GoogleDriveLoadingManager.with_loading('file_download', 'Descargando archivo desde Google Drive')
     def get_file_content(self, file_id):
         """
         Retrieve the content of a file from Google Drive.
@@ -226,6 +232,7 @@ class GoogleDriveAPI:
 
         return signature_data.get('fileId'), signature_data.get('webViewLink')
 
+    @GoogleDriveLoadingManager.with_loading('signature_process', 'Procesando firma digital')
     def overwrite_file(self, file_id, file_data):
         """
         Overwrite an existing file in Google Drive.
@@ -269,6 +276,7 @@ class GoogleDriveAPI:
             logger.error(f"Error overwriting file in Drive: {str(e)}")
             raise
 
+    @GoogleDriveLoadingManager.with_loading('file_deletion', 'Eliminando archivo de Google Drive')
     def delete_file(self, file_id):
         """
         Delete a file from Google Drive.
@@ -291,6 +299,7 @@ class GoogleDriveAPI:
 
         return delete_data.get('success')
 
+    @GoogleDriveLoadingManager.with_loading('folder_deletion', 'Eliminando carpeta de Google Drive')
     def delete_folder(self, folder_id):
         """
         Delete a folder from Google Drive.
@@ -317,6 +326,7 @@ class GoogleDriveAPI:
         """Get the URL for a Google Drive folder."""
         return f"https://drive.google.com/drive/folders/{folder_id}"
 
+    @GoogleDriveLoadingManager.with_loading('folder_update', 'Actualizando nombre de carpeta')
     def update_folder_name(self, folder_id, new_name):
         """
         Update a folder's name in Google Drive.
@@ -341,6 +351,7 @@ class GoogleDriveAPI:
 
         return rename_data.get('success')
 
+    @GoogleDriveLoadingManager.with_loading('folder_creation', 'Creando carpeta para tribunal')
     def create_tribunal_folder(self, parent_folder_id, nombre, apellido, dni, rol):
         """Create a folder in Google Drive for a tribunal member inside the tribunal folder.
         
@@ -371,6 +382,7 @@ class GoogleDriveAPI:
 
         return folder_data.get('folderId')
 
+    @GoogleDriveLoadingManager.with_loading('email_sending', 'Enviando email con adjuntos')
     def send_email(self, to_email, subject, html_body, sender_name=None, attachment_ids=None, placeholders=None):
         """
         Send an email using Gmail with optional attachments and placeholder replacement.

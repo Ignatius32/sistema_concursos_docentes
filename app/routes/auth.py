@@ -30,29 +30,45 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        logger.info(f"Login attempt for username: {username}")
+        
         if username and password:
             # Direct authentication using username/password
+            logger.info("Attempting direct authentication via Keycloak")
             if keycloak_oidc.direct_authenticate(username, password):
+                logger.info("Direct authentication successful")
                 # Get user info from Keycloak
                 user_info = get_current_user_info()
                 
                 if user_info:
+                    logger.info(f"Got user info: {user_info.get('preferred_username')}")
                     # Sync with local Persona model
                     persona = sync_keycloak_user_with_persona(user_info)
-                      # Check for next URL and redirect appropriately
+                    
+                    if persona:
+                        logger.info(f"Synced with persona ID: {persona.id}")
+                    else:
+                        logger.warning("Failed to sync with persona")
+                  # Check for next URL and redirect appropriately
                     next_url = session.pop('next_url', None)
                     if next_url:
+                        logger.info(f"Redirecting to next URL: {next_url}")
                         return redirect(next_url)
                     
                     # Redirect based on user role
-                    return redirect(get_post_login_redirect())
+                    redirect_url = get_post_login_redirect()
+                    logger.info(f"Redirecting to: {redirect_url}")
+                    return redirect(redirect_url)
                 else:
+                    logger.error("No user info received after authentication")
                     flash('Error al obtener información del usuario.', 'danger')
             else:
+                logger.warning(f"Direct authentication failed for user: {username}")
                 flash('Usuario o contraseña incorrectos.', 'danger')
         
         # Check if user wants Keycloak OIDC flow
         elif request.form.get('keycloak') == 'true':
+            logger.info("Initiating Keycloak OIDC flow")
             return keycloak_oidc.login()
     
     # For GET requests or failed authentication, show login page
@@ -248,16 +264,52 @@ def sync_keycloak_user_with_persona(keycloak_user_info):
                 logger.info(f"Linked existing persona {persona.id} to Keycloak user {keycloak_user_id}")
         
         if not persona:
-            # Only create new personas for users with tribunal_member role
-            # Admin users should be managed through the admin interface only
-            roles = keycloak_user_info.get('realm_access', {}).get('roles', [])
-            client_roles = keycloak_user_info.get('resource_access', {}).get(
-                KeycloakConfig.KEYCLOAK_CLIENT_ID, {}
-            ).get('roles', [])
-              # Check if user has tribunal_member role (should be in client roles)
+            # Check if user has admin role or tribunal_member role
+            # Use token directly instead of userinfo for more complete role information
+            from flask import session
+            token_roles = {}
+            token_realm_roles = []
+            
+            # Try to get roles from the raw token if available
+            if 'keycloak_token' in session:
+                try:
+                    import jwt
+                    token = session['keycloak_token']['access_token']
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    token_realm_roles = decoded.get('realm_access', {}).get('roles', [])
+                    token_roles = decoded.get('resource_access', {})
+                    logger.info(f"Debug - Token realm roles: {token_realm_roles}")
+                    logger.info(f"Debug - Token resource_access: {token_roles}")
+                except Exception as e:
+                    logger.warning(f"Could not decode token for role extraction: {e}")
+            
+            # Fallback to userinfo if token parsing failed
+            if not token_roles:
+                roles = keycloak_user_info.get('realm_access', {}).get('roles', [])
+                client_roles = keycloak_user_info.get('resource_access', {}).get(
+                    KeycloakConfig.KEYCLOAK_CLIENT_ID, {}
+                ).get('roles', [])
+                logger.info(f"Debug - Using userinfo - Realm roles: {roles}")
+                logger.info(f"Debug - Using userinfo - Client roles for {KeycloakConfig.KEYCLOAK_CLIENT_ID}: {client_roles}")
+            else:
+                # Use token data
+                roles = token_realm_roles
+                client_roles = token_roles.get(KeycloakConfig.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
+                logger.info(f"Debug - Using token - Realm roles: {roles}")
+                logger.info(f"Debug - Using token - Client roles for {KeycloakConfig.KEYCLOAK_CLIENT_ID}: {client_roles}")
+            
+            # Check if user has tribunal_member role in the specific client
             has_tribunal_role = KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE in client_roles
             
-            if has_tribunal_role and email and username:
+            # Check if user has admin role in the specific client or realm roles
+            has_admin_role = (KeycloakConfig.KEYCLOAK_ADMIN_ROLE in roles or 
+                             KeycloakConfig.KEYCLOAK_ADMIN_ROLE in client_roles)
+            
+            logger.info(f"Debug - has_tribunal_role: {has_tribunal_role}")
+            logger.info(f"Debug - has_admin_role: {has_admin_role}")
+            logger.info(f"Debug - Checking ONLY client {KeycloakConfig.KEYCLOAK_CLIENT_ID} for roles")
+            
+            if (has_tribunal_role or has_admin_role) and email and username:
                 # Validate for duplicates before creating
                 validation_errors = []
                 
@@ -285,15 +337,19 @@ def sync_keycloak_user_with_persona(keycloak_user_info):
                         nombre=first_name,
                         apellido=last_name,
                         dni=username,  # Assuming username is DNI, adjust as needed
-                        is_admin=False  # Always create as non-admin for tribunal members
+                        is_admin=has_admin_role  # Set admin status based on roles
                     )
                     db.session.add(persona)
-                    logger.info(f"Created new persona for tribunal member {keycloak_user_id}")
+                    if has_admin_role:
+                        logger.info(f"Created new persona for admin user {keycloak_user_id}")
+                    else:
+                        logger.info(f"Created new persona for tribunal member {keycloak_user_id}")
                 else:
                     logger.warning(f"Cannot create persona for {keycloak_user_id}: {'; '.join(validation_errors)}")
             else:
-                # Don't create personas for users without tribunal_member role
-                logger.info(f"User {keycloak_user_id} does not have tribunal_member role - no persona created")
+                # Don't create personas for users without admin or tribunal_member role
+                logger.info(f"User {keycloak_user_id} does not have admin or tribunal_member role - no persona created")
+                return None
         else:
             # Update existing persona with current Keycloak data
             if email and persona.correo != email:
@@ -307,15 +363,46 @@ def sync_keycloak_user_with_persona(keycloak_user_info):
             
             logger.info(f"Updated persona {persona.id} with Keycloak data")
         
-        # Update ultimo_acceso
-        persona.ultimo_acceso = datetime.utcnow()
-        
-        # Check if user has admin role in Keycloak
-        roles = keycloak_user_info.get('realm_access', {}).get('roles', [])
-        persona.is_admin = 'app_admin' in roles
-        
-        db.session.commit()
-        return persona
+        # Update ultimo_acceso only if persona exists
+        if persona:
+            persona.ultimo_acceso = datetime.utcnow()
+            
+            # Check if user has admin role in Keycloak (use token for accurate role info)
+            from flask import session
+            token_roles = {}
+            token_realm_roles = []
+            
+            # Try to get roles from the raw token if available
+            if 'keycloak_token' in session:
+                try:
+                    import jwt
+                    token = session['keycloak_token']['access_token']
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    token_realm_roles = decoded.get('realm_access', {}).get('roles', [])
+                    token_roles = decoded.get('resource_access', {})
+                except Exception as e:
+                    logger.warning(f"Could not decode token for admin role check: {e}")
+            
+            # Use token data if available, otherwise fall back to userinfo
+            if token_roles:
+                roles = token_realm_roles
+                client_roles = token_roles.get(KeycloakConfig.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
+            else:
+                roles = keycloak_user_info.get('realm_access', {}).get('roles', [])
+                client_roles = keycloak_user_info.get('resource_access', {}).get(
+                    KeycloakConfig.KEYCLOAK_CLIENT_ID, {}
+                ).get('roles', [])
+            
+            # Check admin role in realm or the specific client only
+            has_admin_role_final = (KeycloakConfig.KEYCLOAK_ADMIN_ROLE in roles or 
+                                   KeycloakConfig.KEYCLOAK_ADMIN_ROLE in client_roles)
+            
+            persona.is_admin = has_admin_role_final
+            
+            db.session.commit()
+            return persona
+        else:
+            return None
         
     except Exception as e:
         logger.error(f"Error syncing Keycloak user with persona: {e}")
