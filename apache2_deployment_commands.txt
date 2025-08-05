@@ -6,21 +6,21 @@ This file contains the commands needed to properly deploy the application to you
 
 ```bash
 # Create the directory
-sudo mkdir -p /var/www/selecciones-docentes
+sudo mkdir -p /var/www/concursos-docentes
 
 # Copy all files (run this from your local machine or after uploading)
-sudo cp -r /path/to/local/sistema_concursos_docentes/* /var/www/selecciones-docentes/
+sudo cp -r /path/to/local/sistema_concursos_docentes/* /var/www/concursos-docentes/
 
 # Set correct permissions
-sudo chown -R www-data:www-data /var/www/selecciones-docentes
-sudo chmod -R 755 /var/www/selecciones-docentes
+sudo chown -R www-data:www-data /var/www/concursos-docentes
+sudo chmod -R 755 /var/www/concursos-docentes
 ```
 
 ## 2. Create Virtual Environment
 
 ```bash
 # Create and setup virtual environment
-cd /var/www/selecciones-docentes
+cd /var/www/concursos-docentes
 sudo python3 -m venv venv
 sudo chmod -R 755 venv
 sudo -u www-data ./venv/bin/pip install -r requirements.txt
@@ -30,7 +30,7 @@ sudo -u www-data ./venv/bin/pip install -r requirements.txt
 
 ```bash
 # Create .env file with required variables
-sudo nano /var/www/selecciones-docentes/.env
+sudo nano /var/www/concursos-docentes/.env
 ```
 
 Add the following content (replace with actual values):
@@ -55,7 +55,7 @@ Add the configuration from apache_config.conf before the closing </VirtualHost> 
 
 ```
 # === CONCURSOS DOCENTES APPLICATION ===
-WSGIDaemonProcess concursos_docentes_app python-home=/var/www/selecciones-docentes/venv python-path=/var/www/selecciones-docentes
+WSGIDaemonProcess concursos_docentes_app python-home=/var/www/concursos-docentes/venv python-path=/var/www/concursos-docentes
 
 <Location /selecciones-docentes>
     WSGIProcessGroup concursos_docentes_app
@@ -89,7 +89,7 @@ Alias /selecciones-docentes/static /var/www/selecciones-docentes/app/static
 
 ```bash
 # Make sure instance directory exists with proper permissions
-sudo mkdir -p /var/www/selecciones-docentes/instance
+sudo mkdir -p /var/www/concursos-docentes/instance
 sudo chown www-data:www-data /var/www/selecciones-docentes/instance
 sudo chmod 755 /var/www/selecciones-docentes/instance
 ```
@@ -120,7 +120,7 @@ https://huayca.crub.uncoma.edu.ar/selecciones-docentes/
 
 3. If database errors occur, check permissions on the instance directory:
    ```bash
-   sudo chown -R www-data:www-data /var/www/selecciones-docentes/instance
+   sudo chown -R www-data:www-data /var/www/concursos-docentes/instance
    ```
 
 4. For static file issues (CSS/JS not loading), verify the Alias directive is correct and the static directory has proper permissions.

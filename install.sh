@@ -13,7 +13,7 @@ fi
 
 # Step 2: Update environment file
 echo "Step 1: Updating environment configuration..."
-cd /var/www/selecciones-docentes
+cd /var/www/concursos-docentes
 
 # Copy production environment template if .env doesn't exist
 if [ ! -f ".env" ]; then
@@ -42,17 +42,17 @@ pip install -r requirements.txt
 
 # Step 4: Set proper permissions
 echo "Step 3: Setting proper permissions..."
-chown -R www-data:www-data /var/www/selecciones-docentes
-chmod -R 755 /var/www/selecciones-docentes
-chmod -R 644 /var/www/selecciones-docentes/app/static
-chmod 600 /var/www/selecciones-docentes/.env
-chmod -R 700 /var/www/selecciones-docentes/instance
+chown -R www-data:www-data /var/www/concursos-docentes
+chmod -R 755 /var/www/concursos-docentes
+chmod -R 644 /var/www/concursos-docentes/app/static
+chmod 600 /var/www/concursos-docentes/.env
+chmod -R 700 /var/www/concursos-docentes/instance
 
 # Step 5: Initialize database
 echo "Step 4: Initializing database..."
-sudo -u www-data /var/www/selecciones-docentes/venv/bin/python -c "
+sudo -u www-data /var/www/concursos-docentes/venv/bin/python -c "
 import sys
-sys.path.insert(0, '/var/www/selecciones-docentes')
+sys.path.insert(0, '/var/www/concursos-docentes')
 from app import create_app, init_app_data
 app = create_app()
 init_app_data(app)
@@ -61,7 +61,7 @@ print('Database initialized successfully')
 
 # Step 6: Test configuration
 echo "Step 5: Testing configuration..."
-sudo -u www-data /var/www/selecciones-docentes/venv/bin/python /var/www/selecciones-docentes/debug_keycloak.py
+sudo -u www-data /var/www/concursos-docentes/venv/bin/python /var/www/concursos-docentes/debug_keycloak.py
 
 # Step 7: Restart Apache
 echo "Step 6: Restarting Apache..."
@@ -77,10 +77,10 @@ echo ""
 echo "Next steps:"
 echo "1. Check the application at: https://your-domain.com/selecciones-docentes/"
 echo "2. Monitor logs: sudo tail -f /var/log/apache2/error.log"
-echo "3. Check application logs: sudo tail -f /var/www/selecciones-docentes/app.log"
+echo "3. Check application logs: sudo tail -f /var/www/concursos-docentes/app.log"
 echo ""
 echo "If you see errors, run the debug script:"
-echo "sudo -u www-data /var/www/selecciones-docentes/venv/bin/python /var/www/selecciones-docentes/debug_keycloak.py"
+echo "sudo -u www-data /var/www/concursos-docentes/venv/bin/python /var/www/selecciones-docentes/debug_keycloak.py"
 echo ""
 echo "Common issues:"
 echo "- Make sure your Keycloak client is configured with the correct redirect URIs"
