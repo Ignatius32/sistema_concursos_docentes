@@ -26,7 +26,7 @@ class KeycloakConfig:
     KEYCLOAK_POST_LOGOUT_REDIRECT_URI: str = os.environ.get('KEYCLOAK_POST_LOGOUT_REDIRECT_URI', 'http://127.0.0.1:5000/')
     
     # Application base path configuration
-    APPLICATION_ROOT: str = os.environ.get('APPLICATION_ROOT', '')  # e.g., '/concursos-docentes' for production
+    APPLICATION_ROOT: str = os.environ.get('APPLICATION_ROOT', '')  # e.g., '/selecciones-docentes' for production
     
     # Password Reset Configuration
     USE_INTERNAL_PASSWORD_RESET: bool = os.environ.get('USE_INTERNAL_PASSWORD_RESET', 'true').lower() == 'true'

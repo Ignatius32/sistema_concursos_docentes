@@ -15,19 +15,19 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
     handlers=[
-        logging.FileHandler('/var/www/concursos-docentes/app.log'),
+        logging.FileHandler('/var/www/selecciones-docentes/app.log'),
         logging.StreamHandler()
     ]
 )
 
 # Add the site-packages of the virtualenv
-site.addsitedir('/var/www/concursos-docentes/venv/lib/python3.9/site-packages')
+site.addsitedir('/var/www/selecciones-docentes/venv/lib/python3.9/site-packages')
 
 # Add the application directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Set environment variables for production deployment
-os.environ.setdefault('APPLICATION_ROOT', '/concursos-docentes')
+os.environ.setdefault('APPLICATION_ROOT', '/selecciones-docentes')
 
 # Import app factory function and initialize app data
 from app import create_app, init_app_data

@@ -34,6 +34,78 @@ def update_concurso_resolution_number(concurso, template_config, documento):
     else:
         concurso.nro_res_otras = res_string
 
+def generate_resolution_filename(documento, concurso, template_config, is_firmado=True):
+    """
+    Generate a filename for resolution documents based on their metadata.
+    
+    Args:
+        documento: The DocumentoConcurso instance with resolution info
+        concurso: The Concurso instance
+        template_config: The DocumentTemplateConfig instance
+        is_firmado: Whether this is for the signed version (default: True)
+    
+    Returns:
+        str: The generated filename
+    """
+    if not template_config.es_res or not documento.tipo_res or not documento.nro_res:
+        # Fallback to original naming for non-resolutions or incomplete data
+        original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
+        return f"{original_filename}_firmado.pdf" if is_firmado else f"{original_filename}.pdf"
+    
+    # Sanitize resolution type for filename (remove spaces, special chars)
+    tipo_sanitized = documento.tipo_res.replace(' ', '_').replace('.', '').replace('/', '-')
+    
+    # Sanitize resolution number for filename (replace / with -)
+    nro_sanitized = documento.nro_res.replace('/', '-').replace('\\', '-')
+    
+    # Get concurso basic info for context
+    concurso_info = f"Concurso_{concurso.id}_{concurso.categoria}_{concurso.dedicacion}"
+    
+    # Add departamento if available for better organization
+    if concurso.departamento_rel:
+        dept_name = concurso.departamento_rel.nombre.replace(' ', '_')[:20]  # Limit length
+        concurso_info = f"{concurso_info}_{dept_name}"
+    
+    # Construct the filename
+    base_filename = f"{tipo_sanitized}_{nro_sanitized}_{concurso_info}"
+    
+    # Add suffix based on document state
+    if is_firmado:
+        return f"{base_filename}_firmado.pdf"
+    else:
+        return f"{base_filename}.pdf"
+
+def maybe_rename_document_in_drive(documento, concurso, template_config, file_id):
+    """
+    Optionally rename a document in Google Drive if it's a resolution with metadata.
+    This is called after uploading to potentially rename the file to a more descriptive name.
+    
+    Args:
+        documento: The DocumentoConcurso instance
+        concurso: The Concurso instance
+        template_config: The DocumentTemplateConfig instance
+        file_id: The Google Drive file ID
+    
+    Returns:
+        bool: True if renaming was attempted, False if not applicable
+    """
+    if not template_config.es_res or not documento.tipo_res or not documento.nro_res:
+        return False
+    
+    try:
+        # Generate the new resolution-based filename
+        new_filename = generate_resolution_filename(documento, concurso, template_config, is_firmado=True)
+        
+        # Attempt to rename the file in Google Drive
+        # Note: This would require extending the GoogleDriveAPI to support renaming
+        # For now, we just return True to indicate we would rename if the API supported it
+        current_app.logger.info(f"Would rename document {file_id} to: {new_filename}")
+        return True
+        
+    except Exception as e:
+        current_app.logger.warning(f"Failed to rename document {file_id}: {str(e)}")
+        return False
+
 @concursos.route('/<int:concurso_id>/generar-resolucion-llamado-tribunal', methods=['GET'])
 @keycloak_login_required
 @admin_required
@@ -335,19 +407,10 @@ def subir_documento_firmado(concurso_id, documento_id):
             flash('No se seleccionó ningún archivo.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
         
-        # Create the filename with _firmado suffix
-        original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
-        new_filename = f"{original_filename}_firmado.pdf"
-        
-        # Upload to documentos_firmados folder
-        file_data = file.read()
-        file_id, web_view_link = drive_api.upload_document(
-            concurso.documentos_firmados_folder_id,
-            new_filename,
-            file_data
-        )        # Get template configuration for this document type
+        # Get template configuration for this document type
         template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
-          # If it's a resolution, handle resolution-specific fields
+        
+        # If it's a resolution, handle resolution-specific fields first
         if template_config and template_config.es_res:
             documento.nro_res = request.form.get('numero_resolucion')
             documento.tipo_res = request.form.get('tipo_resolucion')
@@ -359,20 +422,31 @@ def subir_documento_firmado(concurso_id, documento_id):
                     flash('Formato de fecha inválido.', 'danger')
                     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
             documento.articulado = request.form.get('articulado')
-            
-            # Update concurso resolution number based on parentesco
+        
+        # Generate appropriate filename based on document type and metadata
+        if template_config and template_config.es_res and documento.nro_res and documento.tipo_res:
+            new_filename = generate_resolution_filename(documento, concurso, template_config, is_firmado=True)
+        else:
+            # Fallback to original naming for non-resolutions
+            original_filename = documento.tipo.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
+            new_filename = f"{original_filename}_firmado.pdf"
+        
+        # Upload to documentos_firmados folder
+        file_data = file.read()
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id,
+            new_filename,
+            file_data
+        )
+        
+        # Update concurso resolution number based on parentesco (if resolution)
+        if template_config and template_config.es_res:
             update_concurso_resolution_number(concurso, template_config, documento)
         
         # Update document record for the signed version
         documento.file_id = file_id  # Store the file ID of the signed version
         documento.update_url_from_file_ids()  # Update URL based on state and file IDs
         documento.estado = 'FIRMADO'
-        
-        # Update concurso resolution number fields if applicable
-        update_concurso_resolution_number(concurso, template_config, documento)
-        
-        # Get template configuration for this document type
-        template_config = DocumentTemplateConfig.query.filter_by(document_type_key=documento.tipo).first()
         
         # Update concurso estado_actual and subestado if configured in template
         if template_config and template_config.estado_al_subir_firmado:
@@ -1188,18 +1262,7 @@ def crear_documento_subida_directa(concurso_id, document_type_key):
             flash('No se seleccionó ningún archivo.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
         
-        # Create the filename
-        original_filename = document_type_key.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
-        new_filename = f"{original_filename}_firmado.pdf"
-        
-        # Upload to documentos_firmados folder
-        file_data = file.read()
-        file_id, web_view_link = drive_api.upload_document(
-            concurso.documentos_firmados_folder_id,
-            new_filename,
-            file_data
-        )
-          # Create new document record directly as FIRMADO
+        # Create new document record directly as FIRMADO
         documento = DocumentoConcurso(
             concurso_id=concurso_id,
             tipo=document_type_key,
@@ -1220,8 +1283,29 @@ def crear_documento_subida_directa(concurso_id, document_type_key):
                     flash('Formato de fecha inválido.', 'danger')
                     return redirect(url_for('concursos.ver', concurso_id=concurso_id))
             documento.articulado = request.form.get('articulado')
-            
-            # Update concurso resolution number based on parentesco
+        
+        # Generate appropriate filename based on document type and metadata
+        if template_config.es_res and documento.nro_res and documento.tipo_res:
+            new_filename = generate_resolution_filename(documento, concurso, template_config, is_firmado=True)
+        else:
+            # Fallback to original naming for non-resolutions
+            original_filename = document_type_key.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
+            new_filename = f"{original_filename}_firmado.pdf"
+        
+        # Upload to documentos_firmados folder
+        file_data = file.read()
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id,
+            new_filename,
+            file_data
+        )
+        
+        # Update the document with the new file information
+        documento.file_id = file_id
+        documento.url = web_view_link
+        
+        # Update concurso resolution number based on parentesco (if resolution)
+        if template_config.es_res:
             update_concurso_resolution_number(concurso, template_config, documento)
         
         db.session.add(documento)

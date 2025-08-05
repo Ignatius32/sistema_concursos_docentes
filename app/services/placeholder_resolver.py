@@ -211,6 +211,7 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'categoria_codigo': concurso.categoria or '',
         'categoria_nombre': categoria_nombre or '',
         'dedicacion': concurso.dedicacion or '',
+        'localizacion': concurso.localizacion or '',
         'cant_cargos_numero': str(concurso.cant_cargos),
         'cant_cargos_texto': cargo_texto,
         'descripcion_cargo': descripcion_cargo,

@@ -7,10 +7,23 @@
 .public-hero {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
-    border-radius: 20px;
+    border-radius: 20px 20px 0 0;
     padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-bottom: 0;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.public-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    opacity: 0.1;
+    border-radius: 0 0 20px 20px;
 }
 
 .detail-card {
@@ -64,14 +77,7 @@
     border-bottom: none;
 }
 
-.status-badge {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+
 
 .status-abierto {
     background: #059669;
@@ -103,6 +109,13 @@
     box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
     color: white;
     text-decoration: none;
+}
+
+.back-btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 20px;
+    gap: 0.25rem;
 }
 
 .instructivo-card {
@@ -222,7 +235,7 @@
 @media (max-width: 768px) {
     .public-hero {
         padding: 1.5rem;
-        text-align: center;
+        text-align: left;
     }
     
     .detail-card .card-body {
@@ -234,201 +247,547 @@
         padding: 0.75rem;
     }
 }
+
+/* Navigation Menu Styles */
+.navigation-menu {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border: 2px solid #e2e8f0;
+    border-radius: 0 0 20px 20px;
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    margin-top: -10px;
+    position: relative;
+    z-index: 1;
+}
+
+.nav-link-card {
+    display: block;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 15px;
+    padding: 1.2rem 1rem;
+    text-decoration: none;
+    color: #374151;
+    transition: all 0.3s ease;
+    text-align: center;
+    height: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.nav-link-card:hover {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
+    text-decoration: none;
+}
+
+.nav-link-card i {
+    font-size: 1.2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.nav-link-card span {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+}
+
+@media screen and (max-width: 768px) {
+    .public-hero {
+        padding: 1.5rem;
+        text-align: left;
+        border-radius: 15px 15px 0 0;
+    }
+    
+    .public-hero::after {
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .navigation-menu {
+        padding: 1.5rem 1rem 1rem 1rem;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .nav-link-card {
+        padding: 0.9rem 0.75rem;
+        margin-bottom: 0.5rem;
+        border-radius: 12px;
+    }
+    
+    .nav-link-card i {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .nav-link-card span {
+        font-size: 0.8rem;
+    }
+}
+
+@media screen and (min-width: 1400px) {
+    .navigation-menu .row {
+        --bs-gutter-x: 1rem;
+    }
+    
+    .navigation-menu .col-lg-2 {
+        flex: 1;
+        max-width: none;
+    }
+    
+    .navigation-menu .offset-lg-1 {
+        margin-left: 0;
+    }
+}
+
+/* Section Header Cards */
+.section-header-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+}
+
+.section-header-card .card-header {
+    background: #2563eb;
+    border-radius: 13px 13px 0 0;
+    color: white;
+    border: none;
+    padding: 1.5rem;
+}
+
+.section-header-card .card-body {
+    padding: 2rem;
+}
+
+/* Full-width tables for info sections */
+.section-header-card .card-body.no-padding {
+    padding: 0;
+}
+
+.section-header-card .info-table-container {
+    padding: 1rem;
+    margin: 0;
+}
+
+.section-header-card .info-table-container .table-responsive {
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.section-header-card .info-table {
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Section highlight animation */
+@keyframes sectionHighlight {
+    0% { 
+        background: #2563eb;
+    }
+    25% { 
+        background: #ffffff;
+        color: #2563eb;
+    }
+    50% { 
+        background: #2563eb;
+        color: #ffffff;
+    }
+    75% { 
+        background: #ffffff;
+        color: #2563eb;
+    }
+    100% { 
+        background: #2563eb;
+        color: #ffffff;
+    }
+}
+
+.section-header-card .card-header.highlight {
+    animation: sectionHighlight 1.5s ease-in-out;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+}
+
+/* Special highlight for asignaturas card */
+.asignaturas-card .card-header.highlight {
+    animation: sectionHighlight 1.5s ease-in-out;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Back Button >
+<div class="mb-3">
+    <a href="{{ url_for('public.index') }}" class="back-btn back-btn-small">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div-->
+
 <!-- Hero Section -->
 <div class="public-hero">
-    <div class="d-flex align-items-center justify-content-between flex-wrap">
-        <div>
-            <p>Selección de Personal Docente</p>
-            <h1 class="mb-2">{{ concurso.categoria_nombre }} {{ concurso.dedicacion }}</h1>
-            <p class="mb-1 opacity-90">
-                <i class="bi bi-building me-2"></i>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }} 
-            </p>
-            <p class="mb-1 opacity-80">
-                <i class="bi bi-compass me-2"></i>{{ concurso.area }}
-            </p>
-            {% if concurso.orientacion %}
-            <p class="mb-1 opacity-75">
-                <i class="bi bi-arrow-right me-2"></i>{{ concurso.orientacion }}
-            </p>
-            {% endif %}
-            <p class="mb-0 opacity-70" style="font-size: 0.9rem;">
-                <i class="bi bi-people me-1"></i>{{ concurso.cant_cargos }} cargo{{ 's' if concurso.cant_cargos != 1 else '' }}
-            </p>
+    <div>
+                <p style="font-size: 1.1rem; color: #e5e7eb; margin-bottom: 0.5rem;">
+            <i class="bi bi-calendar-event me-2"></i>
+            <strong>Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</strong>
+        </p>
+        <h1 class="mb-2">{{ concurso.categoria_nombre }} {{ concurso.dedicacion }}</h1>
+     
+       <p class="mb-0 opacity-70" style="font-size: 0.9rem;">       
+            <i class="bi bi-building me-2"></i>Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}
+        </p>
+               <p class="mb-0 opacity-70" style="font-size: 0.9rem;">
+            <i class="bi bi-people me-1"></i>{{ concurso.cant_cargos }} cargo{{ 's' if concurso.cant_cargos != 1 else '' }}
+        </p>   
+
+
+
+    </div>
+</div>
+
+<!-- Navigation Menu -->
+<div class="navigation-menu mb-4">
+    <div class="row g-2">
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2 offset-lg-1">
+            <a href="#informacion-seleccion" class="nav-link-card">
+                <i class="bi bi-info-circle me-2"></i>
+                <span>Información General</span>
+            </a>
         </div>
-        <div>
-            <span class="status-badge status-{{ 'abierto' if concurso.estado_actual == 'ABIERTO' else 'cerrado' }}">
-                {{ concurso.estado_actual or 'ABIERTO' }}
-            </span>
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a href="#informacion-sustanciacion" class="nav-link-card">
+                <i class="bi bi-shuffle me-2"></i>
+                <span>Sustanciación: Sorteo y Exposición</span>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a href="#instructivo-postulantes" class="nav-link-card">
+                <i class="bi bi-clipboard-check me-2"></i>
+                <span>Instructivo de Inscripción</span>
+            </a>
+        </div>
+        <div class="col-6 col-sm-6 col-md-3 col-lg-2">
+            <a href="#documentos-disponibles" class="nav-link-card">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                <span>Documentos de la Selección</span>
+            </a>
+        </div>
+        <div class="col-12 col-md-12 col-lg-2">
+            <a href="#asignaturas-relacionadas" class="nav-link-card">
+                <i class="bi bi-book me-2"></i>
+                <span>Asignaturas Relacionadas</span>
+            </a>
         </div>
     </div>
 </div>
 
-<!-- Back Button -->
-<div class="mb-4">
-    <a href="{{ url_for('public.index') }}" class="back-btn">
-        <i class="bi bi-arrow-left"></i> Volver al listado
-    </a>
-</div>
-
-<!-- Main Content -->
-<div class="detail-card">
-    <div class="card-header">
-        <h3 class="mb-0">
-            <i class="bi bi-info-circle me-2"></i>Información de la Selección
-        </h3>
-    </div>
-    <div class="card-body"><div class="row">
-                    <div class="col-12 col-lg-6 mb-4">
-                        <h4>Información de la Selección</h4>
-                        <div class="table-responsive">
-                            <table class="table table-bordered info-table">
-                                <tr>
-                                    <th width="40%">Departamento</th>
-                                    <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Área</th>
-                                    <td>{{ concurso.area }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Orientación</th>
-                                    <td>{{ concurso.orientacion }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Categoría</th>
-                                    <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
-                                </tr>
-                                <tr>
-                                    <th>Dedicación</th>
-                                    <td>{{ concurso.dedicacion }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Tipo de Selección</th>
-                                    <td>{{ concurso.tipo }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Carácter</th>
-                                    <td>{{ concurso.cerrado_abierto }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Cantidad de Cargos</th>
-                                    <td>{{ concurso.cant_cargos }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Localización</th>
-                                    <td>{{ concurso.localizacion }}</td>
-                                </tr>
-                                {% if concurso.asignaturas %}
-                                <tr>
-                                    <th>Asignaturas</th>
-                                    <td>{{ concurso.asignaturas }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr>
-                                    <th>Fecha de Cierre de Inscripción</th>
-                                    <td>{{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>                    <div class="col-12 col-lg-6">
-                        <div class="instructivo-card">
-                            <div class="card-header">
-                                <h4 class="mb-0">
-                                    <i class="bi bi-info-circle me-2"></i>Instructivo para Postulantes
-                                </h4>
-                            </div>
-                            <div class="card-body">
-                                {% if instructivo %}
-                                <div class="mb-4">
-                                    <h5 class="text-primary">
-                                        <i class="bi bi-check-circle me-1"></i>Requisitos Generales
-                                    </h5>
-                                    <p class="text-muted">{{ instructivo.base }}</p>
-                                </div>
-                                
-                                <div>
-                                    <h5 class="text-primary">
-                                        <i class="bi bi-clock me-1"></i>Requisitos por Dedicación: {{ concurso.dedicacion }}
-                                    </h5>
-                                    <p class="text-muted">{{ instructivo.dedicacion }}</p>
-                                </div>
-                                  <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
-                                    <i class="bi bi-info-circle me-2"></i>Para más información y para presentar su postulación, contacte a la Secretaría Académica.
-                                </div>
-                                {% else %}
-                                <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>No hay instructivos específicos disponibles para este concurso. Por favor, contacte a la Secretaría Académica para más detalles.
-                                </div>
-                                {% endif %}
-                                
-                                <!-- Download Inscription Form Button -->
-                                <div class="mt-4 text-center">
-                                    <a href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}" 
-                                       class="btn btn-primary-custom">
-                                        <i class="bi bi-download me-2"></i>Descargar Formulario de Inscripción
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+<!-- Información General and Sustanciación - Side by Side -->
+<div class="row mb-4">
+    <!-- Información General -->
+    <div class="col-12 col-lg-6 mb-4" id="informacion-seleccion">
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Información General
+                </h4>
+            </div>
+            <div class="card-body no-padding">
+                <div class="info-table-container">
+                    <div class="table-responsive">
+                        <table class="table table-bordered info-table">
+                            <!-- Departamento Section -->
+                            <tr>
+                                <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
+                                    <strong><i class="bi bi-building me-2"></i>Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</strong>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th width="40%"><i class="bi bi-compass me-2"></i>Área</th>
+                                <td>{{ concurso.area }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="bi bi-arrow-right me-2"></i>Orientación</th>
+                                <td>{{ concurso.orientacion }}</td>
+                            </tr>
+                            
+                            <!-- Cargo Section -->
+                            <tr>
+                                <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
+                                    <strong><i class="bi bi-briefcase me-2"></i>Cargo</strong>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th width="40%">Tipo de Selección</th>
+                                <td>{{ concurso.tipo }}</td>
+                            </tr>
+                            <tr>
+                                <th>Carácter</th>
+                                <td>{{ concurso.cerrado_abierto }}</td>
+                            </tr>
+                            <tr>
+                                <th>Categoría</th>
+                                <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                            </tr>
+                            <tr>
+                                <th>Dedicación</th>
+                                <td>{{ concurso.dedicacion }}</td>
+                            </tr>
+                            <tr>
+                                <th>Localización</th>
+                                <td>{{ concurso.localizacion }}</td>
+                            </tr>
+                            <tr>
+                                <th>Cantidad de Cargos</th>
+                                <td>{{ concurso.cant_cargos }}</td>
+                            </tr>
+                            {% if concurso.asignaturas %}
+                            <tr>
+                                <th>Asignaturas</th>
+                                <td>{{ concurso.asignaturas }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+    
+    <!-- Información de Sustanciación -->
+    <div class="col-12 col-lg-6 mb-4" id="informacion-sustanciacion">
+        {% if concurso.sustanciacion and (concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.tema_sorteado or concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link) %}
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-shuffle me-2"></i>Información de Sustanciación
+                </h4>
+            </div>
+            <div class="card-body no-padding">
+                <div class="info-table-container">
+                    <div class="table-responsive">
+                    <table class="table table-bordered info-table">
+                        <!-- Sorteo Information -->
+                        {% if concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
+                                <strong><i class="bi bi-shuffle me-2"></i>Sorteo de Tema</strong>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th width="40%">Fecha de Sorteo</th>
+                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'Por definir' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de Sorteo</th>
+                            <td>{{ concurso.sustanciacion.sorteo_lugar if concurso.sustanciacion.sorteo_lugar else 'Por definir' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th>Enlace Virtual Sorteo</th>
+                            <td>
+                                <a href="{{ 'https://' + concurso.sustanciacion.sorteo_virtual_link if not concurso.sustanciacion.sorteo_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.sorteo_virtual_link }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                        
+                        <!-- Tema Sorteado -->
+                        {% if concurso.sustanciacion.tema_sorteado %}
+                        <tr>
+                            <th>Tema Sorteado</th>
+                            <td>{{ concurso.sustanciacion.tema_sorteado }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        <!-- Exposición Information -->
+                        {% if concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
+                                <strong><i class="bi bi-easel me-2"></i>Exposición</strong>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th width="40%">Fecha de Exposición</th>
+                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'Por definir' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de Exposición</th>
+                            <td>{{ concurso.sustanciacion.exposicion_lugar if concurso.sustanciacion.exposicion_lugar else 'Por definir' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th>Enlace Virtual Exposición</th>
+                            <td>
+                                <a href="{{ 'https://' + concurso.sustanciacion.exposicion_virtual_link if not concurso.sustanciacion.exposicion_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.exposicion_virtual_link }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-shuffle me-2"></i>Información de Sustanciación
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
+                    <i class="bi bi-info-circle me-2"></i>La información de sustanciación se publicará cuando esté disponible.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Instructivo and Documentos - Side by Side -->
+<div class="row mb-4">
+    <!-- Instructivo para Postulantes -->
+    <div class="col-12 col-lg-6 mb-4" id="instructivo-postulantes">
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-clipboard-check me-2"></i>Instructivo para Postulantes
+                </h4>
+            </div>
+            <div class="card-body">
+                        {% if instructivo %}
+                        <div class="mb-4">
+                            <h5 class="text-primary">
+                                <i class="bi bi-check-circle me-1"></i>Requisitos Generales
+                            </h5>
+                            <p class="text-muted">{{ instructivo.base }}</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="text-primary">
+                                <i class="bi bi-clock me-1"></i>Requisitos por Dedicación: {{ concurso.dedicacion }}
+                            </h5>
+                            <p class="text-muted">{{ instructivo.dedicacion }}</p>
+                        </div>
+                        <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
+                            <i class="bi bi-info-circle me-2"></i>Para más información y para presentar su postulación, contacte a la Secretaría Académica.
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
+                            <i class="bi bi-exclamation-triangle me-2"></i>No hay instructivos específicos disponibles para este concurso. Por favor, contacte a la Secretaría Académica para más detalles.
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Download Inscription Form Button with Closure Logic -->
+                        <div class="mt-4 text-center">
+                            {% if is_registration_closed %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="bi bi-x-circle me-2"></i>Inscripción Cerrada
+                            </button>
+                            <small class="d-block mt-2 text-muted">
+                                La inscripción cerró el {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}
+                            </small>
+                            {% else %}
+                            <a href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}" 
+                               class="btn btn-primary-custom me-2">
+                                <i class="bi bi-download me-2"></i>Descargar Formulario de Inscripción
+                            </a>
+                            <a href="#asignaturas-relacionadas" class="btn btn-outline-primary">
+                                <i class="bi bi-book me-2"></i>Ver Asignaturas
+                            </a>
+                            {% if concurso.cierre_inscripcion %}
+                            <small class="d-block mt-2 text-muted">
+                                Inscripción abierta hasta el {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}
+                            </small>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+        </div>
+    </div>
+    
+    <!-- Documentos Disponibles -->
+    <div class="col-12 col-lg-6 mb-4" id="documentos-disponibles">
+        {% if public_documents %}
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
+                </h4>
+            </div>
+            <div class="card-body">
+                        <div class="row">
+                            {% for document in public_documents %}
+                            <div class="col-12{% if public_documents|length > 2 %} col-md-6{% endif %} mb-3">
+                                <div class="document-mini-card">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-primary fw-bold mb-3">
+                                            <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
+                                        </h6>
+                                        <div class="d-flex gap-2 flex-wrap mb-3">
+                                            {% if document.drive_file_id %}
+                                            <button type="button" 
+                                                    class="btn-primary-custom" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#pdfViewerModal{{ document.id }}">
+                                                <i class="bi bi-eye me-1"></i>Ver
+                                            </button>                           
+                                            {% endif %}
+                                        </div>
+                                        {% if document.fecha_creacion %}
+                                        <div class="mt-auto">
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+        </div>
+        {% else %}
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No hay documentos públicos disponibles para este concurso.
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
 <!-- Section Divider -->
 <hr class="section-divider">
 
-<!-- Documents available to public -->
-{% if public_documents %}
-<div class="documents-card">
-    <div class="card-header">
-        <h3 class="mb-0">
-            <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
-        </h3>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            {% for document in public_documents %}
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
-                <div class="document-mini-card">
-                    <div class="card-body">
-                        <h6 class="card-title text-primary fw-bold mb-3">
-                            <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
-                        </h6>
-                        <div class="d-flex gap-2 flex-wrap mb-3">
-                            {% if document.drive_file_id %}
-                            <button type="button" 
-                                    class="btn-primary-custom" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#pdfViewerModal{{ document.id }}">
-                                <i class="bi bi-eye me-1"></i>Ver
-                            </button>                           
-
-                            {% endif %}
-                        </div>
-                        {% if document.fecha_creacion %}
-                        <div class="mt-auto">
-                            <small class="text-muted">
-                                <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
-                            </small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-</div>
-
 <!-- PDF Viewer Modals for Public Documents -->
+{% if public_documents %}
 {% for document in public_documents %}
 {% if document.drive_file_id %}
 <div class="modal fade" id="pdfViewerModal{{ document.id }}" tabindex="-1">
@@ -456,11 +815,8 @@
 {% endfor %}
 {% endif %}
 
-<!-- Section Divider -->
-<hr class="section-divider">
-
 <!-- Asignaturas related to this concurso -->
-<div class="asignaturas-card">
+<div class="asignaturas-card" id="asignaturas-relacionadas">
     <div class="card-header">
         <h3 class="mb-0">
             <i class="bi bi-book me-2"></i>Asignaturas Relacionadas
@@ -474,4 +830,76 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/programas-auto.js') }}"></script>
+<script>
+// Function to highlight section header
+function highlightSectionHeader(targetId) {
+    const target = document.querySelector(targetId);
+    if (target) {
+        // Find the card header within the target section
+        let cardHeader = null;
+        
+        // Look for card header in section-header-card or asignaturas-card
+        if (target.classList.contains('section-header-card') || target.classList.contains('asignaturas-card')) {
+            cardHeader = target.querySelector('.card-header');
+        } else {
+            // If target is a column containing the card, look for the card header inside
+            cardHeader = target.querySelector('.section-header-card .card-header, .asignaturas-card .card-header');
+        }
+        
+        if (cardHeader) {
+            // Remove any existing highlight class
+            cardHeader.classList.remove('highlight');
+            
+            // Add highlight class after a short delay to trigger animation
+            setTimeout(() => {
+                cardHeader.classList.add('highlight');
+                
+                // Remove highlight class after animation completes
+                setTimeout(() => {
+                    cardHeader.classList.remove('highlight');
+                }, 1500); // Match animation duration
+            }, 100);
+        }
+    }
+}
+
+// Add smooth scrolling to all navigation links and existing anchor links
+document.addEventListener('DOMContentLoaded', function() {
+    // Navigation menu links
+    const navLinks = document.querySelectorAll('.nav-link-card');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const target = document.querySelector(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Highlight the section header after scrolling
+                setTimeout(() => {
+                    highlightSectionHeader(targetId);
+                }, 500); // Wait for scroll to complete
+            }
+        });
+    });
+    
+    // Existing "Ver Asignaturas" button
+    const asignaturasLink = document.querySelector('a[href="#asignaturas-relacionadas"]');
+    if (asignaturasLink && !asignaturasLink.classList.contains('nav-link-card')) {
+        asignaturasLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const target = document.querySelector(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Highlight the section header after scrolling
+                setTimeout(() => {
+                    highlightSectionHeader(targetId);
+                }, 500); // Wait for scroll to complete
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

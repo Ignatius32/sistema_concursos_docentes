@@ -53,6 +53,8 @@ def index():
 @public.route('/concurso/<int:concurso_id>')
 def ver_concurso(concurso_id):
     """Display details of a specific concurso for public viewing, including instructivos."""
+    from datetime import date
+    
     concurso = Concurso.query.get_or_404(concurso_id)
     
     # Get the categoria to access instructivos
@@ -82,11 +84,17 @@ def ver_concurso(concurso_id):
             orientacion_concurso=concurso.orientacion
         )
     
+    # Check if registration is closed (using Argentina timezone concept)
+    today = date.today()
+    is_registration_closed = concurso.cierre_inscripcion and concurso.cierre_inscripcion < today
+    
     return render_template('public/detalle_concurso.html', 
                           concurso=concurso, 
                           instructivo=instructivo,
                           asignaturas_externas=asignaturas_externas,
-                          public_documents=public_documents)
+                          public_documents=public_documents,
+                          is_registration_closed=is_registration_closed,
+                          today=today)
 
 @public.route('/concurso/<int:concurso_id>/documento/<int:documento_id>')
 def ver_documento_publico(concurso_id, documento_id):
@@ -202,16 +210,44 @@ def descargar_formulario_inscripcion(concurso_id):
         if not pdf_content:
             return "Error al generar el formulario", 500
         
-        # Create filename
-        filename = f"Formulario_Inscripcion_Concurso_{concurso.id}_{concurso.categoria}.pdf"
+        # Create detailed filename with sanitized names
+        def sanitize_filename(text):
+            """Sanitize text for use in filename"""
+            import re
+            import unicodedata
+            # Remove accents and normalize unicode
+            text = unicodedata.normalize('NFD', text)
+            text = ''.join(char for char in text if unicodedata.category(char) != 'Mn')
+            # Replace spaces and special characters with underscores
+            sanitized = re.sub(r'[^\w\s-]', '', text)
+            sanitized = re.sub(r'[-\s]+', '_', sanitized)
+            # Limit length and clean up
+            sanitized = sanitized.strip('_')[:20]  # Limit each part to 20 chars
+            return sanitized
         
-        # Return the PDF as a downloadable file
-        return send_file(
-            io.BytesIO(pdf_content),
+        # Build detailed filename
+        departamento_name = sanitize_filename(concurso.departamento_rel.nombre) if concurso.departamento_rel else "Sin_Depto"
+        area_name = sanitize_filename(concurso.area or "Sin_Area")
+        orientacion_name = sanitize_filename(concurso.orientacion or "Sin_Orientacion")
+        categoria_name = sanitize_filename(concurso.categoria or "Sin_Categoria")
+        
+        filename = f"Formulario_Inscripcion_C{concurso.id}_{departamento_name}_{area_name}_{orientacion_name}_{categoria_name}.pdf"
+        
+        # Return the PDF as a downloadable file with proper headers
+        from flask import Response
+        response = Response(
+            pdf_content,
             mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'application/pdf',
+                'Content-Length': str(len(pdf_content)),
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
         )
+        return response
         
     except Exception as e:
         logger.error(f"Error generating inscription form: {str(e)}")

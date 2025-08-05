@@ -265,6 +265,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/fetch-programas.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sorteo-manager.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle TKD file requirement based on existing file
@@ -320,6 +321,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('El estado es requerido');
                 return false;
             }
+        });
+    }
+    
+    // Handle reset temas miembro modal
+    const resetTemasMiembroModal = document.getElementById('resetTemasMiembroModal');
+    if (resetTemasMiembroModal) {
+        resetTemasMiembroModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget; // Button that triggered the modal
+            const miembroId = button.getAttribute('data-miembro-id');
+            const miembroNombre = button.getAttribute('data-miembro-nombre');
+            
+            // Update the form action - construct URL directly
+            const form = document.getElementById('resetTemasMiembroForm');
+            form.action = `/tribunal/{{ concurso.id }}/reset-temas-miembro/${miembroId}`;
+            
+            // Update the hidden input
+            document.getElementById('resetTemasMiembroId').value = miembroId;
+            
+            // Update the member name in the modal
+            document.getElementById('resetTemasMiembroNombre').textContent = miembroNombre;
         });
     }
     

@@ -549,6 +549,45 @@ def generate_formulario_inscripcion_pdf(concurso, placeholders):
     """
     try:
         from app.templates.pdf_templates.formulario_inscripcion import FormularioInscripcionTemplate
+        from app.models.models import Categoria
+        import os
+        import json
+        
+        # Get the categoria to access instructivos and required documents (same logic as public.py)
+        categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+        instructivo = None
+        required_docs = []
+        
+        if categoria and categoria.instructivo_postulantes:
+            # Build the complete instructivo text based on dedicacion
+            base_instructivo = categoria.instructivo_postulantes.get('base', '')
+            dedicacion_instructivo = categoria.instructivo_postulantes.get('porDedicacion', {}).get(concurso.dedicacion, '')
+            
+            instructivo = {
+                'base': base_instructivo,
+                'dedicacion': dedicacion_instructivo
+            }
+        
+        # Load required documents from roles_categorias.json (same logic as tribunal view)
+        try:
+            from flask import current_app
+            
+            with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
+                categorias_data = json.load(f)
+                
+            for rol in categorias_data:
+                for cat in rol['categorias']:
+                    if cat['codigo'] == concurso.categoria:
+                        # Add base documents
+                        if 'documentacionRequerida' in cat:
+                            required_docs.extend(cat['documentacionRequerida'].get('base', []))
+                            
+                            # Add documents by dedicacion if available
+                            if 'porDedicacion' in cat['documentacionRequerida'] and concurso.dedicacion in cat['documentacionRequerida']['porDedicacion']:
+                                required_docs.extend(cat['documentacionRequerida']['porDedicacion'][concurso.dedicacion])
+                        break
+        except Exception as e:
+            logger.error(f"Error loading required documents from JSON: {e}")
         
         # Prepare concurso data dictionary
         concurso_data = {
@@ -563,7 +602,9 @@ def generate_formulario_inscripcion_pdf(concurso, placeholders):
             'cant_cargos': concurso.cant_cargos or 1,
             'cierre_inscripcion': concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido',
             'expediente': concurso.expediente or '',
-            'estado_actual': concurso.estado_actual or 'ABIERTO'
+            'estado_actual': concurso.estado_actual or 'ABIERTO',
+            'instructivo': instructivo,
+            'required_docs': required_docs
         }
         
         # Create template instance and generate PDF

@@ -72,7 +72,7 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     
     # Configure APPLICATION_ROOT for deployment with base path
-    app.config['APPLICATION_ROOT'] = os.environ.get('APPLICATION_ROOT', '/concursos-docentes')
+    app.config['APPLICATION_ROOT'] = os.environ.get('APPLICATION_ROOT', '/selecciones-docentes')
     
     # Ensure the instance folder exists
     try:
@@ -228,6 +228,29 @@ def create_app():
             return json.loads(value)
         except (ValueError, TypeError):
             return value
+
+    @app.template_filter('format_date_spanish')
+    def format_date_spanish(value, format='%d de %B de %Y'):
+        """Format a date object with Spanish month names"""
+        if value is None:
+            return ""
+        
+        # Spanish month names
+        months_spanish = {
+            'January': 'enero', 'February': 'febrero', 'March': 'marzo',
+            'April': 'abril', 'May': 'mayo', 'June': 'junio',
+            'July': 'julio', 'August': 'agosto', 'September': 'septiembre',
+            'October': 'octubre', 'November': 'noviembre', 'December': 'diciembre'
+        }
+        
+        # Format with English month names first
+        formatted_date = value.strftime(format)
+        
+        # Replace English month names with Spanish ones
+        for english, spanish in months_spanish.items():
+            formatted_date = formatted_date.replace(english, spanish)
+        
+        return formatted_date
 
     @login_manager.user_loader
     def load_user(user_id):

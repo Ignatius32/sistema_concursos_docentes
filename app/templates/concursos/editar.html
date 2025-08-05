@@ -278,10 +278,10 @@
 <script>
 // Helper function to get the base URL for API calls
 function getBaseUrl() {
-    // Check if we're deployed under /concursos-docentes
+    // Check if we're deployed under /selecciones-docentes
     const path = window.location.pathname;
-    if (path.includes('/concursos-docentes')) {
-        return '/concursos-docentes/concursos';
+    if (path.includes('/selecciones-docentes')) {
+        return '/selecciones-docentes/concursos';
     } else {
         return '/concursos';
     }

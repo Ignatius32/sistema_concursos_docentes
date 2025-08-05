@@ -62,7 +62,7 @@ function fetchAllProgramasInfo() {
                     container.innerHTML = `
                         <a href="${manualUrl}" target="_blank" 
                             class="btn btn-secondary w-100 text-wrap">
-                            <i class="bi bi-search"></i> Programa no encontrado automáticamente, por favor haga una búsqueda manual en este enlace
+                            <i class="bi bi-search"></i> Realizar búsqueda manual
                         </a>
                     `;
                 } else {

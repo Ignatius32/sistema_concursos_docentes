@@ -9,17 +9,28 @@
                 <!-- Information banner -->
                 <div class="alert alert-info mb-4">
                     <i class="bi bi-info-circle"></i> El sistema seleccionará automáticamente el número de temas definido en la configuración para esta categoría y tipo de concurso.
+                    {% if concurso.tipo and concurso.categoria %}
+                    <br><small class="text-muted">
+                        <strong>Concurso:</strong> {{ concurso.tipo.title() }} - 
+                        <strong>Categoría:</strong> {{ concurso.categoria }}
+                    </small>
+                    {% endif %}
                 </div>
                 
                 <div id="sorteo-animation" class="text-center">
                     <div class="mb-4">
-                        <h3>Sorteando tema...</h3>
+                        <h3 class="text-primary">Sorteando tema...</h3>
                         <div class="dice-animation mb-3">
-                            <i class="bi bi-dice-6 fa-4x fa-spin"></i>
+                            <i class="bi bi-dice-6" style="font-size: 4rem; color: #0d6efd; animation: spin 1s linear infinite;"></i>
                         </div>
-                        <div class="progress mt-3">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        <div class="progress mt-3" style="height: 8px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                 role="progressbar" 
+                                 style="width: 0%; transition: width 0.3s ease;"></div>
                         </div>
+                        <p class="text-muted mt-2 mb-0">
+                            <small>Procesando selección aleatoria...</small>
+                        </p>
                     </div>
                 </div>
                 
@@ -41,3 +52,10 @@
         </div>
     </div>
 </div>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
