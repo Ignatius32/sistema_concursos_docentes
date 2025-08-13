@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Concursos Docentes - Portal Público{% endblock %}
+{% block title %}Selecciones Docentes - Portal Público{% endblock %}
+
+{% block og_title %}Selecciones de Personal Docente - CRUB UNComa{% endblock %}
+{% block og_description %}Consulta las selecciones de personal docente abiertas en el Centro Regional Universitario Bariloche - Universidad Nacional del Comahue{% endblock %}
+
+{% block twitter_title %}Selecciones Docentes CRUB{% endblock %}
+{% block twitter_description %}Portal público de selecciones de personal docente del CRUB - UNComa{% endblock %}
+
+{% block meta_description %}Portal público para consultar las selecciones de personal docente abiertas en el Centro Regional Universitario Bariloche - Universidad Nacional del Comahue{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tribunal.css') }}?v=2.0">
@@ -324,13 +332,13 @@
 <!-- No Results State -->
 <div class="no-results">
     <i class="bi bi-search"></i>
-    <h4>No se encontraron concursos</h4>
+    <h4>No se encontraron selecciones</h4>
     <p>
         {% if departamento_filter or estado_filter %}
-            No hay concursos que coincidan con los filtros seleccionados.
+            No hay selecciones que coincidan con los filtros seleccionados.
             <br>Intenta modificar los criterios de búsqueda.
         {% else %}
-            Actualmente no hay concursos docentes disponibles.
+            Actualmente no hay selecciones docentes disponibles.
         {% endif %}
     </p>    {% if departamento_filter or estado_filter %}
     <button type="button" class="btn clear-btn btn-lg" onclick="clearFilters()">

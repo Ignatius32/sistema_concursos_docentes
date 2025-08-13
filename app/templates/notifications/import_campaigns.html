@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Campañas de Notificación{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0"><i class="fas fa-upload"></i> Importar Campañas de Notificación</h2>
+        </div>
+        <div class="card-body">
+            {% include '_flash_messages.html' %}
+            
+            <div class="alert alert-info" role="alert">
+                <h6><i class="fas fa-info-circle"></i> Información sobre la importación:</h6>
+                <ul class="mb-0">
+                    <li>El archivo debe ser un JSON válido exportado desde este sistema.</li>
+                    <li>Las campañas se identifican por su <code>nombre_campana</code>.</li>
+                    <li>Si una campaña ya existe y no marca la opción de sobrescribir, será omitida.</li>
+                    <li>Se mostrará un resumen de las campañas importadas, actualizadas y omitidas.</li>
+                </ul>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-file-import"></i> Archivo de Campañas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="import_file" class="form-label">Archivo de Configuración</label>
+                                    <input type="file" class="form-control" id="import_file" name="import_file" accept=".json" required>
+                                    <small class="form-text text-muted">
+                                        Seleccione el archivo JSON con las campañas de notificación a importar.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="overwrite_existing" name="overwrite_existing">
+                                    <label class="form-check-label" for="overwrite_existing">
+                                        Sobrescribir campañas existentes
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        Si está marcado, las campañas existentes serán actualizadas con los datos del archivo.
+                                        Si no está marcado, las campañas existentes serán omitidas.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('notifications.list_notification_campaigns') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Importar Campañas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            <hr class="my-4">
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Formato esperado del archivo JSON</h6>
+                </div>
+                <div class="card-body">
+                    <p>El archivo debe tener la siguiente estructura:</p>
+                    <pre><code>{
+  "export_metadata": {
+    "export_date": "2025-08-13T10:30:00",
+    "total_campaigns": 2,
+    "version": "1.0"
+  },
+  "campaigns": [
+    {
+      "nombre_campana": "Notificación Acta Constitución",
+      "asunto_email": "Acta de Constitución - Concurso &lt;&lt;expediente&gt;&gt;",
+      "cuerpo_email_html": "&lt;p&gt;Estimado/a &lt;&lt;nombre_destinatario&gt;&gt;,&lt;/p&gt;...",
+      "destinatarios_json": {
+        "tribunal_destinatarios": [
+          {"rol": "Presidente", "claustro": "Docente"},
+          {"rol": "Titular", "claustro": "Docente"}
+        ],
+        "otros_roles_destinatarios": ["postulantes"],
+        "emails_estaticos": ["admin@universidad.edu"]
+      },
+      "documentos_adjuntos_config": [
+        {"document_type_key": "ACTA_CONSTITUCION_TRIBUNAL_REGULAR", "version": "FIRMADO"}
+      ],
+      "adjuntos_personalizados": ["1abc123def456"],
+      "estado_al_enviar": "NOTIFICADO",
+      "subestado_al_enviar": "Acta de constitución notificada"
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Campos importantes</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>destinatarios_json:</strong> Configuración de destinatarios con roles de tribunal, otros roles y emails estáticos</li>
+                        <li><strong>documentos_adjuntos_config:</strong> Array de configuraciones de documentos a adjuntar con su tipo y versión</li>
+                        <li><strong>adjuntos_personalizados:</strong> Array de IDs de Google Drive para adjuntar archivos personalizados</li>
+                        <li><strong>estado_al_enviar:</strong> Estado que se aplicará al concurso cuando se envíe la campaña</li>
+                        <li><strong>subestado_al_enviar:</strong> Subestado que se agregará al concurso cuando se envíe la campaña</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,9 +6,17 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Campañas de Notificación Globales</h2>
-        <a href="{{ url_for('notifications.crear_notificacion_campaign_form') }}" class="btn btn-primary">
-            <i class="fas fa-plus-circle"></i> Nueva Campaña
-        </a>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('notifications.import_campaigns') }}" class="btn btn-outline-info">
+                <i class="fas fa-upload"></i> Importar Campañas
+            </a>
+            <a href="{{ url_for('notifications.export_campaigns') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-download"></i> Exportar Campañas
+            </a>
+            <a href="{{ url_for('notifications.crear_notificacion_campaign_form') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Nueva Campaña
+            </a>
+        </div>
     </div>
     
     <div class="card shadow">

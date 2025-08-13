@@ -1,6 +1,6 @@
 """
 PDF Template for Formulario de Inscripción (Inscription Form)
-This template generates a professional inscription form for concursos docentes.
+This template generates a professional inscription form for selecciones docentes.
 """
 
 from reportlab.pdfgen import canvas

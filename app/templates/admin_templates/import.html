@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Configuraciones de Plantillas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-upload"></i> Importar Configuraciones de Plantillas</h2>
+        </div>
+        <div class="card-body">
+            {% include '_flash_messages.html' %}
+            
+            <div class="alert alert-info" role="alert">
+                <h6><i class="fas fa-info-circle"></i> Información sobre la importación:</h6>
+                <ul class="mb-0">
+                    <li>El archivo debe ser un JSON válido exportado desde este sistema.</li>
+                    <li>Las plantillas se identifican por su <code>document_type_key</code>.</li>
+                    <li>Si una plantilla ya existe y no marca la opción de sobrescribir, será omitida.</li>
+                    <li>Se mostrará un resumen de las plantillas importadas, actualizadas y omitidas.</li>
+                </ul>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {{ form.csrf_token }}
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-file-import"></i> Archivo de Configuración</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    {{ form.import_file.label(class="form-label") }}
+                                    {{ form.import_file(class="form-control", accept=".json") }}
+                                    {% if form.import_file.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.import_file.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        Seleccione el archivo JSON con las configuraciones de plantillas a importar.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    {{ form.overwrite_existing(class="form-check-input") }}
+                                    {{ form.overwrite_existing.label(class="form-check-label") }}
+                                    <small class="form-text text-muted d-block">
+                                        Si está marcado, las plantillas existentes serán actualizadas con los datos del archivo.
+                                        Si no está marcado, las plantillas existentes serán omitidas.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_templates.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            <hr class="my-4">
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Formato esperado del archivo JSON</h6>
+                </div>
+                <div class="card-body">
+                    <p>El archivo debe tener la siguiente estructura:</p>
+                    <pre><code>{
+  "export_metadata": {
+    "export_date": "2025-08-13T10:30:00",
+    "total_templates": 2,
+    "version": "1.0"
+  },
+  "templates": [
+    {
+      "google_doc_id": "1abc123...",
+      "document_type_key": "RESOLUCION_LLAMADO_REGULAR",
+      "display_name": "Resolución de Llamado Regular",
+      "uses_considerandos_builder": true,
+      "requires_tribunal_info": false,
+      "is_active": true,
+      "concurso_visibility": "REGULAR",
+      "is_unique_per_concurso": true,
+      ...
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

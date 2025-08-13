@@ -2,9 +2,10 @@
 Routes for notification campaigns in concursos docentes application.
 Contains functionality for creating, editing, and triggering email notification campaigns.
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, make_response
 from app.utils.keycloak_auth import keycloak_login_required, get_current_username
 from datetime import datetime
+import json
 import json
 
 from app.models.models import db, Concurso, NotificationCampaign, NotificationLog, TribunalMiembro, Persona, Postulante, DocumentoConcurso, DocumentTemplateConfig, HistorialEstado
@@ -249,6 +250,160 @@ def list_notification_campaigns():
         'notifications/list_campaigns.html', 
         campaigns=campaigns
     )
+
+@notifications_bp.route('/notifications/campaigns/export')
+@keycloak_login_required
+def export_campaigns():
+    """Export all notification campaigns as JSON"""
+    campaigns = NotificationCampaign.query.all()
+    
+    # Convert campaigns to dictionary format
+    campaigns_data = []
+    for campaign in campaigns:
+        campaign_dict = {
+            'nombre_campana': campaign.nombre_campana,
+            'asunto_email': campaign.asunto_email,
+            'cuerpo_email_html': campaign.cuerpo_email_html,
+            'destinatarios_json': campaign.destinatarios_json,
+            'documentos_adjuntos_config': campaign.documentos_adjuntos_config,
+            'adjuntos_personalizados': campaign.adjuntos_personalizados,
+            'estado_al_enviar': campaign.estado_al_enviar,
+            'subestado_al_enviar': campaign.subestado_al_enviar,
+            # Include metadata
+            'creado_en': campaign.creado_en.isoformat() if campaign.creado_en else None,
+            'actualizado_en': campaign.actualizado_en.isoformat() if campaign.actualizado_en else None,
+            'creado_por_username': campaign.creado_por.username if campaign.creado_por else None
+        }
+        campaigns_data.append(campaign_dict)
+    
+    # Create export data with metadata
+    export_data = {
+        'export_metadata': {
+            'export_date': datetime.utcnow().isoformat(),
+            'total_campaigns': len(campaigns_data),
+            'version': '1.0'
+        },
+        'campaigns': campaigns_data
+    }
+    
+    # Create response with JSON file download
+    response = make_response(json.dumps(export_data, indent=2, ensure_ascii=False))
+    response.headers['Content-Type'] = 'application/json'
+    response.headers['Content-Disposition'] = f'attachment; filename=notification_campaigns_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.json'
+    
+    flash(f'Campañas de notificación exportadas exitosamente. {len(campaigns_data)} campañas incluidas.', 'success')
+    return response
+
+@notifications_bp.route('/notifications/campaigns/import', methods=['GET', 'POST'])
+@keycloak_login_required
+def import_campaigns():
+    """Import notification campaigns from JSON"""
+    if request.method == 'GET':
+        return render_template('notifications/import_campaigns.html')
+    
+    # Handle POST request (file upload)
+    try:
+        # Check if file was uploaded
+        if 'import_file' not in request.files:
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return render_template('notifications/import_campaigns.html')
+        
+        file = request.files['import_file']
+        if file.filename == '':
+            flash('No se seleccionó ningún archivo.', 'danger')
+            return render_template('notifications/import_campaigns.html')
+        
+        if not file.filename.endswith('.json'):
+            flash('Solo se permiten archivos JSON.', 'danger')
+            return render_template('notifications/import_campaigns.html')
+        
+        # Read and parse the uploaded file
+        file_content = file.read().decode('utf-8')
+        import_data = json.loads(file_content)
+        
+        # Validate the import data structure
+        if 'campaigns' not in import_data:
+            flash('El archivo JSON debe contener una clave "campaigns".', 'danger')
+            return render_template('notifications/import_campaigns.html')
+        
+        campaigns_data = import_data['campaigns']
+        overwrite_existing = request.form.get('overwrite_existing') == 'on'
+        
+        imported_count = 0
+        updated_count = 0
+        skipped_count = 0
+        errors = []
+        
+        for campaign_data in campaigns_data:
+            try:
+                # Check if campaign already exists (by nombre_campana)
+                existing_campaign = NotificationCampaign.query.filter_by(
+                    nombre_campana=campaign_data.get('nombre_campana')
+                ).first()
+                
+                if existing_campaign and not overwrite_existing:
+                    skipped_count += 1
+                    continue
+                
+                # Prepare campaign data (excluding metadata fields)
+                campaign_fields = {
+                    'nombre_campana': campaign_data.get('nombre_campana'),
+                    'asunto_email': campaign_data.get('asunto_email'),
+                    'cuerpo_email_html': campaign_data.get('cuerpo_email_html'),
+                    'destinatarios_json': campaign_data.get('destinatarios_json', {}),
+                    'documentos_adjuntos_config': campaign_data.get('documentos_adjuntos_config', []),
+                    'adjuntos_personalizados': campaign_data.get('adjuntos_personalizados', []),
+                    'estado_al_enviar': campaign_data.get('estado_al_enviar'),
+                    'subestado_al_enviar': campaign_data.get('subestado_al_enviar')
+                }
+                
+                if existing_campaign:
+                    # Update existing campaign
+                    for field, value in campaign_fields.items():
+                        setattr(existing_campaign, field, value)
+                    existing_campaign.actualizado_en = datetime.utcnow()
+                    updated_count += 1
+                else:
+                    # Create new campaign
+                    campaign = NotificationCampaign(**campaign_fields)
+                    campaign.creado_en = datetime.utcnow()
+                    campaign.actualizado_en = datetime.utcnow()
+                    campaign.creado_por_id = None  # TODO: Update when Keycloak integration is complete
+                    db.session.add(campaign)
+                    imported_count += 1
+                    
+            except Exception as e:
+                errors.append(f"Error procesando campaña {campaign_data.get('nombre_campana', 'desconocida')}: {str(e)}")
+        
+        # Commit changes
+        db.session.commit()
+        
+        # Show results
+        success_msg = []
+        if imported_count > 0:
+            success_msg.append(f"{imported_count} campañas importadas")
+        if updated_count > 0:
+            success_msg.append(f"{updated_count} campañas actualizadas")
+        if skipped_count > 0:
+            success_msg.append(f"{skipped_count} campañas omitidas (ya existían)")
+            
+        if success_msg:
+            flash(f"Importación completada: {', '.join(success_msg)}.", 'success')
+        
+        if errors:
+            for error in errors:
+                flash(error, 'warning')
+                
+        return redirect(url_for('notifications.list_notification_campaigns'))
+        
+    except json.JSONDecodeError:
+        flash('El archivo no contiene un JSON válido.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al importar las campañas: {str(e)}")
+        flash(f'Error al importar las campañas: {str(e)}', 'danger')
+    
+    return render_template('notifications/import_campaigns.html')
 
 @notifications_bp.route('/concursos/<int:concurso_id>/notifications/campaigns/<int:campaign_id>/trigger', methods=['POST'])
 @keycloak_login_required
