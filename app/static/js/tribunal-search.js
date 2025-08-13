@@ -56,9 +56,10 @@ class TribunalSearchManager {
         try {
             console.log('API call - Searching for:', query);
               // Use the API URL from the global configuration if available
-            let baseUrl = '/api/buscar-personas';
+            const baseUrl = window.location.pathname.includes('/selecciones-docentes') ? '/selecciones-docentes' : '';
+            let apiUrl = `${baseUrl}/api/buscar-personas`;
             if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.buscarPersonasUrl) {
-                baseUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
+                apiUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
             }
             
             // Build URL with query parameters
@@ -71,7 +72,7 @@ class TribunalSearchManager {
                 params.append('concurso_id', window.TRIBUNAL_API_CONFIG.concursoId);
             }
             
-            const url = `${baseUrl}?${params.toString()}`;
+            const url = `${apiUrl}?${params.toString()}`;
             console.log('API URL:', url);
             
             const response = await fetch(url);
