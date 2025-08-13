@@ -55,9 +55,14 @@ class TribunalSearchManager {
       async searchPersonas(query) {
         try {
             console.log('API call - Searching for:', query);
-              // Use the API URL from the global configuration if available
-            const baseUrl = window.location.pathname.includes('/selecciones-docentes') ? '/selecciones-docentes' : '';
-            let apiUrl = `${baseUrl}/api/buscar-personas`;
+              // Use the API URL with correct base path detection
+            let apiUrl = '/api/buscar-personas';
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/selecciones-docentes/')) {
+                apiUrl = '/selecciones-docentes/api/buscar-personas';
+            }
+            
+            // Override with global configuration if available
             if (window.TRIBUNAL_API_CONFIG && window.TRIBUNAL_API_CONFIG.buscarPersonasUrl) {
                 apiUrl = window.TRIBUNAL_API_CONFIG.buscarPersonasUrl;
             }

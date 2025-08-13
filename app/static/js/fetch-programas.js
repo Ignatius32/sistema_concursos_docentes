@@ -19,9 +19,14 @@ function fetchAllProgramasInfo() {
         }
     });
     
-    // Make bulk request - use relative path that works in both dev and prod
-    const baseUrl = window.location.pathname.includes('/selecciones-docentes') ? '/selecciones-docentes' : '';
-    fetch(`${baseUrl}/api/programas-bulk`, {
+    // Make bulk request - detect correct base URL for dev and prod
+    let apiUrl = '/api/programas-bulk';
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('/selecciones-docentes/')) {
+        apiUrl = '/selecciones-docentes/api/programas-bulk';
+    }
+    
+    fetch(apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
