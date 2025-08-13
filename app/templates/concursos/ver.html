@@ -168,8 +168,14 @@
                                name="estado" 
                                value="{{ concurso.estado_actual }}" 
                                required 
-                               placeholder="Ej: CREADO, EN_TRAMITE, FINALIZADO">
-                        <div class="form-text">Estado actual del concurso</div>
+                               placeholder="Ej: INSCRIPCIÓN ABIERTA, INSCRIPCIÓN CERRADA, FINALIZADO">
+                        <div class="form-text">
+                            <strong>Visibilidad Pública:</strong><br>
+                            • <span class="badge bg-danger">INICIO, CREADO, DESPUBLICAR</span> = No visible al público<br>
+                            • <span class="badge bg-success">Todos los demás estados</span> = Visible al público con badges automáticos<br>
+                            • <span class="badge bg-info">FINALIZADO</span> = Siempre muestra badge "FINALIZADO" (ignora fechas)<br>
+                            • <span class="badge bg-warning">Otros estados</span> = Badge automático según fecha de cierre
+                        </div>
                     </div>
                     
                     <div class="mb-3">

@@ -19,29 +19,50 @@ drive_api = GoogleDriveAPI()
 @public.route('/')
 def index():
     """Display list of all active concursos for public viewing with filtering."""
+    from datetime import date, datetime, timezone, timedelta
+    
+    # Get Argentina timezone (UTC-3)
+    argentina_offset = timedelta(hours=-3)
+    argentina_tz = timezone(argentina_offset)
+    today = datetime.now(argentina_tz).date()
+    
     # Get filter parameters from request
     departamento_filter = request.args.get('departamento', '')
     estado_filter = request.args.get('estado', '')
     
-    # Base query - only show ABIERTO and CERRADO concursos
-    query = Concurso.query.filter(Concurso.estado_actual.in_(['ABIERTO', 'CERRADO']))
+    # Base query - hide only INICIO, CREADO, and DESPUBLICAR estados from public
+    hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+    query = Concurso.query.filter(~Concurso.estado_actual.in_(hidden_estados))
     
     # Apply departamento filter if provided
     if departamento_filter:
         query = query.filter(Concurso.departamento_id == departamento_filter)
     
-    # Apply estado filter if provided
-    if estado_filter:
-        query = query.filter(Concurso.estado_actual == estado_filter)
-    
-    # Get filtered concursos ordered by creation date
+    # Get all concursos first to apply dynamic estado logic
     concursos_list = query.order_by(Concurso.creado.desc()).all()
+    
+    # Apply dynamic estado logic based on cierre_inscripcion date and current estado
+    for concurso in concursos_list:
+        if concurso.estado_actual == 'FINALIZADO':
+            concurso.dynamic_estado = 'FINALIZADO'
+        elif concurso.cierre_inscripcion:
+            if concurso.cierre_inscripcion <= today:
+                concurso.dynamic_estado = 'INSCRIPCIÓN CERRADA'
+            else:
+                concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+        else:
+            # If no cierre_inscripcion date, default to INSCRIPCIÓN ABIERTA
+            concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+    
+    # Apply estado filter after dynamic estado calculation
+    if estado_filter:
+        concursos_list = [c for c in concursos_list if c.dynamic_estado == estado_filter]
     
     # Get all departamentos for the filter dropdown
     departamentos = Departamento.query.order_by(Departamento.nombre).all()
     
-    # Available estados for filtering
-    estados_disponibles = ['ABIERTO', 'CERRADO']
+    # Available estados for filtering - only the dynamic ones
+    estados_disponibles = ['INSCRIPCIÓN ABIERTA', 'INSCRIPCIÓN CERRADA', 'FINALIZADO']
     
     return render_template('public/index.html', 
                          concursos=concursos_list,
@@ -56,6 +77,11 @@ def ver_concurso(concurso_id):
     from datetime import date
     
     concurso = Concurso.query.get_or_404(concurso_id)
+    
+    # Only allow public viewing of concursos (hide only INICIO, CREADO, and DESPUBLICAR)
+    hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+    if concurso.estado_actual in hidden_estados:
+        return "Concurso no disponible para visualización pública", 404
     
     # Get the categoria to access instructivos
     categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
@@ -84,9 +110,21 @@ def ver_concurso(concurso_id):
             orientacion_concurso=concurso.orientacion
         )
     
-    # Check if registration is closed (using Argentina timezone concept)
-    today = date.today()
-    is_registration_closed = concurso.cierre_inscripcion and concurso.cierre_inscripcion < today
+    # Check if registration is closed (using Argentina timezone and FINALIZADO estado)
+    from datetime import datetime, timezone, timedelta
+    
+    # Get Argentina timezone (UTC-3)
+    argentina_offset = timedelta(hours=-3)
+    argentina_tz = timezone(argentina_offset)
+    today = datetime.now(argentina_tz).date()
+    
+    # Registration is closed if:
+    # 1. Estado is FINALIZADO, or
+    # 2. cierre_inscripcion date has passed
+    is_registration_closed = (
+        concurso.estado_actual == 'FINALIZADO' or 
+        (concurso.cierre_inscripcion and concurso.cierre_inscripcion <= today)
+    )
     
     return render_template('public/detalle_concurso.html', 
                           concurso=concurso, 
@@ -102,7 +140,8 @@ def ver_documento_publico(concurso_id, documento_id):
     try:
         # Verify the concurso exists and is public
         concurso = Concurso.query.get_or_404(concurso_id)
-        if concurso.estado_actual not in ['ABIERTO', 'CERRADO']:
+        hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+        if concurso.estado_actual in hidden_estados:
             return "Documento no disponible", 404
         
         # Get the document and verify it's visible to public
@@ -150,7 +189,8 @@ def descargar_documento_publico(concurso_id, documento_id):
     try:
         # Verify the concurso exists and is public
         concurso = Concurso.query.get_or_404(concurso_id)
-        if concurso.estado_actual not in ['ABIERTO', 'CERRADO']:
+        hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+        if concurso.estado_actual in hidden_estados:
             return "Documento no disponible", 404
         
         # Get the document and verify it's visible to public
@@ -198,7 +238,8 @@ def descargar_formulario_inscripcion(concurso_id):
     try:
         # Verify the concurso exists and is public
         concurso = Concurso.query.get_or_404(concurso_id)
-        if concurso.estado_actual not in ['ABIERTO', 'CERRADO']:
+        hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+        if concurso.estado_actual in hidden_estados:
             return "Formulario no disponible", 404
         
         # Get placeholders for this concurso
