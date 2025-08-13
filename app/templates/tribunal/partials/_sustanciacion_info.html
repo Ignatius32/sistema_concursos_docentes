@@ -1,15 +1,21 @@
 <!-- Sustanciación Information Partial -->
 {% if concurso.sustanciacion %}
+    {% set has_constitucion_data = concurso.sustanciacion.constitucion_fecha or concurso.sustanciacion.constitucion_lugar or concurso.sustanciacion.constitucion_virtual_link or concurso.sustanciacion.constitucion_observaciones %}
+    {% set has_sorteo_data = concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.temas_exposicion %}
+    {% set has_exposicion_data = concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link %}
+    
+    {% if has_constitucion_data or has_sorteo_data or has_exposicion_data %}
 <div class="row">
     <!-- Constitución del jurado -->
     <div class="col-md-4">
         <h5>Constitución del Jurado</h5>
+        {% if has_constitucion_data %}
         <p><strong>Fecha:</strong> {{ concurso.sustanciacion.constitucion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.constitucion_fecha else 'No definida' }}</p>
         <p><strong>Lugar:</strong> {{ concurso.sustanciacion.constitucion_lugar or 'No definido' }}</p>
         {% if concurso.sustanciacion.constitucion_virtual_link %}
         <p>
             <strong>Enlace virtual:</strong> 
-            <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <a href="{% if concurso.sustanciacion.constitucion_virtual_link.startswith('http') %}{{ concurso.sustanciacion.constitucion_virtual_link }}{% else %}https://{{ concurso.sustanciacion.constitucion_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-link-45deg"></i> Abrir enlace
             </a>
         </p>
@@ -17,17 +23,21 @@
         {% if concurso.sustanciacion.constitucion_observaciones %}
         <p><strong>Observaciones:</strong> {{ concurso.sustanciacion.constitucion_observaciones }}</p>
         {% endif %}
+        {% else %}
+        <p class="text-muted"><i class="bi bi-info-circle"></i> No hay información definida para la constitución del jurado.</p>
+        {% endif %}
     </div>
     
     <!-- Sorteo de tema -->
     <div class="col-md-4">
         <h5>Sorteo de Tema</h5>
+        {% if has_sorteo_data %}
         <p><strong>Fecha:</strong> {{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'No definida' }}</p>
         <p><strong>Lugar:</strong> {{ concurso.sustanciacion.sorteo_lugar or 'No definido' }}</p>
         {% if concurso.sustanciacion.sorteo_virtual_link %}
         <p>
             <strong>Enlace virtual:</strong> 
-            <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <a href="{% if concurso.sustanciacion.sorteo_virtual_link.startswith('http') %}{{ concurso.sustanciacion.sorteo_virtual_link }}{% else %}https://{{ concurso.sustanciacion.sorteo_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-link-45deg"></i> Abrir enlace
             </a>
         </p>
@@ -44,23 +54,35 @@
             </div>
         </div>
         {% endif %}
+        {% else %}
+        <p class="text-muted"><i class="bi bi-info-circle"></i> No hay información definida para el sorteo de tema.</p>
+        {% endif %}
     </div>
     
     <!-- Exposición -->
     <div class="col-md-4">
         <h5>Exposición</h5>
+        {% if has_exposicion_data %}
         <p><strong>Fecha:</strong> {{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'No definida' }}</p>
         <p><strong>Lugar:</strong> {{ concurso.sustanciacion.exposicion_lugar or 'No definido' }}</p>
         {% if concurso.sustanciacion.exposicion_virtual_link %}
         <p>
             <strong>Enlace virtual:</strong> 
-            <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <a href="{% if concurso.sustanciacion.exposicion_virtual_link.startswith('http') %}{{ concurso.sustanciacion.exposicion_virtual_link }}{% else %}https://{{ concurso.sustanciacion.exposicion_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-link-45deg"></i> Abrir enlace
             </a>
         </p>
         {% endif %}
+        {% else %}
+        <p class="text-muted"><i class="bi bi-info-circle"></i> No hay información definida para la exposición.</p>
+        {% endif %}
     </div>
 </div>
+    {% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No hay información de sustanciación definida para este concurso. La información se completará a medida que se planifique el proceso del concurso.
+</div>
+    {% endif %}
 {% else %}
 <div class="alert alert-info">
     <i class="bi bi-info-circle"></i> No hay información de sustanciación disponible para este concurso.

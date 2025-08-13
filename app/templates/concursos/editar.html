@@ -7,14 +7,30 @@
     <div class="card-header">
         <h2 class="mb-0">Editar Concurso #{{ concurso.id }}</h2>
     </div>    <div class="card-body">
-        <form method="POST" enctype="multipart/form-data">
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" id="concursoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="datos-principales-tab" data-bs-toggle="tab" data-bs-target="#datos-principales" type="button" role="tab" aria-controls="datos-principales" aria-selected="true">
+                    <i class="fas fa-file-alt me-2"></i>Datos Principales
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sustanciacion-tab" data-bs-toggle="tab" data-bs-target="#sustanciacion" type="button" role="tab" aria-controls="sustanciacion" aria-selected="false">
+                    <i class="fas fa-gavel me-2"></i>Sustanciación
+                </button>
+            </li>
+        </ul>
 
-            <!-- Sección: Datos principales -->
-            <div class="row">
-                <div class="col-12">
-                    <h4 class="mt-2 mb-3">Datos principales del concurso</h4>
-                </div>
-            </div>
+        <form method="POST" enctype="multipart/form-data">
+            <!-- Tab panes -->
+            <div class="tab-content" id="concursoTabContent">
+                <!-- Datos principales tab -->
+                <div class="tab-pane fade show active" id="datos-principales" role="tabpanel" aria-labelledby="datos-principales-tab">
+                    <div class="row">
+                        <div class="col-12">
+                            <h4 class="mt-4 mb-3">Datos principales del concurso</h4>
+                        </div>
+                    </div>
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label for="tipo" class="form-label">Tipo de Concurso</label>
@@ -111,7 +127,7 @@
 
             <!-- Grupo: Resoluciones y Fechas -->
             <div class="row">
-                <div class="col-md-4 mb-3" id="nro_res_llamado_interino_group" {% if concurso.tipo != 'Interino' %}style="display:none;"{% endif %}>
+                <!--div class="col-md-4 mb-3" id="nro_res_llamado_interino_group" {% if concurso.tipo != 'Interino' %}style="display:none;"{% endif %}>
                     <label for="nro_res_llamado_interino" class="form-label">N° Res. Llamado Interino</label>
                     <input type="text" class="form-control" id="nro_res_llamado_interino" name="nro_res_llamado_interino" value="{{ concurso.nro_res_llamado_interino or '' }}">
                 </div>
@@ -122,7 +138,7 @@
                 <div class="col-md-4 mb-3" id="nro_res_tribunal_regular_group" {% if concurso.tipo != 'Regular' %}style="display:none;"{% endif %}>
                     <label for="nro_res_tribunal_regular" class="form-label">N° Res. Tribunal Regular</label>
                     <input type="text" class="form-control" id="nro_res_tribunal_regular" name="nro_res_tribunal_regular" value="{{ concurso.nro_res_tribunal_regular or '' }}">
-                </div>
+                </div-->
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -180,8 +196,10 @@
                     </select>
                 </div>
             </div>
-
-
+        </div>
+                
+        <!-- Sustanciación tab -->
+        <div class="tab-pane fade" id="sustanciacion" role="tabpanel" aria-labelledby="sustanciacion-tab">
             <!-- Sección: Sustanciación de Concurso -->
             <div class="row">
                 <div class="col-12">
@@ -234,11 +252,7 @@
                     <label for="sorteo_observaciones" class="form-label">Observaciones del Sorteo</label>
                     <textarea class="form-control" id="sorteo_observaciones" name="sorteo_observaciones" rows="2">{{ concurso.sustanciacion.sorteo_observaciones if concurso.sustanciacion and concurso.sustanciacion.sorteo_observaciones }}</textarea>
                 </div>
-                <div class="col-md-12 mb-3">
-                    <label for="temas_exposicion" class="form-label">Temas de Exposición</label>
-                    <div id="temas-container" class="mb-2"></div>
-                    <input type="hidden" id="temas_exposicion" name="temas_exposicion" value="{{ concurso.sustanciacion.temas_exposicion if concurso.sustanciacion and concurso.sustanciacion.temas_exposicion }}">
-                </div>
+
 
                 <!-- Exposición -->
                 <div class="col-12">
@@ -263,9 +277,11 @@
                     <label for="exposicion_observaciones" class="form-label">Observaciones de la Exposición</label>
                     <textarea class="form-control" id="exposicion_observaciones" name="exposicion_observaciones" rows="2">{{ concurso.sustanciacion.exposicion_observaciones if concurso.sustanciacion and concurso.sustanciacion.exposicion_observaciones }}</textarea>
                 </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="text-end">
+            <div class="text-end mt-4">
                 <a href="{{ url_for('concursos.ver', concurso_id=concurso.id) }}" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
             </div>
@@ -552,6 +568,27 @@ document.addEventListener('DOMContentLoaded', function() {
     display: inline-flex;
     align-items: center;
     border: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.tab-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.5rem 0.5rem;
+    padding: 1rem;
+    background-color: #fff;
+}
+
+.nav-tabs {
+    margin-bottom: 0;
 }
 </style>
 {% endblock %}

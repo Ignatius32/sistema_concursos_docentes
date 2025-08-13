@@ -1,4 +1,12 @@
 <!-- Documentos Section Partial -->
+{% set visible_documentos = [] %}
+{% for documento in concurso.documentos %}
+    {% if documento.is_visible_to_tribunal(miembro) %}
+        {% set _ = visible_documentos.append(documento) %}
+    {% endif %}
+{% endfor %}
+
+{% if visible_documentos %}
 <div class="table-responsive">
     <table class="table">
         <thead>
@@ -9,8 +17,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for documento in concurso.documentos %}
-            {% if documento.is_visible_to_tribunal(miembro) %}
+            {% for documento in visible_documentos %}
             <tr>
                 <td>
                     {{ documento.get_friendly_name() }}
@@ -68,8 +75,12 @@
                     {% include 'tribunal/partials/_documento_modals.html' %}
                 </td>
             </tr>
-            {% endif %}
             {% endfor %}
         </tbody>
     </table>
 </div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No hay documentos disponibles para este concurso en este momento. Los documentos aparecerán aquí a medida que se generen durante el proceso del concurso.
+</div>
+{% endif %}

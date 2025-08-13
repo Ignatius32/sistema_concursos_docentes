@@ -24,7 +24,7 @@
                     <tr>
                         <th>Enlace a Reunión Virtual:</th>
                         <td>
-                            <a href="{{ concurso.sustanciacion.constitucion_virtual_link }}" target="_blank" class="btn btn-sm btn-tribunal-accent">
+                            <a href="{% if concurso.sustanciacion.constitucion_virtual_link.startswith('http') %}{{ concurso.sustanciacion.constitucion_virtual_link }}{% else %}https://{{ concurso.sustanciacion.constitucion_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-tribunal-accent">
                                 <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.constitucion_virtual_link }}
                             </a>
                         </td>
@@ -54,7 +54,7 @@
             <tr>
                 <th>Enlace a Reunión Virtual del Sorteo:</th>
                 <td>
-                    <a href="{{ concurso.sustanciacion.sorteo_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="{% if concurso.sustanciacion.sorteo_virtual_link.startswith('http') %}{{ concurso.sustanciacion.sorteo_virtual_link }}{% else %}https://{{ concurso.sustanciacion.sorteo_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.sorteo_virtual_link }}
                     </a>
                 </td>
@@ -245,7 +245,7 @@
             <tr>
                 <th>Enlace a Reunión Virtual de la Exposición:</th>
                 <td>
-                    <a href="{{ concurso.sustanciacion.exposicion_virtual_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="{% if concurso.sustanciacion.exposicion_virtual_link.startswith('http') %}{{ concurso.sustanciacion.exposicion_virtual_link }}{% else %}https://{{ concurso.sustanciacion.exposicion_virtual_link }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-link-45deg"></i> {{ concurso.sustanciacion.exposicion_virtual_link }}
                     </a>
                 </td>

@@ -216,14 +216,58 @@ document.addEventListener('DOMContentLoaded', function() {
     // Store the active tab in localStorage
     const tabTriggerList = [].slice.call(document.querySelectorAll('#concursoTabs button[data-bs-toggle="tab"]'));
     
-    // Restore active tab from localStorage
-    const savedTab = localStorage.getItem('portal-concurso-active-tab');
-    if (savedTab) {
-        const savedTabElement = document.querySelector(`button[data-bs-target="${savedTab}"]`);
-        if (savedTabElement) {
-            const tab = new bootstrap.Tab(savedTabElement);
-            tab.show();
+    // Check if we're coming from the tribunal portal listing page
+    const comingFromPortal = document.referrer.includes('/tribunal/portal') && !document.referrer.includes('/tribunal/portal_concurso/');
+    
+    // Check for URL hash or query parameters that might specify a tab
+    const urlHash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    // Determine which tab to show
+    let tabToShow = null;
+    
+    // Priority 1: URL hash (e.g., #sustanciacion)
+    if (urlHash) {
+        const hashTab = document.querySelector(`button[data-bs-target="${urlHash}"]`);
+        if (hashTab) {
+            tabToShow = hashTab;
         }
+    }
+    
+    // Priority 2: URL parameter (e.g., ?tab=sustanciacion)
+    if (!tabToShow && tabParam) {
+        const paramTab = document.querySelector(`button[data-bs-target="#${tabParam}"]`);
+        if (paramTab) {
+            tabToShow = paramTab;
+        }
+    }
+    
+    // Priority 3: If coming from portal listing, always show General tab
+    if (!tabToShow && comingFromPortal) {
+        tabToShow = document.querySelector('button[data-bs-target="#general"]');
+    }
+    
+    // Priority 4: Restore from localStorage if staying within same concurso
+    if (!tabToShow && !comingFromPortal) {
+        const savedTab = localStorage.getItem('portal-concurso-active-tab');
+        if (savedTab) {
+            const savedTabElement = document.querySelector(`button[data-bs-target="${savedTab}"]`);
+            if (savedTabElement) {
+                tabToShow = savedTabElement;
+            }
+        }
+    }
+    
+    // Priority 5: Default to General tab
+    if (!tabToShow) {
+        tabToShow = document.querySelector('button[data-bs-target="#general"]');
+    }
+    
+    // Show the selected tab
+    if (tabToShow) {
+        const tab = new bootstrap.Tab(tabToShow);
+        tab.show();
     }
     
     // Save active tab to localStorage when tab changes
