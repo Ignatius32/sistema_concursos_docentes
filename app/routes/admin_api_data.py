@@ -4,7 +4,7 @@ Provides CRUD operations for data that was previously fetched from external APIs
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app.models.models import db, Considerandos, DepartamentoHead
+from app.models.models import db, Considerandos, DepartamentoHead, Categoria
 from app.utils.keycloak_auth import admin_required
 from app.services.placeholder_resolver import get_core_placeholders
 import json
@@ -344,6 +344,20 @@ def api_departamento_heads_list():
     """API endpoint to get all departamento heads as JSON."""
     heads = DepartamentoHead.query.filter_by(is_active=True).all()
     return jsonify([h.to_dict() for h in heads])
+
+@admin_api_data_bp.route('/categorias')
+@admin_required
+def categorias_list():
+    """Return list of categorias for admin UIs (id, codigo, nombre, rol)."""
+    cats = Categoria.query.order_by(Categoria.codigo).all()
+    return jsonify([
+        {
+            'id': c.id,
+            'codigo': c.codigo,
+            'nombre': c.nombre,
+            'rol': c.rol,
+        } for c in cats
+    ])
 
 @admin_api_data_bp.route('/placeholders')
 @admin_required

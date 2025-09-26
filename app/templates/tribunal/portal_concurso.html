@@ -84,7 +84,7 @@
                                 <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
                                 <p><strong>Estado:</strong> 
                                     <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'activo' else 'secondary' }}"
-                                          style="background-color: {{ '#059669' if concurso.estado_actual == 'activo' else '#6b7280' }} !important; color: white !important;">
+                                          >
                                         {{ concurso.estado_actual | upper }}
                                     </span>
                                 </p>
@@ -112,18 +112,32 @@
                         <h4 class="mb-0"><i class="bi bi-info-circle-fill"></i> Instructivo para el Tribunal</h4>
                     </div>
                     <div class="card-body">
-                        {% if instructivo_tribunal.base %}
-                        <div class="mb-3">
-                            <h6><i class="bi bi-check2-circle"></i> Criterios Generales de Evaluación</h6>
-                            <p class="text-muted">{{ instructivo_tribunal.base }}</p>
+                        {% set meta = instructivo_tribunal.meta if instructivo_tribunal.meta is defined else None %}
+                        {% if meta %}
+                        <div class="mb-2">
+                            <span class="badge bg-primary me-2">Fuente: {{ meta.base_source|capitalize }}</span>
+                            {% if meta.dedic_source %}
+                                <span class="badge bg-info me-2">Dedicación: {{ meta.dedic_source }}</span>
+                            {% endif %}
+                            {% if meta.version %}
+                                <span class="badge bg-secondary">v{{ meta.version }}</span>
+                            {% endif %}
+                            {% if meta.updated_at %}
+                                <small class="text-muted ms-2">Actualizado: {{ meta.updated_at.strftime('%d/%m/%Y') }}</small>
+                            {% endif %}
                         </div>
                         {% endif %}
-                        
+                        {% if instructivo_tribunal.base %}
+                            <div class="mb-3">
+                                <h6><i class="bi bi-check2-circle"></i> Criterios Generales de Evaluación</h6>
+                                <p class="text-muted">{{ instructivo_tribunal.base }}</p>
+                            </div>
+                        {% endif %}
                         {% if instructivo_tribunal.dedicacion %}
-                        <div>
-                            <h6><i class="bi bi-star"></i> Criterios Específicos para {{ concurso.dedicacion }}</h6>
-                            <p class="text-muted">{{ instructivo_tribunal.dedicacion }}</p>
-                        </div>
+                            <div>
+                                <h6><i class="bi bi-star"></i> Criterios Específicos para {{ concurso.dedicacion }}</h6>
+                                <p class="text-muted">{{ instructivo_tribunal.dedicacion }}</p>
+                            </div>
                         {% endif %}
                     </div>
                 </div>

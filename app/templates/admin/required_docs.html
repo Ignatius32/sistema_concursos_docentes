@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="h3 mb-4">Documentación Requerida Configurable</h1>
+<p class="text-muted">Definí la lista de documentos obligatorios por Categoría y Dedicación. Precedencia: (Categoría+Dedicación) &gt; (Categoría Base) &gt; Global.</p>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form id="reqdocs-form" class="row gy-3">
+      <div class="col-md-3">
+        <label class="form-label">Categoría (vacío = Global)</label>
+        <select class="form-select" name="categoria_id" id="categoriaSelect">
+          <option value="">-- Global --</option>
+          {% for c in categorias %}
+            <option value="{{ c.id }}">{{ c.codigo }} - {{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Dedicación</label>
+        <select class="form-select" name="dedicacion" id="dedicacionSelect">
+          <option value="">Base / Todas</option>
+          <option>Simple</option>
+          <option>Parcial</option>
+          <option>Exclusiva</option>
+        </select>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">Documentos</label>
+        <div class="row" id="catalogContainer"></div>
+      </div>
+      <div class="col-md-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Guardar / Actualizar</button>
+        <button class="btn btn-outline-secondary" type="reset" id="resetBtn">Limpiar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h5 m-0">Conjuntos Configurados</h2>
+  <div class="d-flex gap-2">
+    <select id="filterCategoria" class="form-select form-select-sm" style="width:auto">
+      <option value="">Todas</option>
+      {% for c in categorias %}
+        <option value="{{ c.id }}">{{ c.codigo }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-sm btn-outline-secondary" id="refreshBtn"><i class="bi bi-arrow-clockwise"></i></button>
+  </div>
+</div>
+<table class="table table-sm table-striped align-middle" id="tablaReqDocs">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Categoría</th>
+      <th>Dedicación</th>
+      <th>Docs</th>
+      <th>Versión</th>
+      <th>Updated</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadCatalog(){
+  const res = await fetch('/admin/required-docs/catalog');
+  const data = await res.json();
+  const container = document.getElementById('catalogContainer');
+  container.innerHTML = '';
+  data.forEach(item => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4';
+    col.innerHTML = `<div class="form-check small">
+      <input class="form-check-input" type="checkbox" value="${item.code}" id="doc_${item.code}">
+      <label class="form-check-label" for="doc_${item.code}">${item.code} - ${item.label}</label>
+    </div>`;
+    container.appendChild(col);
+  });
+}
+
+function gatherSelectedDocs(){
+  return Array.from(document.querySelectorAll('#catalogContainer input[type=checkbox]:checked')).map(i=>i.value);
+}
+
+function setSelectedDocs(codes){
+  document.querySelectorAll('#catalogContainer input[type=checkbox]').forEach(cb => {
+    cb.checked = codes.includes(cb.value);
+  });
+}
+
+async function loadSets(){
+  const catFilter = document.getElementById('filterCategoria').value;
+  const params = new URLSearchParams();
+  if (catFilter) params.append('categoria_id', catFilter);
+  const res = await fetch('/admin/required-docs/?'+params.toString());
+  const data = await res.json();
+  const tbody = document.querySelector('#tablaReqDocs tbody');
+  tbody.innerHTML='';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.categoria_codigo || '-'}</td>
+      <td>${r.dedicacion || '-'}</td>
+      <td class="small">${(r.documentos||[]).join(', ')}</td>
+      <td>${r.version}</td>
+      <td>${r.updated_at ? new Date(r.updated_at).toLocaleString(): ''}</td>
+      <td><button class="btn btn-sm btn-outline-primary" data-id="${r.id}"><i class="bi bi-pencil"></i></button></td>`;
+    tr.querySelector('button').addEventListener('click', () => fillForm(r));
+    tbody.appendChild(tr);
+  });
+}
+
+function fillForm(r){
+  document.getElementById('categoriaSelect').value = r.categoria_id || '';
+  document.getElementById('dedicacionSelect').value = r.dedicacion || '';
+  setSelectedDocs(r.documentos || []);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const payload = {
+    documentos: gatherSelectedDocs()
+  };
+  const categoria_id = fd.get('categoria_id');
+  const dedicacion = fd.get('dedicacion');
+  if (categoria_id) payload.categoria_id = parseInt(categoria_id);
+  if (dedicacion) payload.dedicacion = dedicacion;
+  const res = await fetch('/admin/required-docs/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok){
+    const err = await res.json().catch(()=>({error:'Error'}));
+    alert('Error al guardar: ' + (err.error || res.status));
+    return;
+  }
+  await loadSets();
+  e.target.reset();
+  setSelectedDocs([]);
+}
+
+// Bindings
+ document.getElementById('reqdocs-form').addEventListener('submit', submitForm);
+ document.getElementById('refreshBtn').addEventListener('click', loadSets);
+ document.getElementById('filterCategoria').addEventListener('change', loadSets);
+ document.getElementById('resetBtn').addEventListener('click', ()=> setSelectedDocs([]));
+
+loadCatalog().then(loadSets);
+</script>
+{% endblock %}

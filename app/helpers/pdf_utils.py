@@ -550,44 +550,48 @@ def generate_formulario_inscripcion_pdf(concurso, placeholders):
     try:
         from app.templates.pdf_templates.formulario_inscripcion import FormularioInscripcionTemplate
         from app.models.models import Categoria
+        from app.services.instructivo_service import instructivo_service
         import os
         import json
-        
-        # Get the categoria to access instructivos and required documents (same logic as public.py)
+
         categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
         instructivo = None
         required_docs = []
         
-        if categoria and categoria.instructivo_postulantes:
-            # Build the complete instructivo text based on dedicacion
+        # Attempt structured instructivo resolution via service
+        resolved_dedicacion_text = instructivo_service.get_for_concurso(concurso, 'POSTULANTES')
+        if resolved_dedicacion_text:
+            instructivo = {'base': resolved_dedicacion_text, 'dedicacion': ''}
+        elif categoria and categoria.instructivo_postulantes:  # Legacy fallback
             base_instructivo = categoria.instructivo_postulantes.get('base', '')
             dedicacion_instructivo = categoria.instructivo_postulantes.get('porDedicacion', {}).get(concurso.dedicacion, '')
-            
-            instructivo = {
-                'base': base_instructivo,
-                'dedicacion': dedicacion_instructivo
-            }
+            instructivo = {'base': base_instructivo, 'dedicacion': dedicacion_instructivo}
         
-        # Load required documents from roles_categorias.json (same logic as tribunal view)
+        # Resolve required documents via new configurable service
         try:
-            from flask import current_app
-            
-            with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
-                categorias_data = json.load(f)
-                
-            for rol in categorias_data:
-                for cat in rol['categorias']:
-                    if cat['codigo'] == concurso.categoria:
-                        # Add base documents
-                        if 'documentacionRequerida' in cat:
-                            required_docs.extend(cat['documentacionRequerida'].get('base', []))
-                            
-                            # Add documents by dedicacion if available
-                            if 'porDedicacion' in cat['documentacionRequerida'] and concurso.dedicacion in cat['documentacionRequerida']['porDedicacion']:
-                                required_docs.extend(cat['documentacionRequerida']['porDedicacion'][concurso.dedicacion])
-                        break
+            from app.services.required_docs_service import required_docs_service
+            required_docs = required_docs_service.resolve_for_concurso(concurso)
         except Exception as e:
-            logger.error(f"Error loading required documents from JSON: {e}")
+            logger.error(f"Error resolving required docs via service: {e}")
+            required_docs = []
+
+        # Fallback to legacy JSON if service returned empty list
+        if not required_docs:
+            try:
+                from flask import current_app
+                with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
+                    categorias_data = json.load(f)
+                for rol in categorias_data:
+                    for cat in rol.get('categorias', []):
+                        if cat.get('codigo') == concurso.categoria:
+                            doc_req = cat.get('documentacionRequerida') or {}
+                            required_docs.extend(doc_req.get('base', []) or [])
+                            por_ded = doc_req.get('porDedicacion', {})
+                            if concurso.dedicacion in por_ded:
+                                required_docs.extend(por_ded[concurso.dedicacion])
+                            break
+            except Exception as e:
+                logger.error(f"Legacy fallback failed loading required documents: {e}")
         
         # Prepare concurso data dictionary
         concurso_data = {

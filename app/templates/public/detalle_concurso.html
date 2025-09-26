@@ -511,6 +511,15 @@ html {
             </div>
             <div class="card-body">
                 {% if instructivo %}
+                {% set meta = instructivo.meta if instructivo.meta is defined else None %}
+                {% if meta %}
+                <div class="mb-2">
+                    <span class="badge bg-primary me-2">Fuente: {{ meta.base_source|capitalize }}</span>
+                    {% if meta.dedic_source %}<span class="badge bg-info me-2">Dedicación: {{ meta.dedic_source }}</span>{% endif %}
+                    {% if meta.version %}<span class="badge bg-secondary">v{{ meta.version }}</span>{% endif %}
+                    {% if meta.updated_at %}<small class="text-muted ms-2">Actualizado: {{ meta.updated_at.strftime('%d/%m/%Y') }}</small>{% endif %}
+                </div>
+                {% endif %}
                 <div class="mb-4">
                     <h5 class="text-primary">
                         <i class="bi bi-check-circle me-1"></i>Requisitos Generales

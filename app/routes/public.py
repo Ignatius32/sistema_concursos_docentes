@@ -83,19 +83,14 @@ def ver_concurso(concurso_id):
     if concurso.estado_actual in hidden_estados:
         return "Concurso no disponible para visualización pública", 404
     
-    # Get the categoria to access instructivos
+    # Resolve instructivo via service (new) with legacy fallback
     categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
-    instructivo = None
-    
-    if categoria and categoria.instructivo_postulantes:
-        # Build the complete instructivo text based on dedicacion
+    from app.services.instructivo_service import instructivo_service
+    instructivo = instructivo_service.get_structured_postulantes(concurso)
+    if not instructivo and categoria and categoria.instructivo_postulantes:
         base_instructivo = categoria.instructivo_postulantes.get('base', '')
         dedicacion_instructivo = categoria.instructivo_postulantes.get('porDedicacion', {}).get(concurso.dedicacion, '')
-        
-        instructivo = {
-            'base': base_instructivo,
-            'dedicacion': dedicacion_instructivo
-        }
+        instructivo = {'base': base_instructivo, 'dedicacion': dedicacion_instructivo}
     
     # Get documents visible to public
     all_documents = DocumentoConcurso.query.filter_by(concurso_id=concurso_id).all()

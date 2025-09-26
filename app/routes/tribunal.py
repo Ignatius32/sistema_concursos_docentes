@@ -889,19 +889,9 @@ def portal_concurso(concurso_id):
             orientacion_concurso=concurso.orientacion
         )
     
-    # Get the categoria to access tribunal instructivos
-    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
-    instructivo_tribunal = None
-    
-    if categoria and categoria.instructivo_tribunal:
-        # Build the complete instructivo text for tribunal based on dedicacion
-        base_instructivo = categoria.instructivo_tribunal.get('base', '')
-        dedicacion_instructivo = categoria.instructivo_tribunal.get('porDedicacion', {}).get(concurso.dedicacion, '')
-        
-        instructivo_tribunal = {
-            'base': base_instructivo,
-            'dedicacion': dedicacion_instructivo
-        }
+    # New instructivo resolution via service with metadata
+    from app.services.instructivo_service import instructivo_service
+    instructivo_tribunal = instructivo_service.get_structured_tribunal(concurso)
     
     # Ensure role is set properly for template checks
     if 'tribunal_rol' in session:
@@ -956,27 +946,25 @@ def documentacion_postulantes(concurso_id):
             postulantes_with_docs[postulante] = documentos
     
     # Load roles_categorias.json to determine required documents
-    required_docs = []
-    try:
-        import os
-        import json
-        from flask import current_app
-        
-        with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
-            categorias_data = json.load(f)
-            
-        for rol in categorias_data:
-            for cat in rol['categorias']:
-                if cat['codigo'] == concurso.categoria:
-                    # Add base documents
-                    required_docs.extend(cat['documentacionRequerida']['base'])
-                    
-                    # Add documents by dedicacion if available
-                    if 'porDedicacion' in cat['documentacionRequerida'] and concurso.dedicacion in cat['documentacionRequerida']['porDedicacion']:
-                        required_docs.extend(cat['documentacionRequerida']['porDedicacion'][concurso.dedicacion])
-                    break
-    except Exception as e:
-        print(f"Error loading required documents: {e}")
+    from app.services.required_docs_service import required_docs_service
+    required_docs = required_docs_service.resolve_for_concurso(concurso)
+    if not required_docs:
+        try:
+            import os, json
+            from flask import current_app
+            with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
+                categorias_data = json.load(f)
+            for rol in categorias_data:
+                for cat in rol.get('categorias', []):
+                    if cat.get('codigo') == concurso.categoria:
+                        doc_req = cat.get('documentacionRequerida') or {}
+                        required_docs.extend(doc_req.get('base', []) or [])
+                        por_ded = doc_req.get('porDedicacion', {})
+                        if concurso.dedicacion in por_ded:
+                            required_docs.extend(por_ded[concurso.dedicacion])
+                        break
+        except Exception as e:
+            current_app.logger.error(f"Fallback required docs load failed: {e}")
     
     return render_template('tribunal/documentacion_postulantes.html',
                           concurso=concurso,

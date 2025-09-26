@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="h3 mb-4">Editor de Instructivos</h1>
+<p class="text-muted">Administra los textos mostrados a Postulantes y Tribunal según categoría y dedicación.</p>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form id="instructivo-form" class="row gy-3">
+      <div class="col-md-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="tipo" id="tipoSelect" required>
+          <option value="POSTULANTES">Postulantes</option>
+          <option value="TRIBUNAL">Tribunal</option>
+          <option value="GENERAL">General</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Categoría (opcional para GENERAL)</label>
+        <select class="form-select" name="categoria_id" id="categoriaSelect">
+          <option value="">-- Global --</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Dedicación</label>
+        <select class="form-select" name="dedicacion" id="dedicacionSelect">
+          <option value="">Base / Todas</option>
+          <option>Simple</option>
+          <option>Parcial</option>
+          <option>Exclusiva</option>
+        </select>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">Contenido</label>
+        <textarea class="form-control" name="contenido" id="contenidoInput" rows="8" placeholder="Texto del instructivo..." required></textarea>
+      </div>
+      <div class="col-md-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Guardar / Actualizar</button>
+        <button class="btn btn-outline-secondary" type="reset" id="resetBtn">Limpiar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h5 m-0">Registros Existentes</h2>
+  <div class="d-flex gap-2">
+    <select id="filterTipo" class="form-select form-select-sm" style="width:auto">
+      <option value="">Todos</option>
+      <option value="POSTULANTES">Postulantes</option>
+      <option value="TRIBUNAL">Tribunal</option>
+      <option value="GENERAL">General</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary" id="refreshBtn"><i class="bi bi-arrow-clockwise"></i></button>
+  </div>
+</div>
+<table class="table table-sm table-striped align-middle" id="tablaInstructivos">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Tipo</th>
+      <th>Categoría</th>
+      <th>Dedicación</th>
+      <th>Versión</th>
+      <th>Preview</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function fetchCategorias() {
+  // Simple fetch to existing API data endpoint that likely returns categories
+  try {
+    const res = await fetch('/admin/api-data/categorias');
+    if (!res.ok) return;
+    const data = await res.json();
+    const sel = document.getElementById('categoriaSelect');
+    data.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.codigo} - ${c.nombre}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.warn('No se pudieron cargar categorías', e); }
+}
+
+async function loadInstructivos() {
+  const tipoFilter = document.getElementById('filterTipo').value;
+  const params = new URLSearchParams();
+  if (tipoFilter) params.append('tipo', tipoFilter);
+  const res = await fetch(`/admin/instructivos/?${params.toString()}`);
+  const data = await res.json();
+  const tbody = document.querySelector('#tablaInstructivos tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    const preview = (r.contenido || '').slice(0,80).replace(/\n/g,' ');
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.tipo}</td>
+      <td>${r.categoria_codigo || '-'}</td>
+      <td>${r.dedicacion || '-'}</td>
+      <td>${r.version}</td>
+      <td class="text-muted small">${preview}${r.contenido.length>80?'…':''}</td>
+      <td><button class="btn btn-sm btn-outline-primary" data-id="${r.id}"><i class="bi bi-pencil"></i></button></td>
+    `;
+    tr.querySelector('button').addEventListener('click', () => fillForm(r));
+    tbody.appendChild(tr);
+  });
+}
+
+function fillForm(r) {
+  document.getElementById('tipoSelect').value = r.tipo;
+  document.getElementById('categoriaSelect').value = r.categoria_id || '';
+  document.getElementById('dedicacionSelect').value = r.dedicacion || '';
+  document.getElementById('contenidoInput').value = r.contenido;
+  document.getElementById('contenidoInput').focus();
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const payload = {
+    tipo: fd.get('tipo'),
+    contenido: fd.get('contenido'),
+  };
+  const categoria_id = fd.get('categoria_id');
+  const dedicacion = fd.get('dedicacion');
+  if (categoria_id) payload.categoria_id = parseInt(categoria_id);
+  if (dedicacion) payload.dedicacion = dedicacion;
+  const res = await fetch('/admin/instructivos/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok){
+    const err = await res.json().catch(()=>({error:'Error'}));
+    alert('Error al guardar: ' + (err.error || res.status));
+    return;
+  }
+  await loadInstructivos();
+  form.reset();
+}
+
+// Event bindings
+ document.getElementById('instructivo-form').addEventListener('submit', submitForm);
+ document.getElementById('refreshBtn').addEventListener('click', loadInstructivos);
+ document.getElementById('filterTipo').addEventListener('change', loadInstructivos);
+ document.getElementById('resetBtn').addEventListener('click', () => document.getElementById('contenidoInput').focus());
+
+fetchCategorias().then(loadInstructivos);
+</script>
+{% endblock %}

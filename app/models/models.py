@@ -57,6 +57,71 @@ class Categoria(db.Model):
     rol = db.Column(db.String(50), nullable=False)  # 'Profesor' or 'Auxiliar'
     instructivo_postulantes = db.Column(db.JSON, nullable=True)
     instructivo_tribunal = db.Column(db.JSON, nullable=True)
+
+class Instructivo(db.Model):
+        """Editable instructive text segments for postulantes / tribunal / general.
+
+        Incremental introduction: replaces legacy JSON columns on Categoria and
+        external JSON file `roles_categorias.json` for dynamic editing.
+
+        Lookup precedence for a given concurso & tipo (POSTULANTES/TRIBUNAL):
+            1. (tipo, categoria_id, dedicacion)
+            2. (tipo, categoria_id, dedicacion IS NULL)  # base
+            3. (GENERAL, NULL, NULL)                     # global fallback (future)
+
+        Versioning strategy (phase 1): overwrite in-place; increment `version`.
+        Future enhancement: introduce history table before overwrites.
+        """
+        __tablename__ = 'instructivos'
+        id = db.Column(db.Integer, primary_key=True)
+        tipo = db.Column(db.String(20), nullable=False, index=True)  # POSTULANTES | TRIBUNAL | GENERAL
+        categoria_id = db.Column(db.Integer, db.ForeignKey('categorias.id'), nullable=True, index=True)
+        dedicacion = db.Column(db.String(20), nullable=True, index=True)  # Simple | Parcial | Exclusiva | NULL(base)
+        titulo = db.Column(db.String(150), nullable=True)
+        contenido = db.Column(db.Text, nullable=False)
+        version = db.Column(db.Integer, default=1, nullable=False)
+        is_active = db.Column(db.Boolean, default=True, nullable=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        created_by_persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), nullable=True)
+        updated_by_persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), nullable=True)
+
+        # Relationships (optional navigation)
+        categoria = db.relationship('Categoria', backref=db.backref('instructivos', lazy='dynamic'))
+
+        def bump_version(self):
+                self.version = (self.version or 0) + 1
+
+class RequiredDocumentSet(db.Model):
+    """Configurable required documents list per (categoria, dedicacion) with precedence.
+
+    Precedencia de resolución:
+        1. (categoria_id, dedicacion)
+        2. (categoria_id, NULL)
+        3. (NULL, NULL)  # Global fallback
+
+    Documents stored as list of codes (e.g. ['DNI','CV','TITULO_UNIVERSITARIO']).
+    """
+    __tablename__ = 'required_document_sets'
+    id = db.Column(db.Integer, primary_key=True)
+    categoria_id = db.Column(db.Integer, db.ForeignKey('categorias.id'), nullable=True, index=True)
+    dedicacion = db.Column(db.String(20), nullable=True, index=True)
+    documentos = db.Column(db.JSON, nullable=False, default=list)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by_persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), nullable=True)
+    updated_by_persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), nullable=True)
+
+    categoria = db.relationship('Categoria', backref=db.backref('required_docs_sets', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('categoria_id', 'dedicacion', name='uq_req_docs_categoria_dedicacion'),
+    )
+
+    def bump_version(self):
+        self.version = (self.version or 0) + 1
     
 class Persona(db.Model, UserMixin):
     __tablename__ = 'personas'

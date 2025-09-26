@@ -133,7 +133,7 @@ def create_app():
     app.keycloak_admin = None
     app.logger.info("Keycloak Admin Client disabled - enable after configuring service account")
       
-      # Register blueprints
+        # Register blueprints
     from app.routes.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
     from app.routes.concursos import concursos as concursos_blueprint
@@ -170,10 +170,41 @@ def create_app():
     
     # Register public blueprint
     from app.routes.public import public as public_blueprint
-    app.register_blueprint(public_blueprint)    # Add context processor for template functions
-    from app.helpers.api_services import get_programa_download_url
-    from app.utils.keycloak_auth import get_current_user_info, get_current_user_roles, is_admin, is_tribunal_member
+    app.register_blueprint(public_blueprint)
+
+    # Register admin instructivos blueprint (new editable instructivos feature)
+    from app.routes.admin_instructivos import bp as admin_instructivos_bp
+    app.register_blueprint(admin_instructivos_bp)
+
+    # Register admin required docs blueprint
+    from app.routes.admin_required_docs import bp as admin_required_docs_bp
+    app.register_blueprint(admin_required_docs_bp)
+
+    # Add context processor for template functions
     from flask import g
+    # Keycloak helper accessors (avoid direct import of non-existent functions)
+    def get_current_user_info():
+        kc = getattr(app, 'keycloak_oidc', None)
+        if kc:
+            return kc.get_user_info()
+        return {}
+
+    def get_current_user_roles():
+        kc = getattr(app, 'keycloak_oidc', None)
+        if kc:
+            return kc.get_user_roles()
+        return []
+
+    def is_admin():
+        # Role name may vary; adjust if realm roles differ
+        roles = get_current_user_roles()
+        return 'admin' in roles or 'ADMIN' in roles
+
+    def is_tribunal_member():
+        roles = get_current_user_roles()
+        possible = {'tribunal', 'TRIBUNAL', 'tribunal_member'}
+        return any(r in roles for r in possible)
+    from app.helpers.api_services import get_programa_download_url
     
     @app.context_processor
     def utility_processor():

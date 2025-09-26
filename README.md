@@ -3,6 +3,27 @@
 ## Descripción
 Sistema para la gestión y seguimiento de concursos docentes universitarios.
 
+## Documentación Ampliada
+La documentación detallada del sistema ahora se encuentra en la carpeta `docs/`.
+
+Contenido principal:
+- Arquitectura: `docs/ARCHITECTURE_OVERVIEW.md`
+- Modelos de Datos: `docs/MODELS.md`
+- Rutas / Endpoints: `docs/ROUTES.md`
+- Servicios internos: `docs/SERVICES.md`
+- Integraciones externas (Keycloak / Google Drive): `docs/INTEGRATIONS.md`
+- Generación de Documentos: `docs/DOCUMENT_GENERATION.md`
+- Sistema de Placeholders: `docs/PLACEHOLDER_SYSTEM.md`
+- Estrategia de Testing: `docs/TESTING.md`
+- Guía de Refactorización: `docs/REFACTORING_GUIDE.md`
+- Guía para Contribuciones Asistidas por IA: `docs/AI_CONTRIBUTION_GUIDE.md`
+- Backlog de Deuda Técnica: `docs/TECH_DEBT_TODO.md`
+
+Para cualquier cambio significativo, actualice los archivos relevantes y añada enlaces cruzados cuando corresponda.
+
+## Changelog
+Consulte `CHANGELOG.md` para un historial estructurado de cambios. Las nuevas entradas deben seguir el formato *Keep a Changelog* y Semantic Versioning.
+
 ## Nuevas Características
 
 ### Control de Estado y Subestado en Documentos
@@ -66,3 +87,16 @@ GOOGLE_DRIVE_ROOT_FOLDER=your-google-drive-root-folder-id
 FLASK_APP=run.py
 FLASK_ENV=development
 ```
+
+## Roadmap y Deuda Técnica
+Consulte `docs/TECH_DEBT_TODO.md` para el estado actualizado de tareas de mejora y refactorización. Para contribuciones nuevas siga las pautas en `docs/AI_CONTRIBUTION_GUIDE.md`.
+
+## Contribuciones Asistidas por IA
+Un agente de IA debe:
+1. Añadir o reforzar tests antes de modificar lógica crítica.
+2. Mantener las rutas delgadas moviendo lógica a servicios.
+3. Registrar cambios estructurales en la guía de refactorización.
+4. Actualizar documentación y backlog tras cada PR.
+
+## Licencia
+Pendiente de definir / agregar (añadir LICENSE si corresponde).
