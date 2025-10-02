@@ -206,6 +206,7 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'id_concurso': str(concurso.id),
         'expediente': concurso.expediente or '',
         'tipo_concurso': concurso.tipo or '',
+    'cerrado_abierto': concurso.cerrado_abierto or '',  # Nuevo placeholder para estado de inscripción (Abierto/Cerrado)
         'area': concurso.area or '',
         'orientacion': concurso.orientacion or '',
         'categoria_codigo': concurso.categoria or '',
