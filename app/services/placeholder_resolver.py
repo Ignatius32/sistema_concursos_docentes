@@ -236,6 +236,8 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'fecha_comision_academica': '', # These may need to be populated from document-specific data
         'fecha_consejo_directivo': '',
         'cierre_inscripcion_fecha': concurso.cierre_inscripcion.strftime("%d/%m/%Y") if concurso.cierre_inscripcion else '',
+    # Expiration date of the concurso (formatted dd/mm/YYYY)
+    'vencimiento_fecha': concurso.vencimiento.strftime("%d/%m/%Y") if getattr(concurso, 'vencimiento', None) else '',
         
         # Committee/Council
         'despacho_comision_academica': '',
