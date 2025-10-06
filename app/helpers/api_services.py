@@ -98,8 +98,16 @@ def get_departamento_heads_data():
         
         if heads:
             current_app.logger.info(f"[LOCAL DB] Found {len(heads)} departamento heads")
-            # Return data in the same format as the external API
-            return [head.to_dict() for head in heads]
+            # Return data with aliases to be backward-compatible with legacy keys
+            result = []
+            for head in heads:
+                d = head.to_dict()
+                # Back-compat aliases expected elsewhere in code
+                # Legacy code expects 'email' and 'nombre'
+                d['email'] = d.get('correo', '') or ''
+                d['nombre'] = d.get('responsable', '') or ''
+                result.append(d)
+            return result
         else:
             current_app.logger.warning(f"[LOCAL DB] No departamento heads found")
             return []

@@ -105,6 +105,13 @@
                                     <div class="form-check">
                                         <input type="checkbox" class="form-check-input" id="role_jefe_departamento" name="otros_roles_destinatarios" value="jefe_departamento"
                                                {% if campaign and 'jefe_departamento' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="role_postulantes_activos" name="otros_roles_destinatarios" value="postulantes_activos"
+                                                       {% if campaign and 'postulantes_activos' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                                <label class="form-check-label" for="role_postulantes_activos">Postulantes activos</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mt-2">
                                         <label class="form-check-label" for="role_jefe_departamento">Jefe de Departamento</label>
                                     </div>
                                 </div>

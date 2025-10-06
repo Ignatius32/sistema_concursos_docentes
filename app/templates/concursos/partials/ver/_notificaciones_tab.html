@@ -47,11 +47,25 @@ function showNotificationPreview(concursoId, campaignId) {
     const modal = new bootstrap.Modal(document.getElementById('notificationPreviewModal'));
     modal.show();
     
-    // Load preview data
+    // Load preview data with robust error handling
     fetch(`/concursos/${concursoId}/notifications/campaigns/${campaignId}/preview`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
+        .then(async (response) => {
+            // If server returned a non-success status, surface a readable error
+            if (!response.ok) {
+                const text = await response.text();
+                const message = text && text.length > 0 ? text.substring(0, 200) + (text.length > 200 ? '…' : '') : response.statusText;
+                throw new Error(`HTTP ${response.status} - ${message}`);
+            }
+            // Ensure we received JSON; if not, treat as error (e.g., login page HTML)
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.toLowerCase().includes('application/json')) {
+                const text = await response.text();
+                throw new Error('Respuesta no válida (se esperaba JSON).');
+            }
+            return response.json();
+        })
+        .then((data) => {
+            if (data && data.error) {
                 document.getElementById('notificationPreviewContent').innerHTML = `
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-triangle"></i> Error al cargar la vista previa: ${data.error}
@@ -59,14 +73,14 @@ function showNotificationPreview(concursoId, campaignId) {
                 `;
                 return;
             }
-            
             renderPreviewContent(data);
         })
-        .catch(error => {
+        .catch((error) => {
             console.error('Error loading preview:', error);
             document.getElementById('notificationPreviewContent').innerHTML = `
                 <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i> Error al cargar la vista previa
+                    <i class="fas fa-exclamation-triangle"></i> Error al cargar la vista previa.<br/>
+                    <small class="text-muted">${(error && error.message) ? error.message : 'Error desconocido'}</small>
                 </div>
             `;
         });

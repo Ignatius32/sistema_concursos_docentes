@@ -447,20 +447,45 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                 if p.correo:
                     resolved_emails.add(p.correo)
                     destination_names[p.correo] = f"{p.nombre} {p.apellido}"
+        # Include only active applicants if requested
+        if 'postulantes_activos' in otros_roles:
+            postulantes_activos = Postulante.query.filter_by(concurso_id=concurso_id).all()
+            for p in postulantes_activos:
+                try:
+                    estado_val = (p.estado or '').strip().lower()
+                except Exception:
+                    estado_val = ''
+                if estado_val == 'activo' and p.correo:
+                    resolved_emails.add(p.correo)
+                    destination_names[p.correo] = f"{p.nombre} {p.apellido}"
+        # Include only active applicants if requested
+        if 'postulantes_activos' in otros_roles:
+            postulantes_activos = Postulante.query.filter_by(concurso_id=concurso_id).all()
+            for p in postulantes_activos:
+                try:
+                    estado_val = (p.estado or '').strip().lower()
+                except Exception:
+                    estado_val = ''
+                if estado_val == 'activo' and p.correo:
+                    resolved_emails.add(p.correo)
+                    destination_names[p.correo] = f"{p.nombre} {p.apellido}"
         
         if 'jefe_departamento' in otros_roles:
             try:
-                departamento_nombre = concurso.departamento_rel.nombre if concurso.departamento_rel else ""
-                # Get department heads data from API
+                departamento_nombre = (concurso.departamento_rel.nombre or "") if concurso.departamento_rel else ""
+                depto_norm = departamento_nombre.strip().lower()
+                # Get department heads data from local DB helper
                 dept_heads_data = get_departamento_heads_data()
                 
                 if dept_heads_data:
                     for head in dept_heads_data:
-                        if head.get('departamento') == departamento_nombre:
-                            head_email = head.get('email')
+                        head_depto = (head.get('departamento') or '').strip().lower()
+                        if head_depto == depto_norm:
+                            head_email = head.get('email') or head.get('correo')
                             if head_email:
                                 resolved_emails.add(head_email)
-                                destination_names[head_email] = head.get('nombre', 'Jefe de Departamento')
+                                display_name = head.get('nombre') or head.get('responsable') or 'Jefe de Departamento'
+                                destination_names[head_email] = display_name
             except Exception as e:
                 current_app.logger.error(f"Error fetching department heads: {str(e)}")
                 flash(f'Error al obtener datos de jefes de departamento: {str(e)}', 'warning')
@@ -718,17 +743,20 @@ def preview_notification_campaign(concurso_id, campaign_id):
         
         if 'jefe_departamento' in otros_roles:
             try:
-                departamento_nombre = concurso.departamento_rel.nombre if concurso.departamento_rel else ""
-                # Get department heads data from API
+                departamento_nombre = (concurso.departamento_rel.nombre or "") if concurso.departamento_rel else ""
+                depto_norm = departamento_nombre.strip().lower()
+                # Get department heads data from local DB helper
                 dept_heads_data = get_departamento_heads_data()
                 
                 if dept_heads_data:
                     for head in dept_heads_data:
-                        if head.get('departamento') == departamento_nombre:
-                            head_email = head.get('email')
+                        head_depto = (head.get('departamento') or '').strip().lower()
+                        if head_depto == depto_norm:
+                            head_email = head.get('email') or head.get('correo')
                             if head_email:
                                 resolved_emails.add(head_email)
-                                destination_names[head_email] = head.get('nombre', 'Jefe de Departamento')
+                                display_name = head.get('nombre') or head.get('responsable') or 'Jefe de Departamento'
+                                destination_names[head_email] = display_name
             except Exception as e:
                 current_app.logger.warning(f"Could not get department head data: {e}")
         
