@@ -38,6 +38,8 @@
 <script>
 let currentConcursoId = null;
 let currentCampaignId = null;
+// Respect application mount point (e.g., /selecciones-docentes in production)
+const APP_BASE = (document.querySelector('meta[name="app-base"]')?.getAttribute('content')) || '';
 
 function showNotificationPreview(concursoId, campaignId) {
     currentConcursoId = concursoId;
@@ -47,8 +49,8 @@ function showNotificationPreview(concursoId, campaignId) {
     const modal = new bootstrap.Modal(document.getElementById('notificationPreviewModal'));
     modal.show();
     
-    // Load preview data with robust error handling
-    fetch(`/concursos/${concursoId}/notifications/campaigns/${campaignId}/preview`)
+    // Load preview data with robust error handling (prefix with script_root for subpath deployments)
+    fetch(`${APP_BASE}/concursos/${concursoId}/notifications/campaigns/${campaignId}/preview`)
         .then(async (response) => {
             // If server returned a non-success status, surface a readable error
             if (!response.ok) {
@@ -209,7 +211,8 @@ document.getElementById('confirmSendNotification').addEventListener('click', fun
         // Create and submit a form to trigger the notification
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/concursos/${currentConcursoId}/notifications/campaigns/${currentCampaignId}/trigger`;
+        // Prefix with script_root so it works under subpaths like /selecciones-docentes
+        form.action = `${APP_BASE}/concursos/${currentConcursoId}/notifications/campaigns/${currentCampaignId}/trigger`;
         document.body.appendChild(form);
         form.submit();
     }
