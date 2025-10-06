@@ -20,39 +20,45 @@
             </h4>
         </div>
         <div class="card-body">
-            <!-- Global campaign note -->
-            <div class="alert alert-info mb-4">
-                <i class="fas fa-info-circle"></i>
-                Esta campaña de notificación es una <strong>plantilla global</strong> que podrá ser utilizada en cualquier concurso.
-                Los datos específicos del concurso serán completados al momento de enviar la notificación.
-            </div>
-            
             <!-- Campaign form -->
             <form method="POST" action="{{ form_action }}">
                 <div class="mb-3">
                     <label for="nombre_campana" class="form-label">Nombre de la Campaña *</label>
                     <input type="text" class="form-control" id="nombre_campana" name="nombre_campana" 
                            value="{{ campaign.nombre_campana if campaign else '' }}" required>
-                    <div class="form-text">Ejemplo: "Notificación Acta de Constitución al Tribunal"</div>
                 </div>
-                
                 <div class="mb-3">
                     <label for="asunto_email" class="form-label">Asunto del Email *</label>
                     <input type="text" class="form-control" id="asunto_email" name="asunto_email" 
                            value="{{ campaign.asunto_email if campaign else '' }}" required>
-                    <div class="form-text">Puede contener marcadores como: <<nombre_concurso>>, <<expediente>></div>
+                    <div class="form-text">Puede contener marcadores como: &lt;&lt;nombre_concurso&gt;&gt;, &lt;&lt;expediente&gt;&gt;</div>
                 </div>
-                
                 <div class="mb-3">
-                    <label for="cuerpo_email_html" class="form-label">Cuerpo del Email (HTML) *</label>
-                    <textarea class="form-control" id="cuerpo_email_html" name="cuerpo_email_html" rows="10" required>{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
+                    <label class="form-label">Cuerpo del Email (enriquecido) *</label>
+                    <div class="btn-toolbar mb-2" role="toolbar" aria-label="RTE toolbar">
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="bold" title="Negrita"><i class="fas fa-bold"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
+                        </div>
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="insertUnorderedList" title="Lista"><i class="fas fa-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="insertOrderedList" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                        </div>
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="rte-insert-link" title="Insertar enlace"><i class="fas fa-link"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="removeFormat" title="Quitar formato"><i class="fas fa-eraser"></i></button>
+                        </div>
+                    </div>
+                    <div id="cuerpo_email_html_editor" class="form-control" style="min-height: 220px; overflow-y:auto;" contenteditable="true"></div>
+                    <textarea id="cuerpo_email_html" name="cuerpo_email_html" class="d-none" required>{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
                     <div class="form-text">
-                        Puede escribir en formato HTML básico y utilizar los marcadores especificados abajo.
+                        Puede usar negrita, cursiva, listas, enlaces y saltos de línea. También puede utilizar los marcadores especificados abajo.
                     </div>
                 </div>
-                  <div class="card mb-3">
-                    <div class="card-header">Destinatarios</div>
-                    <div class="card-body">
+                                <div class="card mb-3">
+                                        <div class="card-header">Destinatarios</div>
+                                        <div class="card-body">
                         <!-- Tribunal Members Selection -->
                         <div class="mb-4">
                             <h6 class="mb-3">Miembros del Tribunal:</h6>
@@ -60,11 +66,6 @@
                                 <table class="table table-bordered">
                                     <thead class="table-light">
                                         <tr>
-                                            <th scope="col" style="width: 30%">Rol</th>
-                                            <th scope="col" style="width: 35%">Claustro Docente</th>
-                                            <th scope="col" style="width: 35%">Claustro Estudiante</th>
-                                        </tr>
-                                    </thead>
                                     <tbody>
                                         {% set roles = ["Presidente", "Titular", "Suplente", "Veedor"] %}
                                         {% set claustros = ["Docente", "Estudiante"] %}
@@ -93,29 +94,30 @@
                         <!-- Other Roles Selection -->
                         <div class="mb-3">
                             <h6 class="mb-2">Otros Destinatarios:</h6>
-                            <div class="row">
-                                <div class="col-md-6">
+                            <div class="row g-2">
+                                <div class="col-12 col-md-4">
                                     <div class="form-check">
                                         <input type="checkbox" class="form-check-input" id="role_postulantes" name="otros_roles_destinatarios" value="postulantes"
                                                {% if campaign and 'postulantes' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
                                         <label class="form-check-label" for="role_postulantes">Postulantes</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="role_postulantes_activos" name="otros_roles_destinatarios" value="postulantes_activos"
+                                               {% if campaign and 'postulantes_activos' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_postulantes_activos">Postulantes activos</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
                                     <div class="form-check">
                                         <input type="checkbox" class="form-check-input" id="role_jefe_departamento" name="otros_roles_destinatarios" value="jefe_departamento"
                                                {% if campaign and 'jefe_departamento' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" id="role_postulantes_activos" name="otros_roles_destinatarios" value="postulantes_activos"
-                                                       {% if campaign and 'postulantes_activos' in campaign.destinatarios_json.get('otros_roles_destinatarios', []) %}checked{% endif %}>
-                                                <label class="form-check-label" for="role_postulantes_activos">Postulantes activos</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 mt-2">
                                         <label class="form-check-label" for="role_jefe_departamento">Jefe de Departamento</label>
                                     </div>
                                 </div>
-                            </div>                        </div>
+                            </div>
+                        </div>
                         
                         <!-- Static Emails -->
                         <div class="mb-3">
@@ -326,8 +328,43 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add a wysiwyg editor for the email body if needed
-        // This is just a placeholder, you can implement a rich text editor like TinyMCE or CKEditor
+        const editor = document.getElementById('cuerpo_email_html_editor');
+        const textarea = document.getElementById('cuerpo_email_html');
+        if (editor && textarea) {
+            try {
+                editor.innerHTML = textarea.value || '';
+            } catch (e) {
+                editor.textContent = textarea.value || '';
+            }
+        }
+
+        document.querySelectorAll('[data-rte-cmd]')?.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const cmd = e.currentTarget.getAttribute('data-rte-cmd');
+                document.execCommand(cmd, false, null);
+                editor?.focus();
+            });
+        });
+
+        const linkBtn = document.getElementById('rte-insert-link');
+        linkBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = prompt('Ingrese la URL del enlace:');
+            if (url) {
+                document.execCommand('createLink', false, url);
+                editor?.focus();
+            }
+        });
+
+        const form = document.querySelector('form[action="{{ form_action }}"]');
+        if (form) {
+            form.addEventListener('submit', () => {
+                if (textarea && editor) {
+                    textarea.value = editor.innerHTML;
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

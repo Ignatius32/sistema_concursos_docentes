@@ -333,8 +333,14 @@ def replace_text_with_placeholders(text_content, placeholder_values_dict):
     for key, value in placeholder_values_dict.items():
         # Ensure value is a string
         str_value = str(value) if value is not None else ""
-        # Replace placeholders in the format <<key_name>>
-        placeholder = f"<<{key}>>"
-        result_text = result_text.replace(placeholder, str_value)
+        # Variants to support: raw and HTML-encoded placeholders produced by contenteditable/HTML
+        variants = [
+            f"<<{key}>>",                 # raw
+            f"&lt;&lt;{key}&gt;&gt;",     # HTML entity encoded
+            f"&#60;&#60;{key}&#62;&#62;"  # numeric entity encoded
+        ]
+        for ph in variants:
+            if ph in result_text:
+                result_text = result_text.replace(ph, str_value)
     
     return result_text
