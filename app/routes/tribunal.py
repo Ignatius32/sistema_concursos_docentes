@@ -889,7 +889,8 @@ def portal_concurso(concurso_id):
             orientacion_concurso=concurso.orientacion
         )
     
-    # New instructivo resolution via service with metadata
+    # New instructivo resolution via service with metadata.
+    # Prefer TRIBUNAL base: (tipo=TRIBUNAL, None, None) or (TRIBUNAL, categoria_id, None) and specific exact: (TRIBUNAL, categoria_id, dedicacion).
     from app.services.instructivo_service import instructivo_service
     instructivo_tribunal = instructivo_service.get_structured_tribunal(concurso)
     

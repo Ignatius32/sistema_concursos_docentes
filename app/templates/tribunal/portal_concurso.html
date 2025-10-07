@@ -64,49 +64,9 @@
 <!-- Tabs Content -->
 <div class="tab-content tribunal-tab-content" id="concursoTabsContent">    <!-- General Tab -->
     <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
-        <!-- Concurso Information Section -->
-        <div class="row">
-            <div class="col-md-8">                <div class="card">
-                    <div class="card-header header-primary">
-                        <h4 class="mb-0"><i class="bi bi-info-circle"></i> Información del Concurso</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
-                                <p><strong>Área:</strong> {{ concurso.area }}</p>
-                                <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
-                                <p><strong>Tipo:</strong> {{ concurso.tipo }}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
-                                <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
-                                <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
-                                <p><strong>Estado:</strong> 
-                                    <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'activo' else 'secondary' }}"
-                                          >
-                                        {{ concurso.estado_actual | upper }}
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">                <div class="card">
-                    <div class="card-header header-primary">
-                        <h4 class="mb-0"><i class="bi bi-people"></i> Miembros del Tribunal</h4>
-                    </div>
-                    <div class="card-body">
-                        {% include 'tribunal/partials/_tribunal_members.html' %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Instructivo Section -->
+        <!-- Instructivo Section (moved to top) -->
         {% if instructivo_tribunal %}
-        <div class="row mt-4">
+        <div class="row">
             <div class="col-12">                <div class="card">
                     <div class="card-header header-primary">
                         <h4 class="mb-0"><i class="bi bi-info-circle-fill"></i> Instructivo para el Tribunal</h4>
@@ -144,6 +104,46 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Concurso Information Section -->
+        <div class="row mt-4">
+            <div class="col-md-8">                <div class="card">
+                    <div class="card-header header-primary">
+                        <h4 class="mb-0"><i class="bi bi-info-circle"></i> Información del Concurso</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre }}</p>
+                                <p><strong>Área:</strong> {{ concurso.area }}</p>
+                                <p><strong>Orientación:</strong> {{ concurso.orientacion }}</p>
+                                <p><strong>Tipo:</strong> {{ concurso.tipo }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Categoría:</strong> {{ concurso.categoria_nombre }} ({{ concurso.categoria }})</p>
+                                <p><strong>Dedicación:</strong> {{ concurso.dedicacion }}</p>
+                                <p><strong>Cantidad de Cargos:</strong> {{ concurso.cant_cargos }}</p>
+                                <p><strong>Estado:</strong> 
+                                    <span class="badge badge-tribunal-{{ 'success' if concurso.estado_actual == 'activo' else 'secondary' }}"
+                                          >
+                                        {{ concurso.estado_actual | upper }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">                <div class="card">
+                    <div class="card-header header-primary">
+                        <h4 class="mb-0"><i class="bi bi-people"></i> Miembros del Tribunal</h4>
+                    </div>
+                    <div class="card-body">
+                        {% include 'tribunal/partials/_tribunal_members.html' %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <!-- Sustanciación Tab -->
     {% if concurso.sustanciacion %}
@@ -296,15 +296,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateTabNotifications() {
-    // Add notification badge to documents tab if there are pending signatures
-    const pendingSignatures = document.querySelectorAll('.badge.bg-info');
-    if (pendingSignatures.length > 0) {
+    // Add notification badge to documents tab if there are pending signatures among VISIBLE tribunal documents
+    const documentosSection = document.getElementById('documentos');
+    let pendingVisible = 0;
+    if (documentosSection) {
+        const visiblePending = documentosSection.querySelectorAll('.badge.bg-info[data-status="pending-firma"]');
+        pendingVisible = visiblePending ? visiblePending.length : 0;
+    }
+    if (pendingVisible > 0) {
         const documentosTab = document.getElementById('documentos-tab');
         if (documentosTab && !documentosTab.querySelector('.notification-badge')) {
             const badge = document.createElement('span');
-            badge.className = 'badge bg-danger ms-2 notification-badge';
-            badge.textContent = pendingSignatures.length;
-            badge.title = `${pendingSignatures.length} documento(s) pendiente(s) de firma`;
+            badge.className = 'badge bg-secondary ms-2 notification-badge'; // subtle grey
+            badge.textContent = pendingVisible;
+            badge.title = `${pendingVisible} documento(s) pendiente(s) de firma`;
             documentosTab.appendChild(badge);
         }
     }

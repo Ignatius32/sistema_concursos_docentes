@@ -38,7 +38,7 @@
                         FIRMADO POR USTED {% if documento.firma_count > 1 %}({{ documento.firma_count }} firmas total){% endif %}
                     </span>
                     {% else %}
-                    <span class="badge bg-info">
+                    <span class="badge bg-info" data-status="pending-firma">
                         PENDIENTE DE FIRMA {% if documento.firma_count > 0 %}({{ documento.firma_count }} firma{% if documento.firma_count > 1 %}s{% endif %}){% endif %}
                     </span>
                     {% endif %}

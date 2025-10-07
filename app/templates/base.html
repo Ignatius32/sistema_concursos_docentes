@@ -209,7 +209,8 @@
                                 <li><a class="dropdown-item" href="{{ url_for('concursos.index') }}">
                                     <i class="bi bi-gear"></i> Panel de Administración
                                 </a></li>
-                                {% elif keycloak_is_tribunal %}
+                                {% endif %}
+                                {% if keycloak_is_tribunal %}
                                 <li><a class="dropdown-item" href="{{ url_for('tribunal.portal') }}">
                                     <i class="bi bi-house"></i> Portal del Tribunal
                                 </a></li>

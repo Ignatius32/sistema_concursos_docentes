@@ -27,7 +27,11 @@ class InstructivoService:
             q = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
             if q:
                 return q.contenido
-        # 3. Global fallback (GENERAL)
+        # 3. Tipo-level global fallback (tipo, None, None)
+        q = Instructivo.query.filter_by(tipo=tipo, categoria_id=None, dedicacion=None, is_active=True).first()
+        if q:
+            return q.contenido
+        # 4. Global fallback (GENERAL)
         if tipo != 'GENERAL':
             q = Instructivo.query.filter_by(tipo='GENERAL', categoria_id=None, dedicacion=None, is_active=True).first()
             if q:
@@ -47,7 +51,11 @@ class InstructivoService:
             inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
             if inst:
                 return inst.contenido, 'base', inst
-        # general fallback
+        # tipo-level global fallback (treat as 'general' for source labeling)
+        inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=None, dedicacion=None, is_active=True).first()
+        if inst:
+            return inst.contenido, 'general', inst
+        # general fallback to tipo='GENERAL'
         if tipo != 'GENERAL':
             inst = Instructivo.query.filter_by(tipo='GENERAL', categoria_id=None, dedicacion=None, is_active=True).first()
             if inst:
