@@ -7,7 +7,7 @@ from app.utils.keycloak_auth import (
     is_admin as keycloak_is_admin,
 )
 from app.services.instructivo_service import instructivo_service
-from app.models.models import Categoria
+from app.models.models import Categoria, Instructivo, db
 
 bp = Blueprint('admin_instructivos', __name__, url_prefix='/admin/instructivos')
 
@@ -60,3 +60,15 @@ def create_or_update():
         actor_persona_id=None,
     )
     return jsonify({'id': inst.id, 'version': inst.version}), 201
+
+
+@bp.route('/<int:id>', methods=['DELETE'])
+@keycloak_login_required
+@admin_required
+def delete_instructivo(id: int):
+    inst = Instructivo.query.get_or_404(id)
+    if not inst.is_active:
+        return ('', 204)
+    inst.is_active = False
+    db.session.commit()
+    return ('', 204)
