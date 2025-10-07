@@ -75,7 +75,7 @@
 async function fetchCategorias() {
   // Simple fetch to existing API data endpoint that likely returns categories
   try {
-    const res = await fetch('/admin/api-data/categorias');
+    const res = await fetch('{{ url_for("admin_api_data.categorias_list") }}');
     if (!res.ok) return;
     const data = await res.json();
     const sel = document.getElementById('categoriaSelect');
@@ -92,7 +92,9 @@ async function loadInstructivos() {
   const tipoFilter = document.getElementById('filterTipo').value;
   const params = new URLSearchParams();
   if (tipoFilter) params.append('tipo', tipoFilter);
-  const res = await fetch(`/admin/instructivos/?${params.toString()}`);
+  const baseUrl = '{{ url_for("admin_instructivos.list_instructivos") }}';
+  const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  const res = await fetch(url);
   const data = await res.json();
   const tbody = document.querySelector('#tablaInstructivos tbody');
   tbody.innerHTML = '';
@@ -133,7 +135,8 @@ async function submitForm(e){
   const dedicacion = fd.get('dedicacion');
   if (categoria_id) payload.categoria_id = parseInt(categoria_id);
   if (dedicacion) payload.dedicacion = dedicacion;
-  const res = await fetch('/admin/instructivos/', {
+  const postUrl = '{{ url_for("admin_instructivos.create_or_update") }}';
+  const res = await fetch(postUrl, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(payload)

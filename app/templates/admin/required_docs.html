@@ -68,7 +68,7 @@
 {% block extra_js %}
 <script>
 async function loadCatalog(){
-  const res = await fetch('/admin/required-docs/catalog');
+  const res = await fetch('{{ url_for("admin_required_docs.catalog") }}');
   const data = await res.json();
   const container = document.getElementById('catalogContainer');
   container.innerHTML = '';
@@ -97,7 +97,9 @@ async function loadSets(){
   const catFilter = document.getElementById('filterCategoria').value;
   const params = new URLSearchParams();
   if (catFilter) params.append('categoria_id', catFilter);
-  const res = await fetch('/admin/required-docs/?'+params.toString());
+  const baseUrl = '{{ url_for("admin_required_docs.list_sets") }}';
+  const url = params.toString() ? baseUrl + '?' + params.toString() : baseUrl;
+  const res = await fetch(url);
   const data = await res.json();
   const tbody = document.querySelector('#tablaReqDocs tbody');
   tbody.innerHTML='';
@@ -133,7 +135,8 @@ async function submitForm(e){
   const dedicacion = fd.get('dedicacion');
   if (categoria_id) payload.categoria_id = parseInt(categoria_id);
   if (dedicacion) payload.dedicacion = dedicacion;
-  const res = await fetch('/admin/required-docs/', {
+  const postUrl = '{{ url_for("admin_required_docs.create_or_update") }}';
+  const res = await fetch(postUrl, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(payload)
