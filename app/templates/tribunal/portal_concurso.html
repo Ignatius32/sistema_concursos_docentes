@@ -130,13 +130,13 @@
                         {% if instructivo_tribunal.base %}
                             <div class="mb-3">
                                 <h6><i class="bi bi-check2-circle"></i> Criterios Generales de Evaluación</h6>
-                                <p class="text-muted">{{ instructivo_tribunal.base }}</p>
+                                    <div class="text-muted" style="white-space: pre-line;">{{ instructivo_tribunal.base }}</div>
                             </div>
                         {% endif %}
                         {% if instructivo_tribunal.dedicacion %}
                             <div>
                                 <h6><i class="bi bi-star"></i> Criterios Específicos para {{ concurso.dedicacion }}</h6>
-                                <p class="text-muted">{{ instructivo_tribunal.dedicacion }}</p>
+                                    <div class="text-muted" style="white-space: pre-line;">{{ instructivo_tribunal.dedicacion }}</div>
                             </div>
                         {% endif %}
                     </div>

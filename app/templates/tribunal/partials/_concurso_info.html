@@ -53,13 +53,13 @@
                 {% if instructivo_tribunal.base %}
                     <div class="mb-3">
                         <h6>Criterios Generales de Evaluación</h6>
-                        <p>{{ instructivo_tribunal.base }}</p>
+                        <div style="white-space: pre-line;">{{ instructivo_tribunal.base }}</div>
                     </div>
                 {% endif %}
                 {% if instructivo_tribunal.dedicacion %}
                     <div>
                         <h6>Criterios Específicos para {{ concurso.dedicacion }}</h6>
-                        <p>{{ instructivo_tribunal.dedicacion }}</p>
+                        <div style="white-space: pre-line;">{{ instructivo_tribunal.dedicacion }}</div>
                     </div>
                 {% endif %}
             </div>
