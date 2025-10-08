@@ -2,10 +2,11 @@
 One-off safe DB schema patcher.
 - Adds instructivos.concurso_tipo if missing + index
 - Adds historial_estados.subestado_snapshot if missing (skips if exists)
+- Adds required_document_sets.concurso_tipo if missing + index and updates unique constraint (best-effort)
 
 Run:
-  source .venv/bin/activate
-  python scripts/patch_db_schema.py
+    source .venv/bin/activate
+    python scripts/patch_db_schema.py
 
 Requires app factory and DATABASE_URI to point to your target DB.
 """
@@ -84,6 +85,49 @@ def main():
                 print(f'[warn] Could not add column (may already exist): {e}')
         else:
             print('[skip] Column historial_estados.subestado_snapshot already exists')
+
+        # 3) Add required_document_sets.concurso_tipo if missing and index/unique
+        if not column_exists(insp, 'required_document_sets', 'concurso_tipo'):
+            print('[patch] Adding column required_document_sets.concurso_tipo ...')
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE required_document_sets ADD COLUMN concurso_tipo VARCHAR(20)'))
+            except Exception as e:
+                print(f'[warn] Could not add column (may already exist): {e}')
+            # Refresh inspector
+            insp = inspect(engine)
+        else:
+            print('[skip] Column required_document_sets.concurso_tipo already exists')
+
+        # 3b) Create index for concurso_tipo
+        if not index_exists(insp, 'required_document_sets', 'ix_required_document_sets_concurso_tipo'):
+            print('[patch] Creating index ix_required_document_sets_concurso_tipo ...')
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text('CREATE INDEX IF NOT EXISTS ix_required_document_sets_concurso_tipo ON required_document_sets (concurso_tipo)'))
+            except Exception:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text('CREATE INDEX ix_required_document_sets_concurso_tipo ON required_document_sets (concurso_tipo)'))
+                except Exception as e2:
+                    print(f'[warn] Could not create index (may already exist): {e2}')
+        else:
+            print('[skip] Index ix_required_document_sets_concurso_tipo already exists')
+
+        # 3c) Attempt to replace old unique constraint with new one (best-effort; SQLite limitations apply)
+        # We will attempt to create a new unique index enforcing (categoria_id, dedicacion, concurso_tipo)
+        # without dropping the old constraint to avoid destructive ops in SQLite. This is safe and additive.
+        if not index_exists(insp, 'required_document_sets', 'uq_req_docs_categoria_dedicacion_concurso_tipo'):
+            print('[patch] Creating unique index uq_req_docs_categoria_dedicacion_concurso_tipo ...')
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS uq_req_docs_categoria_dedicacion_concurso_tipo ON required_document_sets (categoria_id, dedicacion, concurso_tipo)'))
+            except Exception:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text('CREATE UNIQUE INDEX uq_req_docs_categoria_dedicacion_concurso_tipo ON required_document_sets (categoria_id, dedicacion, concurso_tipo)'))
+                except Exception as e2:
+                    print(f'[warn] Could not create unique index: {e2}')
 
         print('[done] Schema patch completed.')
 

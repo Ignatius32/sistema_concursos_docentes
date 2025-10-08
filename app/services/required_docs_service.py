@@ -20,25 +20,44 @@ DOCUMENT_CATALOG = {
 class RequiredDocsService:
     """Service for configurable required documents per categoria/dedicacion.
 
-    Resolution precedence:
-        1. (categoria_id, dedicacion)
-        2. (categoria_id, NULL)
-        3. (NULL, NULL)
+    Resolution precedence (including concurso_tipo when provided):
+        1. (categoria_id, dedicacion, concurso_tipo)
+        2. (categoria_id, dedicacion, NULL)
+        3. (categoria_id, NULL, concurso_tipo)
+        4. (categoria_id, NULL, NULL)
+        5. (NULL, NULL, concurso_tipo)
+        6. (NULL, NULL, NULL)
     """
 
-    def resolve(self, *, categoria_id: Optional[int], dedicacion: Optional[str]) -> List[str]:
-        # Exact
-        if categoria_id is not None and dedicacion is not None:
-            inst = RequiredDocumentSet.query.filter_by(categoria_id=categoria_id, dedicacion=dedicacion, is_active=True).first()
+    def resolve(self, *, categoria_id: Optional[int], dedicacion: Optional[str], concurso_tipo: Optional[str]) -> List[str]:
+        q = RequiredDocumentSet.query.filter_by(is_active=True)
+        # Try exact category+dedicacion+tipo
+        if categoria_id is not None and dedicacion is not None and concurso_tipo is not None:
+            inst = q.filter_by(categoria_id=categoria_id, dedicacion=dedicacion, concurso_tipo=concurso_tipo).first()
             if inst:
                 return inst.documentos or []
-        # Base category
+        # Category+dedicacion base (tipo NULL)
+        if categoria_id is not None and dedicacion is not None:
+            inst = q.filter_by(categoria_id=categoria_id, dedicacion=dedicacion, concurso_tipo=None).first()
+            if inst:
+                return inst.documentos or []
+        # Category base by tipo
+        if categoria_id is not None and concurso_tipo is not None:
+            inst = q.filter_by(categoria_id=categoria_id, dedicacion=None, concurso_tipo=concurso_tipo).first()
+            if inst:
+                return inst.documentos or []
+        # Category base (both NULL)
         if categoria_id is not None:
-            inst = RequiredDocumentSet.query.filter_by(categoria_id=categoria_id, dedicacion=None, is_active=True).first()
+            inst = q.filter_by(categoria_id=categoria_id, dedicacion=None, concurso_tipo=None).first()
+            if inst:
+                return inst.documentos or []
+        # Global by tipo
+        if concurso_tipo is not None:
+            inst = q.filter_by(categoria_id=None, dedicacion=None, concurso_tipo=concurso_tipo).first()
             if inst:
                 return inst.documentos or []
         # Global fallback
-        inst = RequiredDocumentSet.query.filter_by(categoria_id=None, dedicacion=None, is_active=True).first()
+        inst = q.filter_by(categoria_id=None, dedicacion=None, concurso_tipo=None).first()
         if inst:
             return inst.documentos or []
         return []
@@ -47,10 +66,11 @@ class RequiredDocsService:
         categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
         categoria_id = categoria.id if categoria else None
         dedicacion = concurso.dedicacion
-        return self.resolve(categoria_id=categoria_id, dedicacion=dedicacion)
+        concurso_tipo = concurso.tipo if getattr(concurso, 'tipo', None) else None
+        return self.resolve(categoria_id=categoria_id, dedicacion=dedicacion, concurso_tipo=concurso_tipo)
 
-    def create_or_update(self, *, categoria_id: Optional[int], dedicacion: Optional[str], documentos: List[str], actor_persona_id: Optional[int] = None) -> RequiredDocumentSet:
-        row = RequiredDocumentSet.query.filter_by(categoria_id=categoria_id, dedicacion=dedicacion).first()
+    def create_or_update(self, *, categoria_id: Optional[int], dedicacion: Optional[str], documentos: List[str], actor_persona_id: Optional[int] = None, concurso_tipo: Optional[str] = None) -> RequiredDocumentSet:
+        row = RequiredDocumentSet.query.filter_by(categoria_id=categoria_id, dedicacion=dedicacion, concurso_tipo=concurso_tipo).first()
         if row:
             row.documentos = documentos
             row.bump_version()
@@ -59,6 +79,7 @@ class RequiredDocsService:
             row = RequiredDocumentSet(
                 categoria_id=categoria_id,
                 dedicacion=dedicacion,
+                concurso_tipo=concurso_tipo,
                 documentos=documentos,
                 created_by_persona_id=actor_persona_id,
             )
@@ -66,11 +87,13 @@ class RequiredDocsService:
         db.session.commit()
         return row
 
-    def list(self, *, categoria_id: Optional[int] = None):
+    def list(self, *, categoria_id: Optional[int] = None, concurso_tipo: Optional[str] = None):
         q = RequiredDocumentSet.query.filter_by(is_active=True)
         if categoria_id is not None:
             q = q.filter_by(categoria_id=categoria_id)
-        return q.order_by(RequiredDocumentSet.categoria_id, RequiredDocumentSet.dedicacion).all()
+        if concurso_tipo is not None:
+            q = q.filter_by(concurso_tipo=concurso_tipo)
+        return q.order_by(RequiredDocumentSet.categoria_id, RequiredDocumentSet.dedicacion, RequiredDocumentSet.concurso_tipo).all()
 
     def seed_from_roles_categorias(self, json_path: str) -> int:
         """Seed initial data from legacy roles_categorias.json if table empty."""

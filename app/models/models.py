@@ -109,6 +109,8 @@ class RequiredDocumentSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categorias.id'), nullable=True, index=True)
     dedicacion = db.Column(db.String(20), nullable=True, index=True)
+    # New optional discriminator to differentiate Regular vs Interino
+    concurso_tipo = db.Column(db.String(20), nullable=True, index=True)  # Regular | Interino | NULL(base)
     documentos = db.Column(db.JSON, nullable=False, default=list)
     version = db.Column(db.Integer, nullable=False, default=1)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
@@ -120,7 +122,8 @@ class RequiredDocumentSet(db.Model):
     categoria = db.relationship('Categoria', backref=db.backref('required_docs_sets', lazy='dynamic'))
 
     __table_args__ = (
-        db.UniqueConstraint('categoria_id', 'dedicacion', name='uq_req_docs_categoria_dedicacion'),
+        # Updated uniqueness to include concurso_tipo in the key
+        db.UniqueConstraint('categoria_id', 'dedicacion', 'concurso_tipo', name='uq_req_docs_categoria_dedicacion_concurso_tipo'),
     )
 
     def bump_version(self):

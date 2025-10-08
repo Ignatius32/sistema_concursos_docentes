@@ -302,22 +302,21 @@ def agregar_documento(postulante_id):
         except Exception as e:
             flash(f'Error al agregar documento: {str(e)}', 'danger')
     
-    # Get the documentation requirements for this concurso
+    # Get the documentation requirements for this concurso via configurable service (with legacy fallback)
     try:
-        with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
-            categorias_data = json.load(f)
-            
-        required_docs = []
-        for rol in categorias_data:
-            for cat in rol['categorias']:
-                if cat['codigo'] == concurso.categoria:
-                    # Add base documents
-                    required_docs.extend(cat['documentacionRequerida']['base'])
-                    
-                    # Add documents by dedicacion if available
-                    if 'porDedicacion' in cat['documentacionRequerida'] and concurso.dedicacion in cat['documentacionRequerida']['porDedicacion']:
-                        required_docs.extend(cat['documentacionRequerida']['porDedicacion'][concurso.dedicacion])
-                    break
+        required_docs = required_docs_service.resolve_for_concurso(concurso)
+        if not required_docs:
+            with open(os.path.join(current_app.root_path, '../roles_categorias.json'), 'r', encoding='utf-8') as f:
+                categorias_data = json.load(f)
+                for rol in categorias_data:
+                    for cat in rol.get('categorias', []):
+                        if cat.get('codigo') == concurso.categoria:
+                            doc_req = cat.get('documentacionRequerida') or {}
+                            required_docs.extend(doc_req.get('base', []) or [])
+                            por_ded = doc_req.get('porDedicacion', {})
+                            if concurso.dedicacion in por_ded:
+                                required_docs.extend(por_ded[concurso.dedicacion])
+                            break
     except Exception as e:
         print(f"Error loading required documents: {e}")
         required_docs = []

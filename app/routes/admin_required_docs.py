@@ -19,13 +19,15 @@ def catalog():
 @admin_required
 def list_sets():
     categoria_id = request.args.get('categoria_id', type=int)
-    rows = required_docs_service.list(categoria_id=categoria_id)
+    concurso_tipo = request.args.get('concurso_tipo') or None
+    rows = required_docs_service.list(categoria_id=categoria_id, concurso_tipo=concurso_tipo)
     return jsonify([
         {
             'id': r.id,
             'categoria_id': r.categoria_id,
             'categoria_codigo': r.categoria.codigo if r.categoria_id and r.categoria else None,
             'dedicacion': r.dedicacion,
+            'concurso_tipo': r.concurso_tipo,
             'documentos': r.documentos,
             'version': r.version,
             'updated_at': r.updated_at.isoformat() if r.updated_at else None,
@@ -42,9 +44,11 @@ def create_or_update():
         return jsonify({'error': 'documentos must be list'}), 400
     categoria_id = payload.get('categoria_id')
     dedicacion = payload.get('dedicacion') or None
+    concurso_tipo = payload.get('concurso_tipo') or None
     row = required_docs_service.create_or_update(
         categoria_id=categoria_id,
         dedicacion=dedicacion,
+        concurso_tipo=concurso_tipo,
         documentos=documentos,
         actor_persona_id=None
     )
