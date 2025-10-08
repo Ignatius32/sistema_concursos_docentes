@@ -18,10 +18,12 @@ bp = Blueprint('admin_instructivos', __name__, url_prefix='/admin/instructivos')
 def list_instructivos():
     tipo = request.args.get('tipo')
     categoria_id = request.args.get('categoria_id', type=int)
+    concurso_tipo = request.args.get('concurso_tipo')
     data = [
         {
             'id': i.id,
             'tipo': i.tipo,
+            'concurso_tipo': i.concurso_tipo,
             'categoria_id': i.categoria_id,
             'categoria_codigo': Categoria.query.get(i.categoria_id).codigo if i.categoria_id else None,
             'dedicacion': i.dedicacion,
@@ -29,7 +31,7 @@ def list_instructivos():
             'contenido': i.contenido,
             'updated_at': i.updated_at.isoformat() if getattr(i, 'updated_at', None) else None,
         }
-        for i in instructivo_service.list(tipo=tipo, categoria_id=categoria_id)
+        for i in instructivo_service.list(tipo=tipo, categoria_id=categoria_id, concurso_tipo=concurso_tipo)
     ]
     return jsonify(data)
 
@@ -56,6 +58,7 @@ def create_or_update():
         categoria_id=payload.get('categoria_id'),
         dedicacion=payload.get('dedicacion'),
         contenido=payload['contenido'],
+        concurso_tipo=payload.get('concurso_tipo'),
         # actor_persona_id mapping from Keycloak user -> persona not yet integrated here
         actor_persona_id=None,
     )

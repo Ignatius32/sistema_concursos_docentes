@@ -1,4 +1,5 @@
 import json
+import json
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -75,6 +76,8 @@ class Instructivo(db.Model):
         __tablename__ = 'instructivos'
         id = db.Column(db.Integer, primary_key=True)
         tipo = db.Column(db.String(20), nullable=False, index=True)  # POSTULANTES | TRIBUNAL | GENERAL
+        # New optional discriminator for Concurso tipo (REGULAR | INTERINO). NULL = aplica a ambos (base)
+        concurso_tipo = db.Column(db.String(20), nullable=True, index=True)
         categoria_id = db.Column(db.Integer, db.ForeignKey('categorias.id'), nullable=True, index=True)
         dedicacion = db.Column(db.String(20), nullable=True, index=True)  # Simple | Parcial | Exclusiva | NULL(base)
         titulo = db.Column(db.String(150), nullable=True)

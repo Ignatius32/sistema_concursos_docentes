@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1 class="h3 mb-4">Editor de Instructivos</h1>
-<p class="text-muted">Administra los textos mostrados a Postulantes y Tribunal según categoría y dedicación.</p>
+<p class="text-muted">Administra los textos mostrados a Postulantes y Tribunal según categoría, dedicación y tipo de concurso (Regular/Interino). Si no especificás tipo de concurso, el texto aplica como base para ambos.</p>
 
 <div class="card mb-4">
   <div class="card-body">
@@ -18,6 +18,14 @@
         <label class="form-label">Categoría (opcional para GENERAL)</label>
         <select class="form-select" name="categoria_id" id="categoriaSelect">
           <option value="">-- Global --</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Tipo de Concurso</label>
+        <select class="form-select" name="concurso_tipo" id="concursoTipoSelect">
+          <option value="">Base / Ambos</option>
+          <option value="REGULAR">Regular</option>
+          <option value="INTERINO">Interino</option>
         </select>
       </div>
       <div class="col-md-3">
@@ -50,6 +58,11 @@
       <option value="TRIBUNAL">Tribunal</option>
       <option value="GENERAL">General</option>
     </select>
+    <select id="filterConcursoTipo" class="form-select form-select-sm" style="width:auto">
+      <option value="">Todos Tipos</option>
+      <option value="REGULAR">Regular</option>
+      <option value="INTERINO">Interino</option>
+    </select>
     <button class="btn btn-sm btn-outline-secondary" id="refreshBtn"><i class="bi bi-arrow-clockwise"></i></button>
   </div>
 </div>
@@ -58,6 +71,7 @@
     <tr>
       <th>ID</th>
       <th>Tipo</th>
+      <th>Concurso Tipo</th>
       <th>Categoría</th>
       <th>Dedicación</th>
       <th>Versión</th>
@@ -90,8 +104,10 @@ async function fetchCategorias() {
 
 async function loadInstructivos() {
   const tipoFilter = document.getElementById('filterTipo').value;
+  const cTipoFilter = document.getElementById('filterConcursoTipo').value;
   const params = new URLSearchParams();
   if (tipoFilter) params.append('tipo', tipoFilter);
+  if (cTipoFilter) params.append('concurso_tipo', cTipoFilter);
   const baseUrl = '{{ url_for("admin_instructivos.list_instructivos") }}';
   const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
   const res = await fetch(url);
@@ -104,6 +120,7 @@ async function loadInstructivos() {
     tr.innerHTML = `
       <td>${r.id}</td>
       <td>${r.tipo}</td>
+      <td>${r.concurso_tipo || '-'}</td>
       <td>${r.categoria_codigo || '-'}</td>
       <td>${r.dedicacion || '-'}</td>
       <td>${r.version}</td>
@@ -122,6 +139,7 @@ async function loadInstructivos() {
 function fillForm(r) {
   document.getElementById('tipoSelect').value = r.tipo;
   document.getElementById('categoriaSelect').value = r.categoria_id || '';
+  document.getElementById('concursoTipoSelect').value = r.concurso_tipo || '';
   document.getElementById('dedicacionSelect').value = r.dedicacion || '';
   document.getElementById('contenidoInput').value = r.contenido;
   document.getElementById('contenidoInput').focus();
@@ -137,8 +155,10 @@ async function submitForm(e){
   };
   const categoria_id = fd.get('categoria_id');
   const dedicacion = fd.get('dedicacion');
+  const concurso_tipo = fd.get('concurso_tipo');
   if (categoria_id) payload.categoria_id = parseInt(categoria_id);
   if (dedicacion) payload.dedicacion = dedicacion;
+  if (concurso_tipo) payload.concurso_tipo = concurso_tipo;
   const postUrl = '{{ url_for("admin_instructivos.create_or_update") }}';
   const res = await fetch(postUrl, {
     method: 'POST',
@@ -169,6 +189,7 @@ async function deleteInstructivo(id){
  document.getElementById('instructivo-form').addEventListener('submit', submitForm);
  document.getElementById('refreshBtn').addEventListener('click', loadInstructivos);
  document.getElementById('filterTipo').addEventListener('change', loadInstructivos);
+ document.getElementById('filterConcursoTipo').addEventListener('change', loadInstructivos);
  document.getElementById('resetBtn').addEventListener('click', () => document.getElementById('contenidoInput').focus());
 
 fetchCategorias().then(loadInstructivos);

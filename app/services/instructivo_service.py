@@ -11,59 +11,91 @@ class InstructivoService:
       3. Global fallback (GENERAL, NULL, NULL)
     """
 
+    def _normalize_concurso_tipo(self, concurso_tipo: Optional[str]) -> Optional[str]:
+        if not concurso_tipo:
+            return None
+        val = concurso_tipo.strip().upper()
+        if val.startswith('REG'):
+            return 'REGULAR'
+        if val.startswith('INT'):
+            return 'INTERINO'
+        return None
+
     def get_for_concurso(self, concurso: Concurso, tipo: str) -> Optional[str]:
         categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
         categoria_id = categoria.id if categoria else None
         dedicacion = concurso.dedicacion
-        return self.resolve(tipo=tipo, categoria_id=categoria_id, dedicacion=dedicacion)
+        concurso_tipo = self._normalize_concurso_tipo(getattr(concurso, 'tipo', None))
+        return self.resolve(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=dedicacion)
 
-    def resolve(self, tipo: str, categoria_id: Optional[int], dedicacion: Optional[str]) -> Optional[str]:
-        # 1. Exact
-        q = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=dedicacion, is_active=True).first()
-        if q:
-            return q.contenido
-        # 2. Base for category
-        if categoria_id is not None:
-            q = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
+    def resolve(self, tipo: str, concurso_tipo: Optional[str], categoria_id: Optional[int], dedicacion: Optional[str]) -> Optional[str]:
+        # Precedence including concurso_tipo dimension
+        filters = []
+        # 1) Exact within concurso_tipo
+        filters.append(dict(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=dedicacion))
+        # 2) Base within concurso_tipo (no dedicacion)
+        filters.append(dict(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=None))
+        # 3) Exact without concurso_tipo (legacy/base)
+        filters.append(dict(tipo=tipo, concurso_tipo=None, categoria_id=categoria_id, dedicacion=dedicacion))
+        # 4) Base without concurso_tipo
+        filters.append(dict(tipo=tipo, concurso_tipo=None, categoria_id=categoria_id, dedicacion=None))
+        # 5) Tipo-level global within concurso_tipo
+        filters.append(dict(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=None, dedicacion=None))
+        # 6) Audience global (no concurso_tipo)
+        filters.append(dict(tipo=tipo, concurso_tipo=None, categoria_id=None, dedicacion=None))
+        for f in filters:
+            q = Instructivo.query.filter_by(is_active=True, **f).first()
             if q:
                 return q.contenido
-        # 3. Tipo-level global fallback (tipo, None, None)
-        q = Instructivo.query.filter_by(tipo=tipo, categoria_id=None, dedicacion=None, is_active=True).first()
-        if q:
-            return q.contenido
-        # 4. Global fallback (GENERAL)
+        # 7) GENERAL global fallback
         if tipo != 'GENERAL':
-            q = Instructivo.query.filter_by(tipo='GENERAL', categoria_id=None, dedicacion=None, is_active=True).first()
+            q = Instructivo.query.filter_by(tipo='GENERAL', concurso_tipo=None, categoria_id=None, dedicacion=None, is_active=True).first()
             if q:
                 return q.contenido
         return None
 
-    def resolve_with_meta(self, tipo: str, categoria_id: Optional[int], dedicacion: Optional[str]):
+    def resolve_with_meta(self, tipo: str, categoria_id: Optional[int], dedicacion: Optional[str], concurso_tipo: Optional[str] = None):
         """Return (contenido, source_level, InstructivoObj) where source_level in
         ['exact','base','general','none'].
         """
-        # exact
-        inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=dedicacion, is_active=True).first()
+        # Normalize concurso_tipo
+        concurso_tipo = self._normalize_concurso_tipo(concurso_tipo)
+        # exact within concurso_tipo
+        inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=dedicacion, is_active=True).first()
         if inst:
             return inst.contenido, 'exact', inst
-        # base
+        # base within concurso_tipo
         if categoria_id is not None:
-            inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
+            inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
             if inst:
                 return inst.contenido, 'base', inst
-        # tipo-level global fallback (treat as 'general' for source labeling)
-        inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=None, dedicacion=None, is_active=True).first()
+        # exact without concurso_tipo (legacy)
+        inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=None, categoria_id=categoria_id, dedicacion=dedicacion, is_active=True).first()
+        if inst:
+            return inst.contenido, 'exact', inst
+        # base without concurso_tipo
+        if categoria_id is not None:
+            inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=None, categoria_id=categoria_id, dedicacion=None, is_active=True).first()
+            if inst:
+                return inst.contenido, 'base', inst
+        # tipo-level global within concurso_tipo (treat as 'general' for source labeling)
+        inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=None, dedicacion=None, is_active=True).first()
         if inst:
             return inst.contenido, 'general', inst
-        # general fallback to tipo='GENERAL'
+        # general fallback within audience without concurso_tipo
+        inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=None, categoria_id=None, dedicacion=None, is_active=True).first()
+        if inst:
+            return inst.contenido, 'general', inst
+        # global fallback to tipo='GENERAL'
         if tipo != 'GENERAL':
-            inst = Instructivo.query.filter_by(tipo='GENERAL', categoria_id=None, dedicacion=None, is_active=True).first()
+            inst = Instructivo.query.filter_by(tipo='GENERAL', concurso_tipo=None, categoria_id=None, dedicacion=None, is_active=True).first()
             if inst:
                 return inst.contenido, 'general', inst
         return None, 'none', None
 
-    def create_or_update(self, *, tipo: str, categoria_id: Optional[int], dedicacion: Optional[str], contenido: str, actor_persona_id: Optional[int] = None) -> Instructivo:
-        inst = Instructivo.query.filter_by(tipo=tipo, categoria_id=categoria_id, dedicacion=dedicacion).first()
+    def create_or_update(self, *, tipo: str, categoria_id: Optional[int], dedicacion: Optional[str], contenido: str, actor_persona_id: Optional[int] = None, concurso_tipo: Optional[str] = None) -> Instructivo:
+        concurso_tipo = self._normalize_concurso_tipo(concurso_tipo)
+        inst = Instructivo.query.filter_by(tipo=tipo, concurso_tipo=concurso_tipo, categoria_id=categoria_id, dedicacion=dedicacion).first()
         if inst:
             inst.contenido = contenido
             inst.bump_version()
@@ -71,6 +103,7 @@ class InstructivoService:
         else:
             inst = Instructivo(
                 tipo=tipo,
+                concurso_tipo=concurso_tipo,
                 categoria_id=categoria_id,
                 dedicacion=dedicacion,
                 contenido=contenido,
@@ -80,20 +113,23 @@ class InstructivoService:
         db.session.commit()
         return inst
 
-    def list(self, *, tipo: Optional[str] = None, categoria_id: Optional[int] = None):
+    def list(self, *, tipo: Optional[str] = None, categoria_id: Optional[int] = None, concurso_tipo: Optional[str] = None):
         q = Instructivo.query.filter_by(is_active=True)
         if tipo:
             q = q.filter_by(tipo=tipo)
         if categoria_id is not None:
             q = q.filter_by(categoria_id=categoria_id)
-        return q.order_by(Instructivo.tipo, Instructivo.categoria_id, Instructivo.dedicacion).all()
+        if concurso_tipo is not None:
+            q = q.filter_by(concurso_tipo=self._normalize_concurso_tipo(concurso_tipo))
+        return q.order_by(Instructivo.tipo, Instructivo.concurso_tipo, Instructivo.categoria_id, Instructivo.dedicacion).all()
 
     # Structured helpers returning dict in legacy shape {base, dedicacion}
     def get_structured_postulantes(self, concurso: Concurso):
         categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
         cat_id = categoria.id if categoria else None
-        dedic_content, dedic_level, dedic_inst = self.resolve_with_meta('POSTULANTES', cat_id, concurso.dedicacion)
-        base_content, base_level, base_inst = self.resolve_with_meta('POSTULANTES', cat_id, None)
+        concurso_tipo = self._normalize_concurso_tipo(getattr(concurso, 'tipo', None))
+        dedic_content, dedic_level, dedic_inst = self.resolve_with_meta('POSTULANTES', cat_id, concurso.dedicacion, concurso_tipo)
+        base_content, base_level, base_inst = self.resolve_with_meta('POSTULANTES', cat_id, None, concurso_tipo)
         # Decide structure
         if dedic_level == 'exact' and base_content and dedic_content != base_content:
             return {
@@ -166,8 +202,9 @@ class InstructivoService:
     def get_structured_tribunal(self, concurso: Concurso):
         categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
         cat_id = categoria.id if categoria else None
-        dedic_content, dedic_level, dedic_inst = self.resolve_with_meta('TRIBUNAL', cat_id, concurso.dedicacion)
-        base_content, base_level, base_inst = self.resolve_with_meta('TRIBUNAL', cat_id, None)
+        concurso_tipo = self._normalize_concurso_tipo(getattr(concurso, 'tipo', None))
+        dedic_content, dedic_level, dedic_inst = self.resolve_with_meta('TRIBUNAL', cat_id, concurso.dedicacion, concurso_tipo)
+        base_content, base_level, base_inst = self.resolve_with_meta('TRIBUNAL', cat_id, None, concurso_tipo)
         if dedic_level == 'exact' and base_content and dedic_content != base_content:
             return {
                 'base': base_content,

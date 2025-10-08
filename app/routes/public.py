@@ -83,52 +83,15 @@ def ver_concurso(concurso_id):
     if concurso.estado_actual in hidden_estados:
         return "Concurso no disponible para visualización pública", 404
     
-    # Resolve instructivo explicitly split between GLOBAL (no categoria, no dedicacion)
-    # and SPECIFIC (exact by categoria + dedicacion). Avoid merging so UI shows them separately.
-    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+    # Resolve instructivo via service with concurso tipo awareness
     from app.services.instructivo_service import instructivo_service
-
-    cat_id = categoria.id if categoria else None
-
-    # 1) General/global text: prefer POSTULANTES with no categoria/dedicacion; fallback to GENERAL
-    general_content, general_level, general_inst = instructivo_service.resolve_with_meta('POSTULANTES', None, None)
-    if not general_content:
-        general_content, general_level, general_inst = instructivo_service.resolve_with_meta('GENERAL', None, None)
-
-    # 2) Specific text (only exact match for POSTULANTES by categoria + dedicacion)
-    specific_content, specific_level, specific_inst = instructivo_service.resolve_with_meta('POSTULANTES', cat_id, concurso.dedicacion)
-    if specific_level != 'exact':
-        specific_content = None
-        specific_inst = None
-
-    instructivo = None
-    # Legacy fallback if nothing is found in the new table
-    if (not general_content) and (not specific_content) and categoria and categoria.instructivo_postulantes:
+    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+    instructivo = instructivo_service.get_structured_postulantes(concurso)
+    # Legacy fallback if service returns nothing
+    if (not instructivo) and categoria and categoria.instructivo_postulantes:
         base_instructivo = categoria.instructivo_postulantes.get('base', '')
         dedicacion_instructivo = categoria.instructivo_postulantes.get('porDedicacion', {}).get(concurso.dedicacion, '')
         instructivo = {'base': base_instructivo, 'dedicacion': dedicacion_instructivo}
-    else:
-        # Build structured payload for template using pure general and pure specific
-        instructivo = {
-            'base': general_content or '',
-            'dedicacion': specific_content or '',
-        }
-        # Provide meta for badges if available
-        meta = {}
-        if general_content:
-            # Use the actual resolution level label for transparency ('exact' if POSTULANTES None/None, or 'general' if GENERAL)
-            meta['base_source'] = general_level or 'general'
-            if general_inst:
-                meta['version'] = general_inst.version
-                meta['updated_at'] = getattr(general_inst, 'updated_at', None)
-        if specific_content:
-            meta['dedic_source'] = 'exact'   # explicitly exact match for categoria+dedicacion
-            # Prefer specific version info if present
-            if specific_inst:
-                meta['version'] = specific_inst.version
-                meta['updated_at'] = getattr(specific_inst, 'updated_at', None)
-        if meta:
-            instructivo['meta'] = meta
     
     # Get documents visible to public
     all_documents = DocumentoConcurso.query.filter_by(concurso_id=concurso_id).all()
