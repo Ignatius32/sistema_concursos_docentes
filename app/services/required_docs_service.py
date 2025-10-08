@@ -3,18 +3,16 @@ from app.models.models import db, RequiredDocumentSet, Categoria, Concurso
 
 # Canonical catalog of document codes and their human labels
 DOCUMENT_CATALOG = {
-    'DNI': 'Fotocopia certificada del DNI',
-    'CV': 'Curriculum Vitae actualizado y documentación respaldatoria',
-    'DOCUMENTACION_RESPALDATORIA_CV': 'Documentación respaldatoria del CV',
-    'TITULO_UNIVERSITARIO': 'Fotocopia certificada del título universitario',
-    'ANTECEDENTES_IDONEIDAD': 'Certificados de antecedentes de idoneidad',
-    'PROPUESTA_PROGRAMA': 'Propuesta de programa detallada',
-    'ACTIVIDADES_PREVISTAS': 'Plan de actividades previstas',
-    'PLAN_FORMACION_RRHH': 'Programa de formación de recursos humanos',
-    'PLAN_IVE': 'Plan de investigación/vinculación/extensión',
-    'PLAN_IVE_OPCIONAL': 'Plan de investigación/vinculación/extensión (opcional)',
-    'PLAN_O_PROGRAMA_ACTIVIDADES': 'Plan o programa de actividades',
-    'PROPUESTA_EJERCICIO_O_TP': 'Propuesta de ejercicio o trabajo práctico',
+    'DNI': 'Copia de DNI (un archivo)',
+    'CV': 'Curriculum Vitae actualizado y documentación respaldatoria (un archivo).',
+    'TITULO_UNIVERSITARIO': 'Copia del Título Universitario (un archivo).',
+    'ANTECEDENTES_IDONEIDAD': 'Documentación que acredita idoneidad en caso de no contar con Título Universitario (un archivo).',
+    'PROGRAMA_ACTIVIDADES': 'Programa y actividades previstas para el dictado de alguna de las asignaturas del área y orientación objeto del concurso; o bien, del área si no corresponde orientación (un archivo).',
+    'PLAN_FORMACION_RRHH': 'Programa de Formación de Recursos Humanos (un archivo).',
+    'PLAN_IVE': 'Plan de Actividades de Investigación, Vinculación y/o Extensión (un archivo).',
+    'PLAN_IVE_OPCIONAL': 'Plan de Actividades de Investigación, Vinculación y/o Extensión (opcional) (un archivo).',
+    'PLAN_O_PROGRAMA_ACTIVIDADES': 'Plan/programa de actividades prácticas y/o de aplicación para la asignatura que concursa según área y orientación (un archivo).',
+    'PROPUESTA_EJERCICIO_O_TP': 'Propuesta de ejercicio o trabajo práctico de un tema específico correspondiente a una unidad o tema del programa de la asignatura a concursar, según área y orientación (un archivo).'
 }
 
 class RequiredDocsService:

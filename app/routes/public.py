@@ -267,11 +267,10 @@ def descargar_formulario_inscripcion(concurso_id):
         area_name = sanitize_filename(concurso.area or "Sin_Area")
         orientacion_name = sanitize_filename(concurso.orientacion or "Sin_Orientacion")
         categoria_name = sanitize_filename(concurso.categoria or "Sin_Categoria")
-        
-        filename = f"Formulario_Inscripcion_C{concurso.id}_{departamento_name}_{area_name}_{orientacion_name}_{categoria_name}.pdf"
-        
+
+        filename = f"Solicitud_Inscripcion_Declaracion_Jurada_C{concurso.id}_{departamento_name}_{area_name}_{orientacion_name}_{categoria_name}.pdf"
+
         # Return the PDF as a downloadable file with proper headers
-        from flask import Response
         response = Response(
             pdf_content,
             mimetype='application/pdf',

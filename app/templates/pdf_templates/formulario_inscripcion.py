@@ -21,6 +21,48 @@ class FormularioInscripcionTemplate:
         self.width, self.height = A4
         self.margin = 1 * inch
         self.content_width = self.width - (2 * self.margin)
+    
+    def _draw_page_number(self, c):
+        """Draw the current page number at the bottom-right of the page."""
+        try:
+            c.setFont("Helvetica", 8)
+            c.drawRightString(self.width - self.margin, 30, f"Página {c.getPageNumber()}")
+        except Exception:
+            # Fallback without breaking rendering
+            pass
+    
+    def _wrap_text(self, c, text, max_width, font="Helvetica", size=10):
+        """Wrap text into lines that fit within max_width using current canvas font metrics."""
+        c.setFont(font, size)
+        text = text or ""
+        words = text.split()
+        if not words:
+            return [""]
+        lines = []
+        line = ""
+        for w in words:
+            candidate = (line + " " + w).strip()
+            if c.stringWidth(candidate, font, size) <= max_width:
+                line = candidate
+            else:
+                if line:
+                    lines.append(line)
+                # If a single word is longer than max_width, force-break by characters
+                if c.stringWidth(w, font, size) > max_width and len(w) > 1:
+                    chunk = ""
+                    for ch in w:
+                        if c.stringWidth(chunk + ch, font, size) <= max_width:
+                            chunk += ch
+                        else:
+                            if chunk:
+                                lines.append(chunk)
+                            chunk = ch
+                    line = chunk
+                else:
+                    line = w
+        if line:
+            lines.append(line)
+        return lines
         
     def generate_pdf(self, concurso_data, placeholders):
         """
@@ -35,6 +77,11 @@ class FormularioInscripcionTemplate:
         """
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
+        # Set PDF metadata title to match the visible title
+        try:
+            c.setTitle("Solicitud de Inscripción y Declaración Jurada")
+        except Exception:
+            pass
         
         # Add header with logo
         self._add_header(c)
@@ -47,6 +94,8 @@ class FormularioInscripcionTemplate:
         
         # Check if we need a new page
         if y_position < 400:
+            # finalize current page with page number before breaking
+            self._draw_page_number(c)
             c.showPage()
             y_position = self.height - 80
         
@@ -55,10 +104,12 @@ class FormularioInscripcionTemplate:
         
         # Add required documents section with dynamic data
         y_position = self._add_required_documents(c, y_position, concurso_data)
-        
-        # Add footer
+
+        # Add footer (signature + timestamp) on the last page
         self._add_footer(c)
-        
+        # Draw page number on the last page
+        self._draw_page_number(c)
+
         c.save()
         buffer.seek(0)
         return buffer.getvalue()
@@ -96,7 +147,7 @@ class FormularioInscripcionTemplate:
     def _add_title(self, c, placeholders):
         """Add the form title"""
         c.setFont("Helvetica-Bold", 16)
-        title = "FORMULARIO DE INSCRIPCIÓN"
+        title = "SOLICITUD DE INSCRIPCIÓN Y DECLARACIÓN JURADA"
         title_width = c.stringWidth(title, "Helvetica-Bold", 16)
         c.drawString((self.width - title_width) / 2, self.height - 160, title)
         
@@ -111,7 +162,7 @@ class FormularioInscripcionTemplate:
         
         # Section title
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(self.margin, y_start, "INFORMACIÓN DEL CONCURSO")
+        c.drawString(self.margin, y_start, "INFORMACIÓN DE LA SELECCIÓN")
         
         # Draw line under title
         c.line(self.margin, y_start - 5, self.width - self.margin, y_start - 5)
@@ -119,47 +170,80 @@ class FormularioInscripcionTemplate:
         y_position = y_start - 25
         c.setFont("Helvetica", 11)
         
-        # Concurso details in two columns
+        # Two columns layout with wrapping and dynamic row height
         left_column_x = self.margin
-        right_column_x = self.width / 2 + 20
-        line_height = 18
-        
-        # Left column - with wider spacing for labels
+        right_column_x = self.width / 2 + 20  # provide gutter
+        label_width = 90
+        line_height = 16
+
+        # Data
         info_items_left = [
-            ("Concurso N°:", placeholders.get('id_concurso', '')),
-            ("Departamento:", placeholders.get('departamento_nombre', '')),
-            ("Área:", placeholders.get('area', '')),
-            ("Orientación:", placeholders.get('orientacion', '')),
-            ("Categoría:", f"{placeholders.get('categoria_nombre', '')} ({placeholders.get('categoria_codigo', '')})"),
+            ("N° de Registro:", str(placeholders.get('id_concurso', ''))),
+            ("Departamento:", str(placeholders.get('departamento_nombre', ''))),
+            ("Área:", str(placeholders.get('area', ''))),
+            ("Orientación:", str(placeholders.get('orientacion', ''))),
+            ("Categoría:", f"{placeholders.get('categoria_nombre', '')} ({placeholders.get('categoria_codigo', '')})".strip()),
         ]
-        
-        # Right column - with shorter labels and wider spacing
         info_items_right = [
-            ("Dedicación:", placeholders.get('dedicacion', '')),
-            ("Localización:", placeholders.get('localizacion', '')),
-            ("Tipo:", placeholders.get('tipo_concurso', '')),
-            ("Cant. Cargos:", placeholders.get('cant_cargos_numero', '')),
-            ("Cierre Insc.:", placeholders.get('cierre_inscripcion_fecha', '')),
-            ("Expediente:", placeholders.get('expediente', '')),
+            ("Dedicación:", str(placeholders.get('dedicacion', ''))),
+            ("Localización:", str(placeholders.get('localizacion', ''))),
+            ("Tipo:", str(placeholders.get('tipo_concurso', ''))),
+            ("Cant. Cargos:", str(placeholders.get('cant_cargos_numero', ''))),
+            ("Cierre Insc.:", str(placeholders.get('cierre_inscripcion_fecha', ''))),
+            ("Expediente:", str(placeholders.get('expediente', ''))),
         ]
-        
-        # Draw left column with adequate spacing
-        for i, (label, value) in enumerate(info_items_left):
-            y = y_position - (i * line_height)
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(left_column_x, y, label)
+
+        # Compute max widths for values
+        left_value_x = left_column_x + label_width
+        left_max_right = right_column_x - 10
+        max_width_left = max(10, left_max_right - left_value_x)
+        right_value_x = right_column_x + label_width
+        right_max_right = self.width - self.margin
+        max_width_right = max(10, right_max_right - right_value_x)
+
+        # Number of rows is the max length among both columns
+        total_rows = max(len(info_items_left), len(info_items_right))
+        y_cursor = y_position
+
+        for i in range(total_rows):
+            # Left item
+            left_label, left_val = (info_items_left[i] if i < len(info_items_left) else ("", ""))
+            # Right item
+            right_label, right_val = (info_items_right[i] if i < len(info_items_right) else ("", ""))
+
+            # Wrap values
+            left_lines = self._wrap_text(c, left_val, max_width_left, font="Helvetica", size=10) if left_val else [""]
+            right_lines = self._wrap_text(c, right_val, max_width_right, font="Helvetica", size=10) if right_val else [""]
+            row_lines = max(len(left_lines), len(right_lines))
+            row_height = max(1, row_lines) * line_height
+
+            # Page safety (unlikely here, but safe)
+            if y_cursor - row_height < 120:
+                self._draw_page_number(c)
+                c.showPage()
+                # re-draw section header if we break page? keep it simple and continue
+                y_cursor = self.height - 100
+
+            # Draw left label and wrapped value
+            if left_label:
+                c.setFont("Helvetica-Bold", 10)
+                c.drawString(left_column_x, y_cursor, left_label)
             c.setFont("Helvetica", 10)
-            c.drawString(left_column_x + 90, y, str(value))
-        
-        # Draw right column with adequate spacing  
-        for i, (label, value) in enumerate(info_items_right):
-            y = y_position - (i * line_height)
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(right_column_x, y, label)
+            for j, l in enumerate(left_lines):
+                c.drawString(left_value_x, y_cursor - (j * line_height), l)
+
+            # Draw right label and wrapped value aligned to the same top line
+            if right_label:
+                c.setFont("Helvetica-Bold", 10)
+                c.drawString(right_column_x, y_cursor, right_label)
             c.setFont("Helvetica", 10)
-            c.drawString(right_column_x + 90, y, str(value))
-        
-        return y_position - (len(info_items_left) * line_height) - 20
+            for j, l in enumerate(right_lines):
+                c.drawString(right_value_x, y_cursor - (j * line_height), l)
+
+            # Advance cursor for next row
+            y_cursor = y_cursor - row_height
+
+        return y_cursor - 20
     
     def _add_personal_data_form(self, c, y_start):
         """Add personal data form section"""
@@ -209,92 +293,123 @@ class FormularioInscripcionTemplate:
         return y_position - (len(fields) * field_height) - 20
     
     def _add_required_documents(self, c, y_start, concurso_data):
-        """Add required documents checklist using dynamic data from JSON"""
-        # Check if we need a new page
+        """Add Declaración Jurada at the top, then required documents, then Información Importante."""
+        # Ensure we start with enough space
         if y_start < 200:
+            self._draw_page_number(c)
             c.showPage()
             y_start = self.height - 100
-        
-        # Section title
+
+        y = y_start
+
+        # 1) Declaración Jurada section
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(self.margin, y_start, "DOCUMENTACIÓN REQUERIDA")
-        
-        # Draw line under title
-        c.line(self.margin, y_start - 5, self.width - self.margin, y_start - 5)
-        
-        y_position = y_start - 30
-        c.setFont("Helvetica", 11)
-        
-        # Use dynamic required documents from JSON data
-        required_docs = concurso_data.get('required_docs', [])
-        
-        # Document type translations/friendly names
-        doc_translations = {
-            'DNI': 'Fotocopia certificada del DNI',
-            'CV': 'Curriculum Vitae actualizado y documentación respaldatoria',
-            'DOCUMENTACION_RESPALDATORIA_CV': 'Documentación respaldatoria del CV',
-            'TITULO_UNIVERSITARIO': 'Fotocopia certificada del título universitario',
-            'ANTECEDENTES_IDONEIDAD': 'Certificados de antecedentes de idoneidad',
-            'PROPUESTA_PROGRAMA': 'Propuesta de programa detallada',
-            'ACTIVIDADES_PREVISTAS': 'Plan de actividades previstas',
-            'PLAN_FORMACION_RRHH': 'Programa de formación de recursos humanos',
-            'PLAN_IVE': 'Plan de investigación/vinculación/extensión',
-            'PLAN_IVE_OPCIONAL': 'Plan de investigación/vinculación/extensión (opcional)',
-            'PLAN_O_PROGRAMA_ACTIVIDADES': 'Plan o programa de actividades',
-            'PROPUESTA_EJERCICIO_O_TP': 'Propuesta de ejercicio o trabajo práctico',
-        }
-        
-        # Create document list with checkboxes
-        documents = []
-        
-        if required_docs:
-            # Use only documents from JSON - no fallback or fixed documents
-            for doc_code in required_docs:
-                friendly_name = doc_translations.get(doc_code, doc_code)
-                documents.append(f"□ {friendly_name}")
-        
-        # If no dynamic documents available, show a message
-        if not documents:
-            documents = ["□ No hay documentación específica requerida para este concurso"]
-        
-        line_height = 16
-        for i, document in enumerate(documents):
-            y = y_position - (i * line_height)
-            # Check if we need a new page
-            if y < 150:
-                c.showPage()
-                y = self.height - 100 - (i * line_height)
-            c.drawString(self.margin + 10, y, document)
-        
-        # Add important note
-        y_note = y_position - (len(documents) * line_height) - 30
-        
-        # Check if we need a new page for the note
-        if y_note < 150:
-            c.showPage()
-            y_note = self.height - 100
-        
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(self.margin, y_note, "INFORMACIÓN IMPORTANTE:")
-        
+        c.drawString(self.margin, y, "DECLARACIÓN JURADA")
+        c.line(self.margin, y - 5, self.width - self.margin, y - 5)
+        y -= 30
+
+        declaracion_text = (
+            "Por la presente informo en carácter de Declaración Jurada no estar comprendido en las causales de "
+            "inhabilitación para el desempeño de cargos públicos."
+        )
+        x_decl = self.margin + 10
+        max_width_decl = self.width - self.margin - x_decl
+        lines_decl = self._wrap_text(c, declaracion_text, max_width_decl, font="Helvetica", size=10)
         c.setFont("Helvetica", 10)
-        note_text = [
-            "• Toda la documentación debe presentarse en original y fotocopia.",
-            "• Las fotocopias serán certificadas por la Secretaría Académica al momento de la presentación.",
-            "• El postulante debe verificar que toda la documentación esté completa antes de la presentación.",
-            "• La documentación incompleta puede resultar en la descalificación de la postulación.",
-            f"• Para más información sobre requisitos específicos, consulte la Secretaría Académica.",
-        ]
-        
-        for i, note in enumerate(note_text):
-            y = y_note - 20 - (i * 12)
-            # Check if we need a new page for notes
-            if y < 80:
+        for line in lines_decl:
+            if y < 150:
+                self._draw_page_number(c)
                 c.showPage()
-                y = self.height - 80 - (i * 12)
-            c.drawString(self.margin + 10, y, note)
-        
-        return y_note - 100
+                y = self.height - 100
+            c.drawString(x_decl, y, line)
+            y -= 12
+        y -= 10
+
+        # 2) Documentación Requerida section
+        # Add a bit of extra top margin before the section title
+        extra_top_margin = 10
+        y -= extra_top_margin
+        if y < 200:
+            self._draw_page_number(c)
+            c.showPage()
+            y = self.height - 100 - extra_top_margin
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(self.margin, y, "DOCUMENTACIÓN PRESENTADA")
+        c.line(self.margin, y - 5, self.width - self.margin, y - 5)
+        y -= 30
+        c.setFont("Helvetica", 11)
+
+        required_docs = concurso_data.get('required_docs', [])
+        doc_translations = {
+    'DNI': 'Copia de DNI (un archivo).',
+    'CV': 'Curriculum Vitae actualizado y documentación respaldatoria (un archivo).',
+    'TITULO_UNIVERSITARIO': 'Copia del Título Universitario (un archivo).',
+    'ANTECEDENTES_IDONEIDAD': 'Documentación que acredita idoneidad en caso de no contar con Título Universitario (un archivo).',
+    'PROGRAMA_ACTIVIDADES': 'Programa y actividades previstas para el dictado de alguna de las asignaturas del área y orientación objeto del concurso; o bien, del área si no corresponde orientación (un archivo).',
+    'PLAN_FORMACION_RRHH': 'Programa de Formación de Recursos Humanos (un archivo).',
+    'PLAN_IVE': 'Plan de Actividades de Investigación, Vinculación y/o Extensión (un archivo).',
+    'PLAN_IVE_OPCIONAL': 'Plan de Actividades de Investigación, Vinculación y/o Extensión (opcional) (un archivo).',
+    'PLAN_O_PROGRAMA_ACTIVIDADES': 'Plan/programa de actividades prácticas y/o de aplicación para la asignatura que concursa según área y orientación (un archivo).',
+    'PROPUESTA_EJERCICIO_O_TP': 'Propuesta de ejercicio o trabajo práctico de un tema específico correspondiente a una unidad o tema del programa de la asignatura a concursar, según área y orientación (un archivo).'
+        }
+
+        x_docs = self.margin + 10
+        max_width_docs = self.width - self.margin - x_docs
+        line_height = 16
+
+        if required_docs:
+            for doc_code in required_docs:
+                friendly = doc_translations.get(doc_code, doc_code)
+                item_text = f"□ {friendly}"
+                lines = self._wrap_text(c, item_text, max_width_docs, font="Helvetica", size=11)
+                c.setFont("Helvetica", 11)
+                for line in lines:
+                    if y < 150:
+                        self._draw_page_number(c)
+                        c.showPage()
+                        y = self.height - 100
+                    c.drawString(x_docs, y, line)
+                    y -= line_height
+        else:
+            msg = "□ No hay documentación específica requerida para este concurso"
+            lines = self._wrap_text(c, msg, max_width_docs, font="Helvetica", size=11)
+            c.setFont("Helvetica", 11)
+            for line in lines:
+                if y < 150:
+                    self._draw_page_number(c)
+                    c.showPage()
+                    y = self.height - 100
+                c.drawString(x_docs, y, line)
+                y -= line_height
+
+        # 3) Información Importante section
+        y -= 20
+        if y < 150:
+            self._draw_page_number(c)
+            c.showPage()
+            y = self.height - 100
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(self.margin, y, "INFORMACIÓN IMPORTANTE:")
+        y -= 18
+        notes = [
+            "• La inscripción se realiza de forma digital enviando los archivos necesarios (en formato pdf) al correo electrónico institucional asignado por la Unidad Académica y que consta en la publicación del llamado.",
+            "• Los archivos correspondientes al CV u documentación respaldatoria tienen carácter de declaración jurada.",
+        ]
+        x_notes = self.margin + 10
+        max_width_notes = self.width - self.margin - x_notes
+        c.setFont("Helvetica", 10)
+        for note in notes:
+            lines = self._wrap_text(c, note, max_width_notes, font="Helvetica", size=10)
+            for line in lines:
+                if y < 80:
+                    self._draw_page_number(c)
+                    c.showPage()
+                    y = self.height - 80
+                c.drawString(x_notes, y, line)
+                y -= 12
+            y -= 6
+
+        return y - 60
     
     def _add_footer(self, c):
         """Add footer with signature area and date"""
@@ -320,5 +435,4 @@ class FormularioInscripcionTemplate:
         timestamp = f"Documento generado el {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
         c.drawString(self.margin, 30, timestamp)
         
-        # Page number
-        c.drawRightString(self.width - self.margin, 30, "Página 1")
+    # Page number is drawn per-page by _draw_page_number
