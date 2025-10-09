@@ -100,6 +100,9 @@ class InstructivoService:
             inst.contenido = contenido
             inst.bump_version()
             inst.updated_by_persona_id = actor_persona_id
+            # Ensure previously deactivated records are reactivated when updated
+            if inst.is_active is False:
+                inst.is_active = True
         else:
             inst = Instructivo(
                 tipo=tipo,

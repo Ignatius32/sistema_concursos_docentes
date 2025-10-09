@@ -130,6 +130,45 @@ def ver_concurso(concurso_id):
                           is_registration_closed=is_registration_closed,
                           today=today)
 
+@public.route('/concurso/<int:concurso_id>/instructivo')
+def ver_instructivo(concurso_id):
+    """Display instructivo/requisitos for a specific concurso in a dedicated page."""
+    from datetime import datetime, timezone, timedelta
+
+    concurso = Concurso.query.get_or_404(concurso_id)
+
+    # Only allow public viewing of concursos (hide only INICIO, CREADO, and DESPUBLICAR)
+    hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+    if concurso.estado_actual in hidden_estados:
+        return "Concurso no disponible para visualización pública", 404
+
+    # Resolve instructivo via service with concurso tipo awareness
+    from app.services.instructivo_service import instructivo_service
+    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+    instructivo = instructivo_service.get_structured_postulantes(concurso)
+    # Legacy fallback if service returns nothing
+    if (not instructivo) and categoria and categoria.instructivo_postulantes:
+        base_instructivo = categoria.instructivo_postulantes.get('base', '')
+        dedicacion_instructivo = categoria.instructivo_postulantes.get('porDedicacion', {}).get(concurso.dedicacion, '')
+        instructivo = {'base': base_instructivo, 'dedicacion': dedicacion_instructivo}
+
+    # Registration closed logic (Argentina timezone and FINALIZADO estado)
+    argentina_offset = timedelta(hours=-3)
+    argentina_tz = timezone(argentina_offset)
+    today = datetime.now(argentina_tz).date()
+    is_registration_closed = (
+        concurso.estado_actual == 'FINALIZADO' or 
+        (concurso.cierre_inscripcion and concurso.cierre_inscripcion <= today)
+    )
+
+    return render_template(
+        'public/instructivo_concurso.html',
+        concurso=concurso,
+        instructivo=instructivo,
+        is_registration_closed=is_registration_closed,
+        today=today,
+    )
+
 @public.route('/concurso/<int:concurso_id>/documento/<int:documento_id>')
 def ver_documento_publico(concurso_id, documento_id):
     """View a public document (PDF) in embedded viewer."""

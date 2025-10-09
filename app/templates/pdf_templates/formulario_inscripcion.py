@@ -270,8 +270,8 @@ class FormularioInscripcionTemplate:
             "Código Postal:",
             "Teléfono:",
             "Correo Electrónico:",
-            "Título de Grado:",
-            "Universidad de Egreso:",
+            "Título Máximo:",
+            "Institución que otorga:",
             "Año de Egreso:",
         ]
         
