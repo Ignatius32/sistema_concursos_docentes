@@ -1257,12 +1257,52 @@ def crear_documento_subida_directa(concurso_id, document_type_key):
     
     try:
         file = request.files.get('documento_firmado')
-        
+
         if not file:
             flash('No se seleccionó ningún archivo.', 'danger')
             return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-        
-        # Create new document record directly as FIRMADO
+
+        # Collect resolution-specific fields (if applicable) before generating filename
+        nro_res = None
+        tipo_res = None
+        fecha_res = None
+        articulado = None
+
+        if template_config.es_res:
+            nro_res = request.form.get('numero_resolucion')
+            tipo_res = request.form.get('tipo_resolucion')
+            fecha_res_str = request.form.get('fecha_resolucion')
+            if fecha_res_str:
+                try:
+                    fecha_res = datetime.strptime(fecha_res_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Formato de fecha inválido.', 'danger')
+                    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
+            articulado = request.form.get('articulado')
+
+        # Generate appropriate filename based on document type and metadata
+        if template_config.es_res and nro_res and tipo_res:
+            # Build a transient DocumentoConcurso-like object to reuse filename generator
+            class _TmpDoc:
+                pass
+            tmp_doc = _TmpDoc()
+            tmp_doc.nro_res = nro_res
+            tmp_doc.tipo_res = tipo_res
+            new_filename = generate_resolution_filename(tmp_doc, concurso, template_config, is_firmado=True)
+        else:
+            # Fallback to original naming for non-resolutions
+            original_filename = document_type_key.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
+            new_filename = f"{original_filename}_firmado.pdf"
+
+        # Upload to documentos_firmados folder
+        file_data = file.read()
+        file_id, web_view_link = drive_api.upload_document(
+            concurso.documentos_firmados_folder_id,
+            new_filename,
+            file_data
+        )
+
+        # Create new document record directly as FIRMADO, now that we have file details
         documento = DocumentoConcurso(
             concurso_id=concurso_id,
             tipo=document_type_key,
@@ -1271,43 +1311,18 @@ def crear_documento_subida_directa(concurso_id, document_type_key):
             url=web_view_link,
             subida_directa=True  # Mark as direct upload
         )
-          # If it's a resolution, handle resolution-specific fields
+
+        # If it's a resolution, persist resolution-specific fields on the record
         if template_config.es_res:
-            documento.nro_res = request.form.get('numero_resolucion')
-            documento.tipo_res = request.form.get('tipo_resolucion')
-            fecha_res_str = request.form.get('fecha_resolucion')
-            if fecha_res_str:
-                try:
-                    documento.fecha_res = datetime.strptime(fecha_res_str, '%Y-%m-%d').date()
-                except ValueError:
-                    flash('Formato de fecha inválido.', 'danger')
-                    return redirect(url_for('concursos.ver', concurso_id=concurso_id))
-            documento.articulado = request.form.get('articulado')
-        
-        # Generate appropriate filename based on document type and metadata
-        if template_config.es_res and documento.nro_res and documento.tipo_res:
-            new_filename = generate_resolution_filename(documento, concurso, template_config, is_firmado=True)
-        else:
-            # Fallback to original naming for non-resolutions
-            original_filename = document_type_key.lower().replace('_', ' ') + f"_concurso_{concurso.id}"
-            new_filename = f"{original_filename}_firmado.pdf"
-        
-        # Upload to documentos_firmados folder
-        file_data = file.read()
-        file_id, web_view_link = drive_api.upload_document(
-            concurso.documentos_firmados_folder_id,
-            new_filename,
-            file_data
-        )
-        
-        # Update the document with the new file information
-        documento.file_id = file_id
-        documento.url = web_view_link
-        
+            documento.nro_res = nro_res
+            documento.tipo_res = tipo_res
+            documento.fecha_res = fecha_res
+            documento.articulado = articulado
+
         # Update concurso resolution number based on parentesco (if resolution)
         if template_config.es_res:
             update_concurso_resolution_number(concurso, template_config, documento)
-        
+
         db.session.add(documento)
         
         # Update concurso estado_actual and subestado if configured in template
