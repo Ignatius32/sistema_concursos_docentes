@@ -247,7 +247,7 @@ class PasswordResetService:
             # Use Google Drive email system
             try:
                 # Simple subject for password reset
-                subject = "Restablecer Contraseña - Portal de Tribunal"
+                subject = "Restablecer Contraseña"
                 
                 # Simple HTML email body focused on password reset
                 html_body = """
@@ -282,11 +282,11 @@ class PasswordResetService:
                     <div class=\"email-container\">
                         <div class=\"header\">
                             <h1>Restablecer Contraseña</h1>
-                            <p>Sistema de Concursos Docentes</p>
+                            <p>Sistema de Selecciones Docentes CRUB</p>
                         </div>
                         <div class=\"content\">
                             <div class=\"greeting\">Hola <<nombre>> <<apellido>>,</div>
-                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta en el Portal de Tribunal.</p>
+                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta.</p>
                             <p>Si usted solicitó restablecer su contraseña, haga clic en el siguiente enlace:</p>
                             <div style=\"text-align: center;\">
                                 <a href=\"<<reset_url>>\" class=\"button\">Restablecer Contraseña</a>
@@ -305,7 +305,7 @@ class PasswordResetService:
                             <p>Si no solicitó restablecer su contraseña o tiene alguna duda, puede ignorar este correo o contactar al administrador del sistema.</p>
                         </div>
                         <div class=\"footer\">
-                            <p><strong>Sistema de Concursos Docentes</strong></p>
+                            <p><strong>Sistema de Selecciones Docentes CRUB</strong></p>
                             <p>Este es un mensaje automático, por favor no responda a este correo.</p>
                             <div class=\"url-break\">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<reset_url>></div>
                         </div>
