@@ -225,8 +225,8 @@ class KeycloakPersonaSyncService:
     
     def sync_keycloak_to_personas(self, dry_run: bool = False) -> Dict[str, Any]:
         """
-        Sync Keycloak users with tribunal_member role to local personas.
-        Creates local personas for Keycloak users that don't have corresponding personas.
+        Sync Keycloak users with tribunal_member and/or admin role to local personas.
+        Creates or links local personas for Keycloak users that don't have corresponding personas.
         """
         results = {
             'created': [],
@@ -236,20 +236,44 @@ class KeycloakPersonaSyncService:
         }
         
         try:
-            # Get all users with tribunal_member role
+            # Get all users with tribunal_member role and admin role, then union
             tribunal_users = self._get_users_with_role(self.tribunal_role)
-            logger.info(f"Found {len(tribunal_users)} users with tribunal_member role in Keycloak")
-            
-            for user in tribunal_users:
+            admin_users = self._get_users_with_role(self.admin_role)
+            logger.info(f"Found {len(tribunal_users)} users with {self.tribunal_role} role and {len(admin_users)} users with {self.admin_role} role in Keycloak")
+
+            users_map: Dict[str, Dict[str, Any]] = {u['id']: u for u in tribunal_users}
+            for u in admin_users:
+                users_map.setdefault(u['id'], u)
+
+            users = list(users_map.values())
+
+            for user in users:
                 try:
+                    # Fetch roles once for this user
+                    user_roles = self.keycloak_admin.get_user_client_roles(user['id']) if self.keycloak_admin else []
+                    has_admin_role = self.admin_role in user_roles
+                    has_tribunal_role = self.tribunal_role in user_roles
+
                     # Check if persona already exists
                     existing_persona = Persona.query.filter_by(keycloak_user_id=user['id']).first()
                     
                     if existing_persona:
+                        # Keep local admin flag in sync with Keycloak admin role
+                        admin_changed = False
+                        if existing_persona.is_admin != has_admin_role:
+                            if not dry_run:
+                                existing_persona.is_admin = has_admin_role
+                                if not has_admin_role:
+                                    # If removing admin locally, also clear cargo
+                                    existing_persona.cargo = None
+                                db.session.commit()
+                            admin_changed = True
+                        
                         results['skipped'].append({
                             'keycloak_user_id': user['id'],
                             'persona_id': existing_persona.id,
-                            'reason': 'persona_already_exists'
+                            'reason': 'persona_already_exists',
+                            'admin_role_synced': admin_changed
                         })
                         continue
                     
@@ -270,12 +294,17 @@ class KeycloakPersonaSyncService:
                         # Link existing persona to Keycloak user
                         if not dry_run:
                             existing_persona.keycloak_user_id = user['id']
+                            # Sync admin flag from Keycloak
+                            existing_persona.is_admin = has_admin_role
+                            if not has_admin_role:
+                                existing_persona.cargo = None
                             db.session.commit()
                         
                         results['updated'].append({
                             'keycloak_user_id': user['id'],
                             'persona_id': existing_persona.id,
-                            'action': 'linked_existing_persona'
+                            'action': 'linked_existing_persona',
+                            'is_admin': has_admin_role
                         })
                         logger.info(f"Linked existing persona {existing_persona.id} to Keycloak user {user['id']}")
                         
@@ -330,10 +359,9 @@ class KeycloakPersonaSyncService:
                             })
                             continue
                         
-                        # Note: When syncing from Keycloak to personas, we only create personas
-                        # for users with tribunal_member role, but we don't automatically 
-                        # grant admin privileges locally - admins must be set manually in the local system
-                        
+                        # Note: When syncing from Keycloak to personas, now we also include admin-only users
+                        # and we set local is_admin flag according to Keycloak admin role.
+
                         if not dry_run:
                             new_persona = Persona(
                                 nombre=nombre,
@@ -343,8 +371,8 @@ class KeycloakPersonaSyncService:
                                 telefono=telefono,
                                 username=username,
                                 keycloak_user_id=user['id'],
-                                is_admin=False,  # Always create as non-admin, admins must be set manually
-                                cargo=None  # No cargo since is_admin is False
+                                is_admin=has_admin_role,
+                                cargo=cargo if has_admin_role else None
                             )
                             
                             try:
@@ -355,7 +383,8 @@ class KeycloakPersonaSyncService:
                                     'keycloak_user_id': user['id'],
                                     'persona_id': new_persona.id,
                                     'persona_name': f"{new_persona.apellido}, {new_persona.nombre}",
-                                    'action': 'created_new_persona'
+                                    'action': 'created_new_persona',
+                                    'is_admin': has_admin_role
                                 })                                
                                 logger.info(f"Created persona {new_persona.id} for Keycloak user {user['id']}")
                                 
@@ -377,8 +406,8 @@ class KeycloakPersonaSyncService:
                                     'correo': correo,
                                     'telefono': telefono,
                                     'username': username,
-                                    'is_admin': False,  # Always create as non-admin
-                                    'cargo': None  # No cargo since is_admin is False
+                                    'is_admin': has_admin_role,
+                                    'cargo': cargo if has_admin_role else None
                                 }
                             })
                             
@@ -390,9 +419,9 @@ class KeycloakPersonaSyncService:
                     })
                     
         except Exception as e:
-            logger.error(f"Error getting tribunal users from Keycloak: {e}")
+            logger.error(f"Error getting users from Keycloak: {e}")
             results['errors'].append({
-                'error': f'Failed to get tribunal users: {str(e)}'
+                'error': f'Failed to get users: {str(e)}'
             })
         return results
     
@@ -580,7 +609,8 @@ class KeycloakPersonaSyncService:
     
     def remove_orphaned_personas(self, dry_run: bool = False) -> Dict[str, Any]:
         """
-        Remove personas whose corresponding Keycloak users no longer have tribunal_member role.
+        Remove personas whose corresponding Keycloak users no longer have tribunal_member role
+        and are not app admins. Admin-only users are preserved.
         WARNING: This is a destructive operation.
         """
         results = {
@@ -619,9 +649,9 @@ class KeycloakPersonaSyncService:
                     })
                     continue
                 
-                # Check if user still has tribunal_member role
+                # Check roles: only remove if lacks tribunal role AND lacks admin role
                 user_roles = self.keycloak_admin.get_user_client_roles(persona.keycloak_user_id)
-                if self.tribunal_role not in user_roles:
+                if (self.tribunal_role not in user_roles) and (self.admin_role not in user_roles):
                     if not dry_run:
                         # Check if persona has any tribunal assignments
                         if persona.asignaciones.count() > 0:
@@ -637,7 +667,13 @@ class KeycloakPersonaSyncService:
                     results['removed'].append({
                         'persona_id': persona.id,
                         'persona_name': f"{persona.apellido}, {persona.nombre}",
-                        'reason': 'no_longer_has_tribunal_role'
+                        'reason': 'no_longer_has_required_roles'
+                    })
+                else:
+                    # Preserve user as they still have admin or tribunal role
+                    results['errors'].append({
+                        'persona_id': persona.id,
+                        'info': 'Persona retained due to admin or tribunal role present'
                     })
                     
             except Exception as e:

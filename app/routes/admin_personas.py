@@ -224,6 +224,13 @@ def nueva_persona():
                             logger.error("Failed to create user in Keycloak")
                             flash('Error: No se pudo crear el usuario en Keycloak. Usuario creado solo localmente.', 'warning')
             
+            # If Keycloak user found/created, ensure we are not duplicating local linkage
+            if keycloak_user_id:
+                already_linked = Persona.query.filter_by(keycloak_user_id=keycloak_user_id).first()
+                if already_linked:
+                    flash('Este usuario de Keycloak ya está vinculado a otra persona local.', 'danger')
+                    return render_template('admin/personas/nueva_persona.html')
+
             if not keycloak_user_id:
                 logger.warning("Keycloak admin client not available or user creation failed")
                 flash('Aviso: Usuario creado localmente, pero no se pudo sincronizar con Keycloak.', 'warning')            # Step 2: Assign roles if user exists in Keycloak
@@ -293,6 +300,15 @@ def nueva_persona():
                 real_telefono = telefono
                 real_dni = dni
             
+            # If the Keycloak user already has admin role, reflect that locally
+            if keycloak_admin and keycloak_user_id:
+                try:
+                    roles = keycloak_admin.get_user_client_roles(keycloak_user_id)
+                    if KeycloakConfig.KEYCLOAK_ADMIN_ROLE in roles:
+                        is_admin_checked = True
+                except Exception as _e:
+                    logger.warning(f"Could not fetch client roles to mirror admin flag: {_e}")
+
             nueva_persona = Persona(
                 nombre=real_nombre,
                 apellido=real_apellido,
