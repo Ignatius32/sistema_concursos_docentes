@@ -196,14 +196,22 @@ def create_app():
         return []
 
     def is_admin():
-        # Role name may vary; adjust if realm roles differ
-        roles = get_current_user_roles()
-        return 'admin' in roles or 'ADMIN' in roles
+        """Return True if user has the configured admin role.
+
+        Uses KeycloakConfig.KEYCLOAK_ADMIN_ROLE and keeps backward compatibility
+        with legacy 'admin'/'ADMIN' role names if present in tokens.
+        """
+        roles = set(get_current_user_roles() or [])
+        configured_admin = KeycloakConfig.KEYCLOAK_ADMIN_ROLE
+        legacy_aliases = {'admin', 'ADMIN'}
+        return (configured_admin in roles) or bool(roles.intersection(legacy_aliases))
 
     def is_tribunal_member():
-        roles = get_current_user_roles()
-        possible = {'tribunal', 'TRIBUNAL', 'tribunal_member'}
-        return any(r in roles for r in possible)
+        """Return True if user has tribunal role or is admin (admins inherit)."""
+        roles = set(get_current_user_roles() or [])
+        configured_tribunal = KeycloakConfig.KEYCLOAK_TRIBUNAL_ROLE
+        legacy_aliases = {'tribunal', 'TRIBUNAL'}
+        return (configured_tribunal in roles) or bool(roles.intersection(legacy_aliases)) or is_admin()
     from app.helpers.api_services import get_programa_download_url
     
     @app.context_processor
