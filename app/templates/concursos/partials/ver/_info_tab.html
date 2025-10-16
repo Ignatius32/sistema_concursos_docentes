@@ -79,9 +79,7 @@
                     {% if concurso.docente_vacante %}
                     <p><strong>Docente que genera vacante:</strong> {{ concurso.docente_vacante }}</p>
                     {% endif %}
-                    {% if concurso.id_designacion_mocovi %}
-                    <p><strong>ID Designación MOCOVI:</strong> {{ concurso.id_designacion_mocovi }}</p>
-                    {% endif %}                  
+                
                     {% if concurso.drive_folder_id %}
                     <p><strong>Carpeta Google Drive:</strong>
                         <a href="https://drive.google.com/drive/folders/{{ concurso.drive_folder_id }}" 

@@ -7,9 +7,9 @@
 .page-hero {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
-    border-radius: 20px;
-    padding: 1.5rem;
-    margin-bottom: 1.25rem;
+    border-radius: 20px 20px 0 0;
+    padding: 2rem;
+    margin-bottom: 0;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
 }
 .breadcrumbs a { text-decoration: none; color: #e0e7ff; }
@@ -80,30 +80,47 @@
     .section-card .card-header { padding: 0.75rem 1rem; }
     .section-card .card-body { padding: 1rem; }
 }
+
+/* Breadcrumbs when placed on white background (top toolbar) */
+.breadcrumbs-top a { text-decoration: none; color: #1e3a8a; }
+.breadcrumbs-top a:hover { color: #1d4ed8; }
+.breadcrumbs-top .breadcrumb-item + .breadcrumb-item::before { color: #6b7280; }
+
+/* Top toolbar subtle divider */
+.toolbar-top { border-bottom: 1px solid #e5e7eb; }
+
+/* (removed hero badges per request) */
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="container">
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2 toolbar-top py-1">
+    <nav aria-label="breadcrumb" class="breadcrumbs-top mb-2 mb-md-0">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('public.index') }}">Selecciones Públicas</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}">Detalle de la Selección</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Instructivo</li>
+        </ol>
+    </nav>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-custom" href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Detalle
+        </a>
+    </div>
+    </div>
+</div>
+<div class="container">
 <div class="page-hero">
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
         <div>
-            <nav aria-label="breadcrumb" class="breadcrumbs mb-2">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ url_for('public.index') }}">Selecciones Públicas</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}">Detalle de la Selección</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Instructivo</li>
-                </ol>
-            </nav>
-            <h1 class="h3 mb-0">Instructivo para Postulantes</h1>
+            <h1 class="h3 mb-0">Instructivo de Inscripción</h1>
             <div class="small-muted mt-1">
-                {{ concurso.categoria_nombre }} {{ concurso.dedicacion }}
-                {% if concurso.cierre_inscripcion %} · Cierre: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}{% endif %}
+
+                {% if concurso.cierre_inscripcion %} Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}{% endif %}
             </div>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-custom" href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}">
-                <i class="bi bi-arrow-left me-1"></i>Volver al Detalle
-            </a>
             {% if concurso.estado_actual == 'FINALIZADO' %}
             <button class="btn btn-secondary" disabled>
                 <i class="bi bi-check-circle me-1"></i>Selección Finalizada
@@ -112,15 +129,30 @@
             <button class="btn btn-secondary" disabled>
                 <i class="bi bi-x-circle me-1"></i>Inscripción Cerrada
             </button>
-            {% else %}
-            <a class="btn btn-primary-custom" href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}">
-                <i class="bi bi-download me-1"></i>Descargar Solicitud
-            </a>
             {% endif %}
         </div>
     </div>
 </div>
+</div>
 
+{# Normativa pertinente card (based on concurso.tipo) #}
+{% set normativa_title = None %}
+{% set normativa_links = [] %}
+{% if concurso.tipo and concurso.tipo|lower == 'regular' %}
+    {% set normativa_title = 'Normativa pertinente a Concursos Regulares UNCo' %}
+    {% set normativa_links = [
+        {'label': 'Ordenanza UNCo N° 728/24', 'url': 'https://ranquel.uncoma.edu.ar/archivos//ord_728_2024_55.pdf'}
+    ] %}
+{% elif concurso.tipo and concurso.tipo|lower == 'interino' %}
+    {% set normativa_title = 'Normativa pertinente a Selecciones interinas' %}
+    {% set normativa_links = [
+        {'label': 'Resolución del Consejo Directivo CRUB 123/45', 'url': None}
+    ] %}
+{% endif %}
+
+{# Normativa card moved below Requisitos y Condiciones #}
+
+<div class="container">
 <div class="section-card">
     <div class="card-header">
         <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Requisitos y Condiciones</h5>
@@ -154,4 +186,40 @@
         {% endif %}
     </div>
 </div>
+</div>
+    {% if normativa_title %}
+    <div class="container">
+    <div class="section-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>{{ normativa_title }}</h5>
+        </div>
+        <div class="card-body">
+            {% if normativa_links %}
+            <ul class="list-unstyled mb-0">
+                {% for link in normativa_links %}
+                <li class="mb-2">
+                    <i class="bi bi-link-45deg text-primary me-1"></i>
+                    {% if link.url %}
+                    <a href="{{ 'https://' + link.url if (not link.url.startswith('http://') and not link.url.startswith('https://')) else link.url }}" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>
+                    {% else %}
+                    {{ link.label }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="small-muted">No hay normativa disponible por el momento.</div>
+            {% endif %}
+        </div>
+    </div>
+    <!-- Full-width download button below Normativa -->
+    {% if not (concurso.estado_actual == 'FINALIZADO' or is_registration_closed) %}
+    <div class="my-2">
+        <a class="btn btn-primary-custom w-100 py-3" href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}">
+            <i class="bi bi-download me-2"></i>Descargar Solicitud de Inscripción
+        </a>
+    </div>
+    {% endif %}
+    </div>
+    {% endif %}
 {% endblock %}

@@ -270,8 +270,8 @@ class FormularioInscripcionTemplate:
             "Código Postal:",
             "Teléfono:",
             "Correo Electrónico:",
-            "Título Máximo:",
-            "Institución que otorga:",
+            "Título máximo obtenido:",
+            "Institución que otorgó:",
             "Año de Egreso:",
         ]
         
@@ -309,7 +309,7 @@ class FormularioInscripcionTemplate:
         y -= 30
 
         declaracion_text = (
-            "Por la presente informo en carácter de Declaración Jurada no estar comprendido en las causales de "
+            "He tomado conocimiento de la Ordenanza UNCo N°728/2024 y en carácter de Declaración Jurada informo no estar comprendido en las causales de "
             "inhabilitación para el desempeño de cargos públicos."
         )
         x_decl = self.margin + 10
