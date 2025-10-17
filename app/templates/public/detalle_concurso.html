@@ -731,19 +731,15 @@ html {
                 {% endif %}
 
                 <div class="ig-title-main px-3">
-                    {{ cantidad }} {{ cargo_label }} {{ tipo_label }} · {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}
+                    {{ cantidad }} {{ cargo_label }} {{ tipo_label }} {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}
                 </div>
-                <!-- Apertura/Cierre de inscripción under title (text-only, compact) -->
+                <!-- Apertura/Cierre de inscripción under title (each on its own line) -->
                 <div class="px-3 mb-2">
-                    <div class="d-flex flex-wrap gap-3 small-muted-value">
+                    <div class="small-muted-value">
                         {% if concurso.fecha_apertura_inscripcion %}
-                        <span>
-                            Fecha de apertura de inscripción: {{ concurso.fecha_apertura_inscripcion.strftime('%d/%m/%Y') }}
-                        </span>
+                        <div>Fecha de apertura de inscripción: {{ concurso.fecha_apertura_inscripcion.strftime('%d/%m/%Y') }}</div>
                         {% endif %}
-                        <span>
-                            Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}
-                        </span>
+                        <div>Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</div>
                     </div>
                 </div>
                 <div class="info-table-container">
@@ -771,8 +767,15 @@ html {
                                         {% if concurso.localizacion %}
                                         <span><strong>Localización:</strong> {{ concurso.localizacion }}</span>
                                         {% endif %}
-                                        <span><a href="#asignaturas-relacionadas" class="text-decoration-none"><i class="bi bi-book me-1"></i>Ver asignaturas relacionadas</a></span>
                                     </div>
+                                </td>
+                            </tr>
+                            <!-- Own line for Asignaturas relacionadas link -->
+                            <tr>
+                                <td colspan="2" class="py-2">
+                                    <a href="#asignaturas-relacionadas" class="text-decoration-none small-muted-value d-inline-flex align-items-center">
+                                        <i class="bi bi-book me-1"></i>Ver asignaturas relacionadas
+                                    </a>
                                 </td>
                             </tr>
                         </table>

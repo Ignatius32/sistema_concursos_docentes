@@ -7,7 +7,7 @@
 .page-hero {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
-    border-radius: 20px 20px 0 0;
+    border-radius: 20px;
     padding: 2rem;
     margin-bottom: 0;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
@@ -114,7 +114,7 @@
 
 /* Responsive tweaks */
 @media (max-width: 768px) {
-    .page-hero { padding: 1rem; border-radius: 16px; }
+    .page-hero { padding: 1rem; border-radius: 20px; }
     .page-hero h1.h3 { font-size: 1.4rem; }
     .page-hero .small-muted { font-size: 0.95rem; }
     .section-card { margin-top: 1rem; }
@@ -158,9 +158,6 @@
             <h1 class="h3 mb-0">Instructivo de Inscripción</h1>
             <div class="small-muted mt-1">
                 N° de Registro de la selección: {{ concurso.id }}
-                {% if concurso.cierre_inscripcion %}<br/>
-                    Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}
-                {% endif %}
             </div>
         </div>
         <div class="d-flex gap-2">
@@ -203,7 +200,7 @@
 <div class="container">
 <div class="section-card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Requisitos y Condiciones</h5>
+        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Instrucciones y documentación a presentar</h5>
     </div>
     <div class="card-body">
         {% if instructivo %}
@@ -211,16 +208,21 @@
 
         <div class="row g-4">
             <div class="col-12">
-                <h6 class="text-primary mb-2"><i class="bi bi-clock me-1"></i>Instrucciones y documentación a presentar</h6>
                 <div class="instructivo-text">
                     <div class="inscripcion-note mb-1">
+                        {% if concurso.cierre_inscripcion %}
+                        <p class="mb-2 d-inline-flex align-items-center" style="color:#000000; white-space: normal;">
+                            <i class="bi bi-calendar-event me-1" style="opacity:0.75;"></i>
+                            <span class="fw-semibold">Cierre de inscripción: </span> {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}
+                        </p>
+                        {% endif %}
                         <p class="mb-1 fw-bold">
                             Para realizar la inscripción debe enviar los archivos que se detallan a continuación por correo electrónico a: 
                             <a class="email-highlight" href="mailto:selecciones.docentes@uncobariloche.com">selecciones.docentes@uncobariloche.com</a>.
                         </p>
                         <p class="mb-1">
                             <span class="fw-bold">Debe utilizar en el asunto:</span>
-                            APELLIDO, NOMBRE - DNI y el N° de registro de la selección (que se encuentra en el encabezado de esta página).
+                            N° de registro de la selección (que se encuentra en el encabezado de esta página) - APELLIDO, NOMBRE - DNI.
                         </p>
                         <p class="mb-0">
                             Puede comunicarse con consultas específicas al mismo correo electrónico.
