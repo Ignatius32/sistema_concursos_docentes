@@ -50,8 +50,9 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-rte-cmd="removeFormat" title="Quitar formato"><i class="fas fa-eraser"></i></button>
                         </div>
                     </div>
-                    <div id="cuerpo_email_html_editor" class="form-control" style="min-height: 220px; overflow-y:auto;" contenteditable="true"></div>
-                    <textarea id="cuerpo_email_html" name="cuerpo_email_html" class="d-none" required>{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
+                    <div id="cuerpo_email_html_editor" class="form-control" style="min-height: 220px; overflow-y:auto;" contenteditable="true" aria-describedby="cuerpoEmailHelp"></div>
+                    <textarea id="cuerpo_email_html" name="cuerpo_email_html" class="d-none">{{ campaign.cuerpo_email_html if campaign else '' }}</textarea>
+                    <div id="cuerpoEmailError" class="invalid-feedback d-block" style="display: none;">El cuerpo del email es obligatorio.</div>
                     <div class="form-text">
                         Puede usar negrita, cursiva, listas, enlaces y saltos de línea. También puede utilizar los marcadores especificados abajo.
                     </div>
@@ -229,6 +230,7 @@
                                 <li><code>&lt;&lt;yyyy&gt;&gt;</code> - Año actual</li>
                                 <li><code>&lt;&lt;fecha_comision_academica&gt;&gt;</code> - Fecha de comisión académica</li>
                                 <li><code>&lt;&lt;fecha_consejo_directivo&gt;&gt;</code> - Fecha de consejo directivo</li>
+                                <li><code>&lt;&lt;apertura_inscripcion_fecha&gt;&gt;</code> - Fecha de apertura de inscripción</li>
                                 <li><code>&lt;&lt;cierre_inscripcion_fecha&gt;&gt;</code> - Fecha de cierre de inscripción</li>
                                 <li><code>&lt;&lt;despacho_comision_academica&gt;&gt;</code> - Despacho comisión académica</li>
                                 <li><code>&lt;&lt;sesion_consejo_directivo&gt;&gt;</code> - Sesión consejo directivo</li>
@@ -333,6 +335,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const editor = document.getElementById('cuerpo_email_html_editor');
         const textarea = document.getElementById('cuerpo_email_html');
+        const errorBox = document.getElementById('cuerpoEmailError');
         if (editor && textarea) {
             try {
                 editor.innerHTML = textarea.value || '';
@@ -362,10 +365,29 @@
 
         const form = document.querySelector('form[action="{{ form_action }}"]');
         if (form) {
-            form.addEventListener('submit', () => {
+            form.addEventListener('submit', (e) => {
                 if (textarea && editor) {
+                    // Copy HTML to hidden textarea
                     textarea.value = editor.innerHTML;
+                    // Validate visible editor content (require non-empty text after trimming)
+                    const plain = (editor.textContent || '').replace(/\u200B/g, '').trim();
+                    if (!plain) {
+                        e.preventDefault();
+                        editor.classList.add('is-invalid');
+                        if (errorBox) errorBox.style.display = 'block';
+                        editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        editor.focus();
+                        return false;
+                    }
+                    // Clear invalid state if previously set
+                    editor.classList.remove('is-invalid');
+                    if (errorBox) errorBox.style.display = 'none';
                 }
+            });
+            // Live input handler to clear error as user types
+            editor?.addEventListener('input', () => {
+                editor.classList.remove('is-invalid');
+                if (errorBox) errorBox.style.display = 'none';
             });
         }
     });
