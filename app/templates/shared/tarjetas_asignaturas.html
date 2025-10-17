@@ -94,17 +94,32 @@
     .content-preview p.card-text.small:first-child {
         margin-bottom: 0;
     }
-    .card {
+    /* Plain, clean card look (scoped to asignaturas section) */
+    #asignaturas-relacionadas .card {
         height: 100%;
         display: flex;
         flex-direction: column;
-        border-radius: 1rem;
-        overflow: hidden;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: none;
+        overflow: visible;
+        background: #fff;
     }
-    .card-body {
+    #asignaturas-relacionadas .card-header {
+        padding: 0.75rem 1rem;
+    }
+    #asignaturas-relacionadas .card-body {
         flex: 1 1 auto;
         overflow: hidden;
-    }    .manual-search-msg {
+        padding: 0.75rem 1rem;
+    }
+    #asignaturas-relacionadas .card-title { font-size: 1.05rem; }
+    #asignaturas-relacionadas .row.g-4 { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; }
+
+    /* Better wrapping for long content */
+    #asignaturas-relacionadas .card-text { word-break: break-word; }
+
+    .manual-search-msg {
         font-size: 0.85rem;
         border-top: 1px dotted #dee2e6;
         padding-top: 0.5rem;
@@ -123,12 +138,22 @@
         border: 1px solid #e9ecef;
     }
     /* Keep subject header background and text consistent (including mobile) */
-    #asignaturas-relacionadas .card .card-header {
-        background: #2563eb;
-        color: #fff;
-    }
-    #asignaturas-relacionadas .card .card-header .card-title {
-        color: #fff;
+    #asignaturas-relacionadas .card .card-header { background: #2563eb; color: #fff; }
+    #asignaturas-relacionadas .card .card-header .card-title { color: #fff; }
+
+    /* Larger tap target for the expand/collapse link */
+    #asignaturas-relacionadas .content-preview .btn-link { padding: 0.25rem 0; }
+
+    /* Program button container spacing */
+    .programa-button-container { margin-top: 0.5rem; }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        #asignaturas-relacionadas .card { border-radius: 10px; }
+        #asignaturas-relacionadas .card-title { font-size: 1rem; }
+        #asignaturas-relacionadas .row.g-4 { --bs-gutter-x: 0.75rem; --bs-gutter-y: 0.75rem; }
+        #asignaturas-relacionadas .card-body > .mb-3 { margin-bottom: 0.75rem !important; }
+        #asignaturas-relacionadas .content-preview .btn-link { font-size: 0.95rem; }
     }
 </style>
 

@@ -4,6 +4,22 @@
 
 {% block styles %}
 <style>
+.container .container, .container .container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+}
+.top-accent-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+    z-index: 2000;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
 .public-hero {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
@@ -139,33 +155,33 @@
 
 .documents-card, .asignaturas-card {
     border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    margin-bottom: 2rem;
-    overflow: hidden;
-    background: #fff;
+    border-radius: 12px;
+    box-shadow: none;
+    margin-bottom: 1.25rem;
+    overflow: visible;
+    background: transparent;
     color: #1f2937;
 }
 
 .documents-card .card-header, .asignaturas-card .card-header {
-    background: #2563eb;
-    color: #fff;
+    background: transparent;
+    color: #111827;
     border: none;
-    padding: 1.5rem;
-    border-radius: 15px 15px 0 0;
+    padding: 0 0 0.5rem 0;
+    border-radius: 0;
 }
 
 .documents-card .card-body, .asignaturas-card .card-body {
-    padding: 2rem;
+    padding: 0;
 }
 
 .document-mini-card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    transition: all 0.3s ease;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: none;
+    transition: all 0.2s ease;
     height: 100%;
-    background: #f8fafc;
+    background: #ffffff;
     color: #1f2937;
 }
 
@@ -245,19 +261,14 @@
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
     .public-hero {
-        padding: 1.5rem;
+        padding: 1.25rem;
         text-align: left;
+        border-radius: 12px 12px 0 0;
     }
     .public-hero h1 { font-size: 1.5rem; }
-    
-    .detail-card .card-body {
-        padding: 1.5rem;
-    }
-    
     .info-table th,
-    .info-table td {
-        padding: 0.75rem;
-    }
+    .info-table td { padding: 0.75rem; }
+    .document-mini-card .card-body { padding: 0.75rem; }
 }
 
 /* Consistent container spacing */
@@ -273,11 +284,11 @@
 
 /* Navigation Menu Styles */
 .navigation-menu {
-    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-    border: 2px solid #e2e8f0;
-    border-radius: 0 0 20px 20px;
-    padding: 2rem 1.5rem 1.5rem 1.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 1rem 0 0.5rem 0;
+    box-shadow: none;
     margin-top: -10px;
     position: relative;
     z-index: 1;
@@ -285,16 +296,16 @@
 
 .nav-link-card {
     display: block;
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 15px;
-    padding: 1.2rem 1rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.9rem 0.75rem;
     text-decoration: none;
     color: #374151;
     transition: all 0.3s ease;
     text-align: center;
     height: 100%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: none;
 }
 
 .nav-link-card:hover {
@@ -372,22 +383,22 @@ html {
 
 /* Section Header Cards */
 .section-header-card {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 2px solid #3b82f6;
-    border-radius: 15px;
-    margin-bottom: 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 1rem;
 }
 
 .section-header-card .card-header {
-    background: #2563eb;
-    border-radius: 13px 13px 0 0;
-    color: white;
+    background: transparent;
+    border-radius: 0;
+    color: #111827;
     border: none;
-    padding: 1.5rem;
+    padding: 0 0 0.5rem 0;
 }
 
 .section-header-card .card-body {
-    padding: 2rem;
+    padding: 0;
 }
 
 /* Full-width tables for info sections */
@@ -396,20 +407,21 @@ html {
 }
 
 .section-header-card .info-table-container {
-    padding: 1rem;
+    padding: 0;
     margin: 0;
 }
 
 .section-header-card .info-table-container .table-responsive {
     margin: 0;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
 }
 
 .section-header-card .info-table {
     margin: 0;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
 }
 
 /* Section highlight animation */
@@ -437,7 +449,7 @@ html {
 
 .section-header-card .card-header.highlight {
     animation: sectionHighlight 1.5s ease-in-out;
-    box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.35);
 }
 
 /* Special highlight for asignaturas card */
@@ -543,6 +555,8 @@ html {
 {% endblock %}
 
 {% block content %}
+<!-- Thin top accent bar (acts like a minimal header) -->
+<div class="top-accent-bar" aria-hidden="true"></div>
 <!-- Top Breadcrumbs Toolbar -->
 <div class="container">
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2 toolbar-top py-1">
@@ -560,7 +574,7 @@ html {
 </div>
 <!-- Back Button (removed to avoid duplication with toolbar) -->
 
-<div class="container">
+<div class="container-fluid px-0">
 <!-- Hero Section -->
 <div class="public-hero">
     <div>
