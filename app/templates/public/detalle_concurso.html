@@ -261,6 +261,31 @@
     .document-mini-card .card-body { padding: 0.75rem; }
     /* Hide navigation links on small screens to reduce clutter */
     .navigation-menu { display: none; }
+
+    /* Documentos Disponibles: render as flat list */
+    #documentos-disponibles .row { --bs-gutter-x: 0; --bs-gutter-y: 0; }
+    #documentos-disponibles .col-12.my-2 { margin: 0 !important; }
+    .document-mini-card {
+        border: 0;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    #documentos-disponibles .row > div:last-child .document-mini-card { border-bottom: 0; }
+    .document-mini-card .card-body { padding: 0.85rem 0; }
+    .document-mini-card .card-title { font-size: 1rem; margin: 0; }
+    .document-mini-card.clickable .card-body { position: relative; padding-right: 1.25rem; }
+    .document-mini-card.clickable .card-body::after {
+        content: '›';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 1.1rem;
+    }
+    .document-mini-card.clickable:active { background: #f8fafc; }
 }
 
 /* Consistent container spacing */
