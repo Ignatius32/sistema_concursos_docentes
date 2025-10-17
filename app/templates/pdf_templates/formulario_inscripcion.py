@@ -279,19 +279,46 @@ class FormularioInscripcionTemplate:
         ]
         
         c.setFont("Helvetica", 11)
-        
+
+        # Add interactive AcroForm text fields so users can fill the form digitally
+        def _normalize_name(label: str) -> str:
+            import re
+            return re.sub(r"[^a-z0-9_]+", "_", label.strip().lower())
+
         for i, field in enumerate(fields):
             y = y_position - (i * field_height)
-            
+
             # Draw field label - positioned to align with middle of box
             label_y = y - 8  # Adjust to center label with box middle
             c.drawString(self.margin, label_y, field)
-            
-            # Draw field box aligned with the label
+
+            # Field box placement
             box_x = self.margin + 140  # More space for longer labels
             box_width = form_width - 140
             box_y = y - box_height  # Box positioned relative to y
-            c.rect(box_x, box_y, box_width, box_height)
+
+            # Prefer interactive text fields; fallback to a plain rectangle on error
+            try:
+                field_name = f"dp_{_normalize_name(field.rstrip(':'))}"
+                c.acroForm.textfield(
+                    name=field_name,
+                    tooltip=field,
+                    x=box_x + 2,
+                    y=box_y + 3,
+                    width=box_width - 4,
+                    height=box_height - 6,
+                    value="",
+                    borderStyle='inset',
+                    borderWidth=1,
+                    fillColor=None,
+                    textColor=None,
+                    fontName="Helvetica",
+                    fontSize=10,
+                    forceBorder=True,
+                )
+            except Exception:
+                # Fallback: static rectangle if AcroForm is not available
+                c.rect(box_x, box_y, box_width, box_height)
         
         return y_position - (len(fields) * field_height) - 20
     
