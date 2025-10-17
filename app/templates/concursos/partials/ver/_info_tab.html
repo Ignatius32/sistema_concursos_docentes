@@ -69,6 +69,7 @@
                         {% endif %}
                     </p>                    
                     {% endif %}
+                    <p><strong>Apertura Inscripción:</strong> {{ concurso.fecha_apertura_inscripcion.strftime('%d/%m/%Y') if concurso.fecha_apertura_inscripcion else '-' }}</p>
                     <p><strong>Cierre Inscripción:</strong> {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else '-' }}</p>
                     {% if concurso.vencimiento %}
                     <p><strong>Vencimiento:</strong> {{ concurso.vencimiento.strftime('%d/%m/%Y') }}</p>

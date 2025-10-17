@@ -131,6 +131,20 @@ def main():
 
         print('[done] Schema patch completed.')
 
+        # 4) Add concursos.fecha_apertura_inscripcion (new column for opening date)
+        # We place this after the generic patches to keep additive order.
+        # Safe on SQLite and Postgres: NULLable Date column.
+        insp = inspect(engine)
+        if not column_exists(insp, 'concursos', 'fecha_apertura_inscripcion'):
+            print('[patch] Adding column concursos.fecha_apertura_inscripcion ...')
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE concursos ADD COLUMN fecha_apertura_inscripcion DATE'))
+            except Exception as e:
+                print(f'[warn] Could not add column (may already exist): {e}')
+        else:
+            print('[skip] Column concursos.fecha_apertura_inscripcion already exists')
+
 
 if __name__ == '__main__':
     main()

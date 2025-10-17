@@ -192,6 +192,7 @@ class FormularioInscripcionTemplate:
             ("Localización:", str(placeholders.get('localizacion', ''))),
             ("Tipo:", str(placeholders.get('tipo_concurso', ''))),
             ("Cant. Cargos:", str(placeholders.get('cant_cargos_numero', ''))),
+            ("Apertura Insc.:", str(placeholders.get('apertura_inscripcion_fecha', ''))),
             ("Cierre Insc.:", str(placeholders.get('cierre_inscripcion_fecha', ''))),
             ("Expediente:", str(placeholders.get('expediente', ''))),
         ]

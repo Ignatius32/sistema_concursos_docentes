@@ -183,6 +183,8 @@ class Concurso(db.Model):
     dedicacion_vacante = db.Column(db.String(20), nullable=True)  # Simple, Parcial, Exclusiva of the vacancy position
     id_designacion_mocovi = db.Column(db.String(50), nullable=True)  # ID from MOCOVI system
     creado = db.Column(db.DateTime, default=datetime.utcnow)
+    # New field: opening date for applications (optional)
+    fecha_apertura_inscripcion = db.Column(db.Date, nullable=True)
     cierre_inscripcion = db.Column(db.Date, nullable=True)  # Changed to nullable=True
     vencimiento = db.Column(db.Date, nullable=True)  # Already nullable
     estado_actual = db.Column(db.String(50), default="CREADO")

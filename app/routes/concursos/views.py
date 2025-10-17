@@ -67,6 +67,12 @@ def nuevo():
                 if categoria_nombre:
                     break
                     
+            # Handle fecha_apertura_inscripcion (optional)
+            fecha_apertura_str = request.form.get('fecha_apertura_inscripcion')
+            fecha_apertura_inscripcion = None
+            if fecha_apertura_str:
+                fecha_apertura_inscripcion = datetime.strptime(fecha_apertura_str, '%Y-%m-%d').date()
+
             # Handle cierre_inscripcion (optional now)
             cierre_inscripcion_str = request.form.get('cierre_inscripcion')
             cierre_inscripcion = None
@@ -96,6 +102,7 @@ def nuevo():
                 localizacion=localizacion,
                 asignaturas=asignaturas,
                 expediente=expediente,
+                fecha_apertura_inscripcion=fecha_apertura_inscripcion,
                 cierre_inscripcion=cierre_inscripcion,
                 vencimiento=vencimiento,
                 origen_vacante=request.form.get('origen_vacante'),
@@ -339,7 +346,16 @@ def editar(concurso_id):
             concurso.docente_vacante = request.form.get('docente_vacante')
             concurso.categoria_vacante = request.form.get('categoria_vacante')
             concurso.dedicacion_vacante = request.form.get('dedicacion_vacante')
-            concurso.id_designacion_mocovi = request.form.get('id_designacion_mocovi')            # Handle cierre_inscripcion
+            concurso.id_designacion_mocovi = request.form.get('id_designacion_mocovi')
+
+            # Handle fecha_apertura_inscripcion
+            fecha_apertura_str = request.form.get('fecha_apertura_inscripcion')
+            if fecha_apertura_str:
+                concurso.fecha_apertura_inscripcion = datetime.strptime(fecha_apertura_str, '%Y-%m-%d').date()
+            else:
+                concurso.fecha_apertura_inscripcion = None
+
+            # Handle cierre_inscripcion
             cierre_inscripcion_str = request.form.get('cierre_inscripcion')
             if cierre_inscripcion_str:
                 concurso.cierre_inscripcion = datetime.strptime(cierre_inscripcion_str, '%Y-%m-%d').date()

@@ -121,8 +121,8 @@ def get_core_placeholders(concurso_id, persona_id=None):
     
     # Format cargo text with all parameters
     cargo_texto = format_cargos_text(
-        concurso.cant_cargos, 
-        concurso.tipo, 
+        concurso.cant_cargos,
+        concurso.tipo,
         concurso.categoria,
         categoria_nombre,
         concurso.dedicacion
@@ -245,8 +245,9 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'fecha_actual': current_date,
         'yyyy': current_year,
         'fecha_comision_academica': '', # These may need to be populated from document-specific data
-        'fecha_consejo_directivo': '',
-        'cierre_inscripcion_fecha': concurso.cierre_inscripcion.strftime("%d/%m/%Y") if concurso.cierre_inscripcion else '',
+    'fecha_consejo_directivo': '',
+    'apertura_inscripcion_fecha': concurso.fecha_apertura_inscripcion.strftime("%d/%m/%Y") if getattr(concurso, 'fecha_apertura_inscripcion', None) else '',
+    'cierre_inscripcion_fecha': concurso.cierre_inscripcion.strftime("%d/%m/%Y") if concurso.cierre_inscripcion else '',
     # Expiration date of the concurso (formatted dd/mm/YYYY)
     'vencimiento_fecha': concurso.vencimiento.strftime("%d/%m/%Y") if getattr(concurso, 'vencimiento', None) else '',
         

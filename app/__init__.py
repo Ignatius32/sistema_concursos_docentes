@@ -89,16 +89,33 @@ def create_app():
     # Set up database URI with absolute path in instance folder
     if os.environ.get('DATABASE_URI'):
         db_uri = os.environ.get('DATABASE_URI')
-        if db_uri.startswith('sqlite:///'):
-            # Convert relative SQLite path to absolute path in instance folder
-            db_path = os.path.join(app.instance_path, db_uri.replace('sqlite:///', ''))
-            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        # Handle absolute sqlite path form 'sqlite:////abs/path'
+        if db_uri.startswith('sqlite:////'):
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+        elif db_uri.startswith('sqlite:///'):
+            # Convert relative SQLite path to absolute path inside instance folder
+            rel_path = db_uri.replace('sqlite:///', '', 1)
+            # If user already prefixed with 'instance/', strip it to avoid instance/instance duplication
+            if rel_path.startswith('instance/'):
+                rel_path = rel_path[len('instance/'):]
+            # If an accidental absolute path was provided after triple slashes, respect it
+            if os.path.isabs(rel_path):
+                normalized = f'sqlite:///{rel_path}'
+            else:
+                db_path = os.path.join(app.instance_path, rel_path)
+                normalized = f'sqlite:///{db_path}'
+            app.config['SQLALCHEMY_DATABASE_URI'] = normalized
         else:
             app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     else:
         db_path = os.path.join(app.instance_path, 'concursos.db')
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Log chosen DB for debugging
+    try:
+        print(f"Using SQLALCHEMY_DATABASE_URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+    except Exception:
+        pass
     
     # Initialize extensions
     db.init_app(app)
