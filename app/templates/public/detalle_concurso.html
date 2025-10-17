@@ -23,7 +23,7 @@
 .public-hero {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
-    border-radius: 20px 20px 0 0;
+    border-radius: 20px;
     padding: 2rem;
     margin-bottom: 0;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
@@ -60,26 +60,43 @@
 }
 
 .info-table {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+    border: 0;
 }
 
 .info-table th {
-    background: #f8fafc;
+    background: transparent;
     color: #374151;
     font-weight: 600;
     border: none;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     width: 40%;
 }
 
 .info-table td {
-    background: white;
+    background: transparent;
     border: none;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     color: #1f2937;
+}
+
+/* Slightly smaller, muted values for Información General */
+.small-muted-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Composed title style for Información General */
+.ig-title-main {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.35;
+    margin: 0 0 0.75rem 0;
 }
 
 .info-table tr {
@@ -278,7 +295,7 @@
     .public-hero {
         padding: 1.25rem;
         text-align: left;
-        border-radius: 12px 12px 0 0;
+        border-radius: 20px;
     }
     .public-hero h1 { font-size: 1.5rem; }
     .info-table th,
@@ -370,6 +387,9 @@
     font-size: 0.9rem;
 }
 
+/* Hide navigation menu globally */
+.navigation-menu { display: none !important; }
+
 /* Smooth Scrolling */
 html {
     scroll-behavior: smooth;
@@ -380,11 +400,11 @@ html {
     .public-hero {
         padding: 1.5rem;
         text-align: left;
-        border-radius: 15px 15px 0 0;
+        border-radius: 20px;
     }
     
     .public-hero::after {
-        border-radius: 0 0 15px 15px;
+        border-radius: 20px;
     }
     
     .navigation-menu {
@@ -437,7 +457,11 @@ html {
     color: #111827;
     border: none;
     padding: 0 0 0.5rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 0.75rem;
 }
+.section-header-card .card-header h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.table-section-heading { font-weight: 700; color: #374151; padding: 0.5rem 1rem 0.25rem; }
 
 .section-header-card .card-body {
     padding: 0;
@@ -608,7 +632,7 @@ html {
     <nav aria-label="breadcrumb" class="breadcrumbs-top mb-2 mb-md-0">
         <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="{{ url_for('public.index') }}">Selecciones Públicas</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Detalle de la Selección</li>
+            <li class="breadcrumb-item active" aria-current="page">N° de Registro: {{ concurso.id }}</li>
         </ol>
     </nav>
     <div class="d-flex gap-2">
@@ -621,21 +645,11 @@ html {
 
 <div class="container-fluid px-0">
 <!-- Hero Section -->
-<div class="public-hero">
+<div class="public-hero mb-3">
     <div>
-        <p style="font-size: 1.1rem; color: #e5e7eb; margin-bottom: 0.5rem;">
-            <i class="bi bi-calendar-event me-2 d-none d-sm-inline"></i>
-            <strong>
-                Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}
-            </strong>
-            <span class="d-inline d-sm-none"><br/>N° de registro de selección: {{ concurso.id }}</span>
-        </p>
-    <h1 class="mb-2">{{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}</h1>
-    <p class="mb-0 opacity-70 d-none d-sm-block" style="font-size: 0.95rem;">
-        N° de registro de selección: {{ concurso.id }}
-    </p>
+        <h1 class="mb-1">Inscripción y más información</h1>
     </div>
-    </div>
+</div>
 
 <!-- Navigation Menu -->
 <div class="navigation-menu mb-4">
@@ -679,9 +693,9 @@ html {
                         </div>
                         <div class="callout-text flex-grow-1">
                             {% if concurso.tipo and concurso.tipo|lower == 'regular' %}
-                            Los Concursos Regulares están normados por la <a href="https://ranquel.uncoma.edu.ar/archivos//ord_728_2024_55.pdf" target="_blank" rel="noopener noreferrer">Ordenanza UNCo N° 728/24</a>. <br> Acceda al instructivo completo para ver los detalles y requisitos de inscripción.
+                            Los Concursos Regulares Docentes están normados por la <a href="https://ranquel.uncoma.edu.ar/archivos//ord_728_2024_55.pdf" target="_blank" rel="noopener noreferrer">Ordenanza UNCo N° 728/24</a>. <br> Acceda al instructivo para ver los detalles y requisitos de inscripción.
                             {% elif concurso.tipo and concurso.tipo|lower == 'interino' %}
-                            Las selecciones docentes interinas están normadas por la Resolución del Consejo Directivo CRUB 123/45.
+                            Las selecciones docentes interinas están normadas por la Resolución del Consejo Directivo CRUB .../.. .
                             {% else %}
                             Consultá los requisitos generales y específicos de esta selección en una página dedicada.
                             {% endif %}
@@ -697,78 +711,168 @@ html {
     <div class="col-12 col-lg-6 mb-4" id="informacion-seleccion">
         <div class="section-header-card h-100">
             <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="bi bi-info-circle me-2"></i>Información General
-                </h4>
+                <h4 class="mb-0">Información General</h4>
             </div>
             <div class="card-body no-padding">
+                {# Composed title: cantidad + Cargo(s) + tipo (plural if needed) + categoría + dedicación #}
+                {% set cantidad = concurso.cant_cargos or 0 %}
+                {% set cargo_label = 'Cargo' if cantidad == 1 else 'Cargos' %}
+                {% set tipo_raw = (concurso.tipo or '') %}
+                {% set tipo_lower = tipo_raw.lower() %}
+                {% set tipo_label = tipo_raw %}
+                {% if cantidad|int > 1 %}
+                    {% if tipo_lower == 'regular' %}
+                        {% set tipo_label = 'Regulares' %}
+                    {% elif tipo_lower == 'interino' %}
+                        {% set tipo_label = 'Interinos' %}
+                    {% else %}
+                        {% set tipo_label = tipo_raw %}
+                    {% endif %}
+                {% endif %}
 
+                <div class="ig-title-main px-3">
+                    {{ cantidad }} {{ cargo_label }} {{ tipo_label }} · {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}
+                </div>
+                <!-- Apertura/Cierre de inscripción under title (text-only, compact) -->
+                <div class="px-3 mb-2">
+                    <div class="d-flex flex-wrap gap-3 small-muted-value">
+                        {% if concurso.fecha_apertura_inscripcion %}
+                        <span>
+                            Fecha de apertura de inscripción: {{ concurso.fecha_apertura_inscripcion.strftime('%d/%m/%Y') }}
+                        </span>
+                        {% endif %}
+                        <span>
+                            Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}
+                        </span>
+                    </div>
+                </div>
                 <div class="info-table-container">
                     <div class="table-responsive">
                         <table class="table table-bordered info-table">
-                            <!-- Departamento Section -->
-                            <tr>
-                                <th width="40%"><i class="bi bi-building me-2"></i>Departamento</th>
-                                <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <th width="40%"><i class="bi bi-compass me-2"></i>Área</th>
-                                <td>{{ concurso.area }}</td>
-                            </tr>
-                            <tr>
-                                <th><i class="bi bi-arrow-right me-2"></i>Orientación</th>
-                                <td>{{ concurso.orientacion }}</td>
-                            </tr>
+                            <!-- (Departamento / Área / Orientación moved to bottom in a compact row) -->
                             
-                            <!-- Cargo Section -->
-                            <tr>
-                                <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
-                                    <strong><i class="bi bi-briefcase me-2"></i>Cargo</strong>
-                                </th>
-                            </tr>
-                            <tr>
-                                <th width="40%">Tipo de Selección</th>
-                                <td>{{ concurso.tipo }}</td>
-                            </tr>
-                            <tr>
-                                <th>Carácter</th>
-                                <td>{{ concurso.cerrado_abierto }}</td>
-                            </tr>
-                            <tr>
-                                <th>Categoría</th>
-                                <td>{{ concurso.categoria_nombre|inclusive_title }} ({{ concurso.categoria }})</td>
-                            </tr>
-                            <tr>
-                                <th>Dedicación</th>
-                                <td>{{ concurso.dedicacion }}</td>
-                            </tr>
-                            <tr>
-                                <th>Localización</th>
-                                <td>{{ concurso.localizacion }}</td>
-                            </tr>
-                            <tr>
-                                <th>Cantidad de Cargos</th>
-                                <td>{{ concurso.cant_cargos }}</td>
-                            </tr>
+                            <!-- Datos principales se muestran en el título superior -->
                             {% if concurso.asignaturas %}
                             <tr>
                                 <th>Asignaturas</th>
-                                <td>{{ concurso.asignaturas }}</td>
+                                <td class="small-muted-value">{{ concurso.asignaturas }}</td>
                             </tr>
                             {% endif %}
+
+                            <!-- Compact inline list for Departamento / Área / Orientación / Localización at the end -->
+                            <tr>
+                                <td colspan="2" class="py-2">
+                                    <div class="d-flex flex-wrap gap-3 small-muted-value">
+                                        <span><strong>Departamento:</strong> {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</span>
+                                        <span><strong>Área:</strong> {{ concurso.area }}</span>
+                                        {% if concurso.orientacion %}
+                                        <span><strong>Orientación:</strong> {{ concurso.orientacion }}</span>
+                                        {% endif %}
+                                        {% if concurso.localizacion %}
+                                        <span><strong>Localización:</strong> {{ concurso.localizacion }}</span>
+                                        {% endif %}
+                                        <span><a href="#asignaturas-relacionadas" class="text-decoration-none"><i class="bi bi-book me-1"></i>Ver asignaturas relacionadas</a></span>
+                                    </div>
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Documentos Disponibles moved next to Información General -->
-    <div class="col-12 col-lg-6 mb-4" id="documentos-disponibles">
+    <!-- Sustanciación moved next to Información General -->
+    <div class="col-12 col-lg-6 mb-4" id="sustanciacion">
         <div class="section-header-card h-100">
             <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
-                </h4>
+                <h4 class="mb-0">Información de Sustanciación</h4>
+            </div>
+            <div class="card-body {% if not (concurso.sustanciacion and (concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.tema_sorteado or concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link)) %}d-flex align-items-center{% else %}no-padding{% endif %}">
+                {% if concurso.sustanciacion and (concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.tema_sorteado or concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link) %}
+                <div class="info-table-container">
+                    <div class="table-responsive">
+                    <table class="table table-bordered info-table">
+                        <!-- Sorteo Information -->
+                        {% if concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th colspan="2" class="text-left table-section-heading">Sorteo de Tema</th>
+                        </tr>
+                        <tr>
+                            <th width="40%">Fecha de Sorteo</th>
+                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'Por definir' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de Sorteo</th>
+                            <td>{{ concurso.sustanciacion.sorteo_lugar if concurso.sustanciacion.sorteo_lugar else 'Por definir' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.sorteo_virtual_link %}
+                        <tr>
+                            <th>Enlace Virtual Sorteo</th>
+                            <td>
+                                <a href="{{ 'https://' + concurso.sustanciacion.sorteo_virtual_link if not concurso.sustanciacion.sorteo_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.sorteo_virtual_link }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                        
+                        <!-- Tema Sorteado -->
+                        {% if concurso.sustanciacion.tema_sorteado %}
+                        <tr>
+                            <th>Tema Sorteado</th>
+                            <td>{{ concurso.sustanciacion.tema_sorteado }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        <!-- Exposición Information -->
+                        {% if concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th colspan="2" class="text-left table-section-heading">Exposición</th>
+                        </tr>
+                        <tr>
+                            <th width="40%">Fecha de Exposición</th>
+                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'Por definir' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Lugar de Exposición</th>
+                            <td>{{ concurso.sustanciacion.exposicion_lugar if concurso.sustanciacion.exposicion_lugar else 'Por definir' }}</td>
+                        </tr>
+                        {% if concurso.sustanciacion.exposicion_virtual_link %}
+                        <tr>
+                            <th>Enlace Virtual Exposición</th>
+                            <td>
+                                <a href="{{ 'https://' + concurso.sustanciacion.exposicion_virtual_link if not concurso.sustanciacion.exposicion_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.exposicion_virtual_link }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                    </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info border-0 w-100" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
+                    <i class="bi bi-info-circle me-2"></i>La información de sustanciación se publicará cuando esté disponible.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- CONTAINER 2: Documentos Disponibles (moved below Información General) -->
+<div class="row mb-4">
+    <div class="col-12 mb-4" id="documentos-disponibles">
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">Documentos Disponibles</h4>
             </div>
             {% set visible = namespace(count=0) %}
             {# First pass: count visible docs excluding 'Expediente CRUB' #}
@@ -817,107 +921,12 @@ html {
     </div>
 </div>
 
-<!-- CONTAINER 2: Sustanciación -->
-<div class="row mb-4">
-    <!-- Sustanciación -->
-    <div class="col-12 col-lg-12 mb-4" id="sustanciacion">
-        <div class="section-header-card h-100">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="bi bi-shuffle me-2"></i>Información de Sustanciación
-                </h4>
-            </div>
-            <div class="card-body {% if not (concurso.sustanciacion and (concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.tema_sorteado or concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link)) %}d-flex align-items-center{% else %}no-padding{% endif %}">
-                {% if concurso.sustanciacion and (concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link or concurso.sustanciacion.tema_sorteado or concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link) %}
-                <div class="info-table-container">
-                    <div class="table-responsive">
-                    <table class="table table-bordered info-table">
-                        <!-- Sorteo Information -->
-                        {% if concurso.sustanciacion.sorteo_fecha or concurso.sustanciacion.sorteo_lugar or concurso.sustanciacion.sorteo_virtual_link %}
-                        <tr>
-                            <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
-                                <strong><i class="bi bi-shuffle me-2"></i>Sorteo de Tema</strong>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th width="40%">Fecha de Sorteo</th>
-                            <td>{{ concurso.sustanciacion.sorteo_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.sorteo_fecha else 'Por definir' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar de Sorteo</th>
-                            <td>{{ concurso.sustanciacion.sorteo_lugar if concurso.sustanciacion.sorteo_lugar else 'Por definir' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.sorteo_virtual_link %}
-                        <tr>
-                            <th>Enlace Virtual Sorteo</th>
-                            <td>
-                                <a href="{{ 'https://' + concurso.sustanciacion.sorteo_virtual_link if not concurso.sustanciacion.sorteo_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.sorteo_virtual_link }}" 
-                                   target="_blank" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% endif %}
-                        
-                        <!-- Tema Sorteado -->
-                        {% if concurso.sustanciacion.tema_sorteado %}
-                        <tr>
-                            <th>Tema Sorteado</th>
-                            <td>{{ concurso.sustanciacion.tema_sorteado }}</td>
-                        </tr>
-                        {% endif %}
-                        
-                        <!-- Exposición Information -->
-                        {% if concurso.sustanciacion.exposicion_fecha or concurso.sustanciacion.exposicion_lugar or concurso.sustanciacion.exposicion_virtual_link %}
-                        <tr>
-                            <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
-                                <strong><i class="bi bi-easel me-2"></i>Exposición</strong>
-                            </th>
-                        </tr>
-                        <tr>
-                            <th width="40%">Fecha de Exposición</th>
-                            <td>{{ concurso.sustanciacion.exposicion_fecha.strftime('%d/%m/%Y %H:%M') if concurso.sustanciacion.exposicion_fecha else 'Por definir' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Lugar de Exposición</th>
-                            <td>{{ concurso.sustanciacion.exposicion_lugar if concurso.sustanciacion.exposicion_lugar else 'Por definir' }}</td>
-                        </tr>
-                        {% if concurso.sustanciacion.exposicion_virtual_link %}
-                        <tr>
-                            <th>Enlace Virtual Exposición</th>
-                            <td>
-                                <a href="{{ 'https://' + concurso.sustanciacion.exposicion_virtual_link if not concurso.sustanciacion.exposicion_virtual_link.startswith(('http://', 'https://')) else concurso.sustanciacion.exposicion_virtual_link }}" 
-                                   target="_blank" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-link-45deg me-1"></i>Acceder a Reunión
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% endif %}
-                    </table>
-                    </div>
-                </div>
-                {% else %}
-                <div class="alert alert-info border-0 w-100" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
-                    <i class="bi bi-info-circle me-2"></i>La información de sustanciación se publicará cuando esté disponible.
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- CONTAINER 3: Asignaturas -->
 <div class="row mb-4">
     <div class="col-12" id="asignaturas-relacionadas">
         <div class="section-header-card">
             <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="bi bi-book me-2"></i>Asignaturas Relacionadas
-                </h4>
+                <h4 class="mb-0">Asignaturas Relacionadas</h4>
             </div>
             <div class="card-body">
                 {% include 'shared/tarjetas_asignaturas.html' %}

@@ -195,6 +195,13 @@
     line-height: 1.3;
 }
 
+/* Slightly smaller, muted values for depto/area/orientacion */
+.small-muted-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #374151;
+}
+
 .deadline-section {
     background: linear-gradient(135deg, #fef3c7, #fde68a);
     border: 2px solid #f59e0b;
@@ -235,6 +242,15 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
     color: white;
+}
+
+/* Composed title for each concurso card */
+.concurso-card .card-title-main {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
 }
 
 .filter-btn {
@@ -476,81 +492,71 @@
             {% endif %}
 
             <div class="card-body">
-                <!-- Departamento, Área, Orientación Section (moved before category) -->
+                {# Composed title: cantidad + cargo(s) + tipo (plural if needed) + categoría + dedicación #}
+                {% set cantidad = concurso.cant_cargos or 0 %}
+                {% set cargo_label = 'Cargo' if cantidad == 1 else 'Cargos' %}
+                {% set tipo_raw = (concurso.tipo or '') %}
+                {% set tipo_lower = tipo_raw.lower() %}
+                {% set tipo_label = tipo_raw %}
+                {% if cantidad|int > 1 %}
+                    {% if tipo_lower == 'regular' %}
+                        {% set tipo_label = 'Regulares' %}
+                    {% elif tipo_lower == 'interino' %}
+                        {% set tipo_label = 'Interinos' %}
+                    {% else %}
+                        {% set tipo_label = tipo_raw %}
+                    {% endif %}
+                {% endif %}
+
+                <div class="d-flex align-items-start justify-content-between mb-2">
+                    <div class="card-title-main">
+                        {{ cantidad }} {{ cargo_label }} {{ tipo_label }} · {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}
+                    </div>
+                    <span class="status-badge {{ badge_class }}">{{ badge_text }}</span>
+                </div>
+                
+                <!-- Departamento, Área, Orientación Section -->
                 <div class="detail-section">
                     <div class="row g-3">
                         <div class="col-12">
                             <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-building"></i>
-                                    <span>Departamento</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</div>
+                                <div class="detail-label" style="text-transform:none; letter-spacing:0; font-size:0.85rem;">Departamento:</div>
+                                <div class="detail-value small-muted-value">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-compass"></i>
-                                    <span>Área</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.area }}</div>
+                                <div class="detail-label" style="text-transform:none; letter-spacing:0; font-size:0.85rem;">Área:</div>
+                                <div class="detail-value small-muted-value">{{ concurso.area }}</div>
                             </div>
                         </div>
                         {% if concurso.orientacion %}
                         <div class="col-12">
                             <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-arrow-right"></i>
-                                    <span>Orientación</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.orientacion }}</div>
+                                <div class="detail-label" style="text-transform:none; letter-spacing:0; font-size:0.85rem;">Orientación:</div>
+                                <div class="detail-value small-muted-value">{{ concurso.orientacion }}</div>
                             </div>
                         </div>
                         {% endif %}
                     </div>
                 </div>
-
-                <!-- Categoría y Dedicación Section -->
-                <div class="detail-section">
-                    <div class="row g-4">
-                        <div class="col-6">
-                            <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-award"></i>
-                                    <span>Categoría</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.categoria_nombre|inclusive_title }}</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-clock"></i>
-                                    <span>Dedicación</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.dedicacion }}</div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="row g-2 align-items-center">
-                                <div class="col-6 cantidad-col">
-                                    <div class="detail-item mb-0">
-                                        <div class="detail-label">
-                                            <i class="bi bi-people"></i>
-                                            <span>Cantidad</span>
-                                        </div>
-                                        <div class="detail-value">{{ concurso.cant_cargos }} cargo{{ 's' if (concurso.cant_cargos or 0) >= 2 else '' }} {{ concurso.tipo }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 d-flex justify-content-start estado-col">
-                                    <span class="status-badge {{ badge_class }}">{{ badge_text }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 
+                <div class="d-grid mb-3">
+                    {% if dynamic_estado == 'INSCRIPCIÓN ABIERTA' %}
+                    <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
+                       class="view-details-btn">
+                        <i class="bi bi-pencil-square"></i>
+                        <span>Inscripción y más información</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
+                       class="view-details-btn">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Inscripción y más información</span>
+                    </a>
+                    {% endif %}
+                </div>
+
                 {% if concurso.cierre_inscripcion %}
                 <div class="deadline-section">
                     <div class="detail-item">
@@ -562,22 +568,6 @@
                     </div>
                 </div>
                 {% endif %}
-                
-                <div class="d-grid">
-                    {% if dynamic_estado == 'INSCRIPCIÓN ABIERTA' %}
-                    <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
-                       class="view-details-btn">
-                        <i class="bi bi-pencil-square"></i>
-                        <span>Inscripción y más información</span>
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('public.ver_concurso', concurso_id=concurso.id) }}" 
-                       class="view-details-btn">
-                        <i class="bi bi-eye-fill"></i>
-                        <span>Ver Detalles Completos</span>
-                    </a>
-                    {% endif %}
-                </div>
             </div>
         </div>
     </div>
@@ -603,14 +593,7 @@
 </div>
 {% endif %}
 
-<!-- Icon Legend (only once, below results) -->
-<div class="mt-4 text-center small text-muted" style="opacity:0.85;">
-    <div class="d-inline-flex align-items-center gap-3 p-2 bg-light rounded-3 border border-1 justify-content-center">
-        <span class="d-inline-flex align-items-center gap-1"><i class="bi bi-building"></i> Departamento</span>
-        <span class="d-inline-flex align-items-center gap-1"><i class="bi bi-compass"></i> Área</span>
-        <span class="d-inline-flex align-items-center gap-1"><i class="bi bi-arrow-right"></i> Orientación</span>
-    </div>
-</div>
+{# Icon legend removed as icons and their labels were removed #}
 {% endblock %}
 
 {% block scripts %}

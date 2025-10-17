@@ -319,46 +319,6 @@ table .badge.badge-tribunal-info,
     vertical-align: middle;
 }
 
-/* Tribunal documents table responsive styling */
-.tribunal-docs-table th,
-.tribunal-docs-table td {
-    white-space: nowrap;
-}
-
-@media (max-width: 768px) {
-    .tribunal-docs-table thead {
-        display: none;
-    }
-    .tribunal-docs-table tr {
-        display: block;
-        margin-bottom: 0.75rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-    .tribunal-docs-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        white-space: normal;
-        border-top: 1px solid #f3f4f6;
-    }
-    .tribunal-docs-table td:first-child {
-        border-top: none;
-    }
-    .tribunal-docs-table td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #374151;
-        margin-right: 1rem;
-    }
-    .tribunal-docs-table .d-flex.gap-2 {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-}
-
 /* Ensure badges work in tribunal tables */
 .tribunal-table .badge[class*="badge-tribunal-"] {
     font-size: 0.75rem;
