@@ -9,7 +9,7 @@ from app.models.models import (
     Postulante, Sustanciacion, DocumentoConcurso
 )
 from app.helpers.api_services import get_departamento_heads_data
-from app.helpers.text_formatting import format_cargos_text, format_descripcion_cargo
+from app.helpers.text_formatting import format_cargos_text, format_descripcion_cargo, to_gender_inclusive_title
 
 def _format_topic_list(base_title_singular: str, base_title_plural: str, topics_raw_string: str, 
                        item_prefix: str = "", empty_list_message: str = "(Ninguno)") -> str:
@@ -136,6 +136,14 @@ def get_core_placeholders(concurso_id, persona_id=None):
         categoria_nombre,
         concurso.dedicacion
     )
+    # Inclusive variants (do not replace existing placeholders; add new keys)
+    categoria_nombre_inclusivo = to_gender_inclusive_title(categoria_nombre or "")
+    # Start with original text; only replace when categoria_nombre is present to avoid empty-string replace issues
+    cargo_texto_inclusivo = cargo_texto
+    descripcion_cargo_inclusivo = descripcion_cargo
+    if categoria_nombre:
+        cargo_texto_inclusivo = cargo_texto.replace(categoria_nombre, categoria_nombre_inclusivo)
+        descripcion_cargo_inclusivo = descripcion_cargo.replace(categoria_nombre, categoria_nombre_inclusivo)
       # Get tribunal data
     step_start = time.time()
     tribunal_members = concurso.asignaciones_tribunal.all() if hasattr(concurso, 'asignaciones_tribunal') else []
@@ -211,11 +219,14 @@ def get_core_placeholders(concurso_id, persona_id=None):
         'orientacion': concurso.orientacion or '',
         'categoria_codigo': concurso.categoria or '',
         'categoria_nombre': categoria_nombre or '',
+    'categoria_nombre_inclusivo': categoria_nombre_inclusivo or '',
         'dedicacion': concurso.dedicacion or '',
         'localizacion': concurso.localizacion or '',
         'cant_cargos_numero': str(concurso.cant_cargos),
         'cant_cargos_texto': cargo_texto,
+    'cant_cargos_texto_inclusivo': cargo_texto_inclusivo,
         'descripcion_cargo': descripcion_cargo,
+    'descripcion_cargo_inclusivo': descripcion_cargo_inclusivo,
         'departamento_nombre': departamento_nombre,
         'origen_vacante': concurso.origen_vacante or '',
         'docente_que_genera_vacante': concurso.docente_vacante or '',

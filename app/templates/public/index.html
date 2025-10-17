@@ -62,18 +62,12 @@
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
     border: none;
-    padding: 2rem 2rem 1.5rem 2rem;
+    padding: 0.75rem 1rem; /* Reduced for a subtler header */
     position: relative;
 }
 
 .concurso-card .card-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6);
+    display: none; /* Remove decorative underline for less intrusion */
 }
 
 .concurso-card .card-body {
@@ -399,33 +393,20 @@
     {% for concurso in concursos %}
     <div class="col-12 col-lg-6 mb-4">
         <div class="concurso-card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="concurso-title">
-                        <i class="bi bi-people me-2"></i>
-                        {{ concurso.cant_cargos }} cargo{{ 's' if concurso.cant_cargos != 1 else '' }} {{ concurso.tipo }}
-                    </div>
-                    {% set badge_class = 'status-default' %}
-                    {% set badge_text = concurso.estado_actual %}
-                    {% set dynamic_estado = concurso.dynamic_estado if concurso.dynamic_estado else concurso.estado_actual %}
-                    
-                    {% if dynamic_estado == 'INSCRIPCIÓN ABIERTA' %}
-                        {% set badge_class = 'status-inscripcion-abierta' %}
-                        {% set badge_text = 'INSCRIPCIÓN ABIERTA' %}
-                    {% elif dynamic_estado == 'INSCRIPCIÓN CERRADA' %}
-                        {% set badge_class = 'status-inscripcion-cerrada' %}
-                        {% set badge_text = 'INSCRIPCIÓN CERRADA' %}
-                    {% elif dynamic_estado == 'FINALIZADO' %}
-                        {% set badge_class = 'status-finalizado' %}
-                        {% set badge_text = 'FINALIZADO' %}
-                    {% endif %}
-                    
-                    <span class="status-badge {{ badge_class }}">
-                        {{ badge_text }}
-                    </span>
-                </div>
-            </div>
-            
+            {% set dynamic_estado = concurso.dynamic_estado if concurso.dynamic_estado else concurso.estado_actual %}
+            {% set badge_class = 'status-default' %}
+            {% set badge_text = concurso.estado_actual %}
+            {% if dynamic_estado == 'INSCRIPCIÓN ABIERTA' %}
+                {% set badge_class = 'status-inscripcion-abierta' %}
+                {% set badge_text = 'INSCRIPCIÓN ABIERTA' %}
+            {% elif dynamic_estado == 'INSCRIPCIÓN CERRADA' %}
+                {% set badge_class = 'status-inscripcion-cerrada' %}
+                {% set badge_text = 'INSCRIPCIÓN CERRADA' %}
+            {% elif dynamic_estado == 'FINALIZADO' %}
+                {% set badge_class = 'status-finalizado' %}
+                {% set badge_text = 'FINALIZADO' %}
+            {% endif %}
+
             <div class="card-body">
                 <!-- Categoría y Dedicación Section -->
                 <div class="detail-section">
@@ -436,7 +417,7 @@
                                     <i class="bi bi-award"></i>
                                     <span>Categoría</span>
                                 </div>
-                                <div class="detail-value">{{ concurso.categoria_nombre }}</div>
+                                <div class="detail-value">{{ concurso.categoria_nombre|inclusive_title }}</div>
                             </div>
                         </div>
                         <div class="col-6">
@@ -446,6 +427,22 @@
                                     <span>Dedicación</span>
                                 </div>
                                 <div class="detail-value">{{ concurso.dedicacion }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-6">
+                                    <div class="detail-item mb-0">
+                                        <div class="detail-label">
+                                            <i class="bi bi-people"></i>
+                                            <span>Cantidad</span>
+                                        </div>
+                                        <div class="detail-value">{{ concurso.cant_cargos }} cargo{{ 's' if (concurso.cant_cargos or 0) >= 2 else '' }} {{ concurso.tipo }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 d-flex justify-content-start">
+                                    <span class="status-badge {{ badge_class }}">{{ badge_text }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -177,12 +177,15 @@ class FormularioInscripcionTemplate:
         line_height = 16
 
         # Data
+        # Prefer inclusive category name from placeholders if available
+        categoria_display = placeholders.get('categoria_nombre_inclusivo') or placeholders.get('categoria_nombre', '')
+
         info_items_left = [
             ("N° de Registro:", str(placeholders.get('id_concurso', ''))),
             ("Departamento:", str(placeholders.get('departamento_nombre', ''))),
             ("Área:", str(placeholders.get('area', ''))),
             ("Orientación:", str(placeholders.get('orientacion', ''))),
-            ("Categoría:", f"{placeholders.get('categoria_nombre', '')} ({placeholders.get('categoria_codigo', '')})".strip()),
+            ("Categoría:", f"{categoria_display} ({placeholders.get('categoria_codigo', '')})".strip()),
         ]
         info_items_right = [
             ("Dedicación:", str(placeholders.get('dedicacion', ''))),

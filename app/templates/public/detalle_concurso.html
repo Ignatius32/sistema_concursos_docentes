@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Detalle de Concurso - {{ concurso.categoria_nombre }} - {{ super() }}{% endblock %}
+{% block title %}Detalle de Concurso - {{ concurso.categoria_nombre|inclusive_title }} - {{ super() }}{% endblock %}
 
 {% block styles %}
 <style>
@@ -529,7 +529,7 @@ html {
             <i class="bi bi-calendar-event me-2"></i>
             <strong>Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</strong>
         </p>
-        <h1 class="mb-2">{{ concurso.categoria_nombre }} {{ concurso.dedicacion }}</h1>
+    <h1 class="mb-2">{{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}</h1>
      
        <p class="mb-0 opacity-70" style="font-size: 0.9rem;">       
             <i class="bi bi-building me-2"></i>Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}
@@ -640,7 +640,7 @@ html {
                             </tr>
                             <tr>
                                 <th>Categoría</th>
-                                <td>{{ concurso.categoria_nombre }} ({{ concurso.categoria }})</td>
+                                <td>{{ concurso.categoria_nombre|inclusive_title }} ({{ concurso.categoria }})</td>
                             </tr>
                             <tr>
                                 <th>Dedicación</th>

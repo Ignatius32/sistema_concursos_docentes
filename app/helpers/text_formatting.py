@@ -2,6 +2,7 @@
 Text formatting utilities for concursos docentes application.
 Contains functions for formatting text descriptions of positions and other fields.
 """
+import re
 
 def format_cargos_text(cant_cargos, tipo, categoria=None, categoria_nombre=None, dedicacion=None):
     """
@@ -100,3 +101,33 @@ def format_descripcion_cargo(cant_cargos, tipo, categoria, categoria_nombre, ded
         
     # Format the full description with the full category name first, then code in parentheses
     return f"{numero} {cargo_text} ({cant_cargos}) {tipo_text} de {categoria_nombre} con dedicación {dedicacion.lower()} ({categoria}-{dedicacion_code})"
+
+
+def to_gender_inclusive_title(text: str) -> str:
+    """
+    Make common academic titles gender-inclusive in Spanish in a safe, idempotent way.
+
+    Rules applied (only when found as whole words and not already inclusive):
+    - Profesor  -> Profesor/a
+    - Adjunto   -> Adjunto/a
+    - Asociado  -> Asociado/a
+
+    Notes:
+    - Leaves already-inclusive forms like "Profesor/a" unchanged.
+    - Does not alter neutral terms (e.g., "Titular", "Auxiliar") nor phrases like
+      "Jefe de Trabajos Prácticos" to avoid overreach.
+    - Case-sensitive by design to match canonical capitalization of category titles.
+    """
+    if not text:
+        return text
+
+    patterns = [
+        (r"\bProfesor\b(?!/a)", "Profesor/a"),
+        (r"\bAdjunto\b(?!/a)", "Adjunto/a"),
+        (r"\bAsociado\b(?!/a)", "Asociado/a"),
+    ]
+
+    result = text
+    for pat, repl in patterns:
+        result = re.sub(pat, repl, result)
+    return result

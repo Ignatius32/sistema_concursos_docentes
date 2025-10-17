@@ -291,6 +291,17 @@ def create_app():
         
         return formatted_date
 
+    # Inclusive title filter for templates
+    from app.helpers.text_formatting import to_gender_inclusive_title
+
+    @app.template_filter('inclusive_title')
+    def inclusive_title(value: str):
+        """Render common academic titles in gender-inclusive form (e.g., Profesor → Profesor/a)."""
+        try:
+            return to_gender_inclusive_title(value)
+        except Exception:
+            return value or ""
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))

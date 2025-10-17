@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Instructivo de Inscripción - {{ concurso.categoria_nombre }} {{ concurso.dedicacion }} - {{ super() }}{% endblock %}
+{% block title %}Instructivo de Inscripción - {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }} - {{ super() }}{% endblock %}
 
 {% block styles %}
 <style>
@@ -57,6 +57,25 @@
     font-size: 0.9rem;
 }
 .btn-outline-custom:hover { background: #3b82f6; color: #fff; }
+
+/* Success (green) button matching 'INSCRIPCIÓN ABIERTA' badge gradient */
+.btn-success-custom {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.btn-success-custom:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(5, 150, 105, 0.35);
+    color: #fff;
+}
 
 /* Better button contrast when placed on the blue hero */
 .page-hero .btn-outline-custom { border-color: #ffffff; color: #ffffff; }
@@ -175,7 +194,7 @@
                 <div class="instructivo-text">{{ instructivo.base }}</div>
             </div>
             <div class="col-12 col-md-6">
-                <h6 class="text-primary mb-2"><i class="bi bi-clock me-1"></i>Requisitos para {{ concurso.categoria_nombre }} {{ concurso.dedicacion }}</h6>
+                <h6 class="text-primary mb-2"><i class="bi bi-clock me-1"></i>Requisitos específicos para {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}</h6>
                 <div class="instructivo-text">{{ instructivo.dedicacion }}</div>
             </div>
         </div>
@@ -215,7 +234,7 @@
     <!-- Full-width download button below Normativa -->
     {% if not (concurso.estado_actual == 'FINALIZADO' or is_registration_closed) %}
     <div class="my-2">
-        <a class="btn btn-primary-custom w-100 py-3" href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}">
+        <a class="btn btn-success-custom w-100 py-3" href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}">
             <i class="bi bi-download me-2"></i>Descargar Solicitud de Inscripción
         </a>
     </div>
