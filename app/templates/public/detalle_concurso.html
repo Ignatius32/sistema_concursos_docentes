@@ -711,28 +711,41 @@ html {
                     <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
                 </h4>
             </div>
-            <div class="card-body {% if not public_documents %}d-flex align-items-center{% endif %}">
-                {% if public_documents %}
+            {% set visible = namespace(count=0) %}
+            {# First pass: count visible docs excluding 'Expediente CRUB' #}
+            {% if public_documents %}
+                {% for document in public_documents %}
+                    {% set _title = document.get_template_display_name() %}
+                    {% if _title != 'Expediente CRUB' %}
+                        {% set visible.count = visible.count + 1 %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <div class="card-body {% if visible.count == 0 %}d-flex align-items-center{% endif %}">
+                {% if visible.count > 0 %}
                 <div class="row">
                     {% for document in public_documents %}
-                    <div class="col-12 my-2">
-                        <div class="document-mini-card {% if document.drive_file_id %}clickable{% endif %}"
-                             {% if document.drive_file_id %}role="button" data-bs-toggle="modal" data-bs-target="#pdfViewerModal{{ document.id }}"{% endif %}>
-                            <div class="card-body">
-                                <h6 class="card-title text-primary fw-bold mb-2">
-                                    <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
-                                </h6>
-                                
-                                {% if document.fecha_creacion %}
-                                <div class="mt-auto">
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
-                                    </small>
+                        {% set _title = document.get_template_display_name() %}
+                        {% if _title != 'Expediente CRUB' %}
+                        <div class="col-12 my-2">
+                            <div class="document-mini-card {% if document.drive_file_id %}clickable{% endif %}"
+                                 {% if document.drive_file_id %}role="button" data-bs-toggle="modal" data-bs-target="#pdfViewerModal{{ document.id }}"{% endif %}>
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary fw-bold mb-2">
+                                        <i class="bi bi-file-pdf me-2"></i>{{ _title }}
+                                    </h6>
+                                    {% if document.fecha_creacion %}
+                                    <div class="mt-auto">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
-                    </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
                 {% else %}
@@ -863,7 +876,8 @@ html {
 <!-- PDF Viewer Modals for Public Documents -->
 {% if public_documents %}
 {% for document in public_documents %}
-{% if document.drive_file_id %}
+{% set _title = document.get_template_display_name() %}
+{% if document.drive_file_id and _title != 'Expediente CRUB' %}
 <div class="modal fade" id="pdfViewerModal{{ document.id }}" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content" style="border-radius: 15px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
