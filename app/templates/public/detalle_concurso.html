@@ -551,15 +551,15 @@ html {
             </a>
         </div>
         <div class="col-6 col-sm-6 col-md-3 col-lg-3">
-            <a href="#sustanciacion" class="nav-link-card">
-                <i class="bi bi-shuffle me-2"></i>
-                <span>Sustanciación: Sorteo y Exposición</span>
+            <a href="#documentos-disponibles" class="nav-link-card">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                <span>Documentos Disponibles</span>
             </a>
         </div>
         <div class="col-6 col-sm-6 col-md-3 col-lg-3">
-            <a href="#documentos-disponibles" class="nav-link-card">
-                <i class="bi bi-file-earmark-text me-2"></i>
-                <span>Documentos de la Selección</span>
+            <a href="#sustanciacion" class="nav-link-card">
+                <i class="bi bi-shuffle me-2"></i>
+                <span>Sustanciación: Sorteo y Exposición</span>
             </a>
         </div>
         <div class="col-6 col-sm-6 col-md-3 col-lg-3">
@@ -597,7 +597,7 @@ html {
                     </div>
     </div>
     <!-- Información General -->
-    <div class="col-12 col-lg-12 mb-4" id="informacion-seleccion">
+    <div class="col-12 col-lg-6 mb-4" id="informacion-seleccion">
         <div class="section-header-card h-100">
             <div class="card-header">
                 <h4 class="mb-0">
@@ -611,9 +611,8 @@ html {
                         <table class="table table-bordered info-table">
                             <!-- Departamento Section -->
                             <tr>
-                                <th colspan="2" class="bg-light text-left" style="font-size: 1.1rem;">
-                                    <strong><i class="bi bi-building me-2"></i>Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</strong>
-                                </th>
+                                <th width="40%"><i class="bi bi-building me-2"></i>Departamento</th>
+                                <td>{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</td>
                             </tr>
                             <tr>
                                 <th width="40%"><i class="bi bi-compass me-2"></i>Área</th>
@@ -666,12 +665,60 @@ html {
             </div>
         </div>
     </div>
+    <!-- Documentos Disponibles moved next to Información General -->
+    <div class="col-12 col-lg-6 mb-4" id="documentos-disponibles">
+        <div class="section-header-card h-100">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
+                </h4>
+            </div>
+            <div class="card-body {% if not public_documents %}d-flex align-items-center{% endif %}">
+                {% if public_documents %}
+                <div class="row">
+                    {% for document in public_documents %}
+                    <div class="col-12 mb-3">
+                        <div class="document-mini-card">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary fw-bold mb-3">
+                                    <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
+                                </h6>
+                                <div class="d-flex gap-2 flex-wrap mb-3">
+                                    {% if document.drive_file_id %}
+                                    <button type="button" 
+                                            class="btn-primary-custom" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#pdfViewerModal{{ document.id }}">
+                                        <i class="bi bi-eye me-1"></i>Ver
+                                    </button>                           
+                                    {% endif %}
+                                </div>
+                                {% if document.fecha_creacion %}
+                                <div class="mt-auto">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-warning border-0 w-100" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No hay documentos públicos disponibles para este concurso.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- CONTAINER 2: Sustanciación and Documentos -->
+<!-- CONTAINER 2: Sustanciación -->
 <div class="row mb-4">
     <!-- Sustanciación -->
-    <div class="col-12 col-lg-6 mb-4" id="sustanciacion">
+    <div class="col-12 col-lg-12 mb-4" id="sustanciacion">
         <div class="section-header-card h-100">
             <div class="card-header">
                 <h4 class="mb-0">
@@ -754,55 +801,6 @@ html {
                 {% else %}
                 <div class="alert alert-info border-0 w-100" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); color: #01579b;">
                     <i class="bi bi-info-circle me-2"></i>La información de sustanciación se publicará cuando esté disponible.
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Documentos -->
-    <div class="col-12 col-lg-6 mb-4" id="documentos-disponibles">
-        <div class="section-header-card h-100">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="bi bi-file-earmark-text me-2"></i>Documentos Disponibles
-                </h4>
-            </div>
-            <div class="card-body {% if not public_documents %}d-flex align-items-center{% endif %}">
-                {% if public_documents %}
-                <div class="row">
-                    {% for document in public_documents %}
-                    <div class="col-12 mb-3">
-                        <div class="document-mini-card">
-                            <div class="card-body">
-                                <h6 class="card-title text-primary fw-bold mb-3">
-                                    <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
-                                </h6>
-                                <div class="d-flex gap-2 flex-wrap mb-3">
-                                    {% if document.drive_file_id %}
-                                    <button type="button" 
-                                            class="btn-primary-custom" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#pdfViewerModal{{ document.id }}">
-                                        <i class="bi bi-eye me-1"></i>Ver
-                                    </button>                           
-                                    {% endif %}
-                                </div>
-                                {% if document.fecha_creacion %}
-                                <div class="mt-auto">
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar me-1"></i>{{ document.fecha_creacion.strftime('%d/%m/%Y') }}
-                                    </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="alert alert-warning border-0 w-100" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;">
-                    <i class="bi bi-exclamation-triangle me-2"></i>No hay documentos públicos disponibles para este concurso.
                 </div>
                 {% endif %}
             </div>

@@ -15,7 +15,8 @@
 .breadcrumbs a { text-decoration: none; color: #e0e7ff; }
 .breadcrumbs a:hover { color: #ffffff; }
 .page-hero .breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,0.7); }
-.page-hero .small-muted { color: rgba(255,255,255,0.9); }
+.page-hero .small-muted { color: rgba(255,255,255,0.9); font-size: 1rem; }
+.page-hero h1.h3 { font-size: 1.75rem; }
 .section-card {
     background: #fff;
     border: 2px solid #e5e7eb;
@@ -94,7 +95,8 @@
 /* Responsive tweaks */
 @media (max-width: 768px) {
     .page-hero { padding: 1rem; border-radius: 16px; }
-    .page-hero h1.h3 { font-size: 1.2rem; }
+    .page-hero h1.h3 { font-size: 1.4rem; }
+    .page-hero .small-muted { font-size: 0.95rem; }
     .section-card { margin-top: 1rem; }
     .section-card .card-header { padding: 0.75rem 1rem; }
     .section-card .card-body { padding: 1rem; }
@@ -135,8 +137,10 @@
         <div>
             <h1 class="h3 mb-0">Instructivo de Inscripción</h1>
             <div class="small-muted mt-1">
-
-                {% if concurso.cierre_inscripcion %} Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}{% endif %}
+                N° de registro de la selección: {{ concurso.id }}
+                {% if concurso.cierre_inscripcion %}<br/>
+                    Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') }}
+                {% endif %}
             </div>
         </div>
         <div class="d-flex gap-2">
