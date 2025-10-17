@@ -30,17 +30,7 @@
     position: relative;
 }
 
-.public-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 0;
-    right: 0;
-    height: 20px;
-    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-    opacity: 0.1;
-    border-radius: 0 0 20px 20px;
-}
+/* Removed decorative after-line under hero for a cleaner look */
 
 /* Smaller hero title */
 .public-hero h1 {
@@ -269,6 +259,8 @@
     .info-table th,
     .info-table td { padding: 0.75rem; }
     .document-mini-card .card-body { padding: 0.75rem; }
+    /* Hide navigation links on small screens to reduce clutter */
+    .navigation-menu { display: none; }
 }
 
 /* Consistent container spacing */
@@ -494,7 +486,10 @@ html {
     .normativa-callout {
         flex-direction: column;
         align-items: stretch;
+        margin-top: 0.75rem; /* add space below hero on mobile */
     }
+    /* hide the icon block in the instructive callout on mobile */
+    .normativa-callout .callout-icon { display: none; }
     .normativa-callout .callout-actions {
         margin-top: 0.5rem;
         width: 100%;
