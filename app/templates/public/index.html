@@ -396,7 +396,7 @@
 <!-- Concursos Cards -->
 <div class="row">
     {% for concurso in concursos %}
-    <div class="col-12 col-md-6 col-lg-4 mb-4">
+    <div class="col-12 col-lg-6 mb-4">
         <div class="concurso-card">
             {% set dynamic_estado = concurso.dynamic_estado if concurso.dynamic_estado else concurso.estado_actual %}
             {% set badge_class = 'status-default' %}
