@@ -91,6 +91,9 @@
 .instructivo-text ul, .instructivo-text ol { padding-left: 1.25rem; margin-bottom: 0.75rem; }
 .instructivo-text li { margin-bottom: 0.4rem; }
 .section-card .card-body h6 { margin-bottom: 0.5rem; font-weight: 700; }
+/* Highlighted email links inside instructivo blocks */
+.instructivo-text a.email-highlight { color: #1d4ed8; font-weight: 700; text-decoration: none; }
+.instructivo-text a.email-highlight:hover { text-decoration: underline; }
 
 /* Responsive tweaks */
 @media (max-width: 768px) {
@@ -164,7 +167,8 @@
 {% if concurso.tipo and concurso.tipo|lower == 'regular' %}
     {% set normativa_title = 'Normativa pertinente a Concursos Regulares UNCo' %}
     {% set normativa_links = [
-        {'label': 'Ordenanza UNCo N° 728/24', 'url': 'https://ranquel.uncoma.edu.ar/archivos//ord_728_2024_55.pdf'}
+        {'label': 'Ordenanza UNCo N° 728/24 - Reglamento de Concurso Regular para Docentes', 'url': 'https://ranquel.uncoma.edu.ar/archivos//ord_728_2024_55.pdf'},
+        {'label': 'Ordenanza N° 492/91 - Régimen de Obligaciones Docentes', 'url': 'https://drive.google.com/file/d/143GYmweNCFs1coKD5_FMTWdTOV69DWzy/view'}
     ] %}
 {% elif concurso.tipo and concurso.tipo|lower == 'interino' %}
     {% set normativa_title = 'Normativa pertinente a Selecciones interinas' %}
@@ -195,11 +199,11 @@
         <div class="row g-4">
             <div class="col-12 col-md-6">
                 <h6 class="text-primary mb-2"><i class="bi bi-check-circle me-1"></i>Requisitos Generales</h6>
-                <div class="instructivo-text">{{ instructivo.base }}</div>
+                <div class="instructivo-text">{{ instructivo.base|link_emails }}</div>
             </div>
             <div class="col-12 col-md-6">
                 <h6 class="text-primary mb-2"><i class="bi bi-clock me-1"></i>Requisitos específicos para {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}</h6>
-                <div class="instructivo-text">{{ instructivo.dedicacion }}</div>
+                <div class="instructivo-text">{{ instructivo.dedicacion|link_emails }}</div>
             </div>
         </div>
         {% else %}

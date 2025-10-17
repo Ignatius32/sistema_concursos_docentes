@@ -408,6 +408,41 @@
             {% endif %}
 
             <div class="card-body">
+                <!-- Departamento, Área, Orientación Section (moved before category) -->
+                <div class="detail-section">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="bi bi-building"></i>
+                                    <span>Departamento</span>
+                                </div>
+                                <div class="detail-value">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="bi bi-compass"></i>
+                                    <span>Área</span>
+                                </div>
+                                <div class="detail-value">{{ concurso.area }}</div>
+                            </div>
+                        </div>
+                        {% if concurso.orientacion %}
+                        <div class="col-12">
+                            <div class="detail-item">
+                                <div class="detail-label">
+                                    <i class="bi bi-arrow-right"></i>
+                                    <span>Orientación</span>
+                                </div>
+                                <div class="detail-value">{{ concurso.orientacion }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Categoría y Dedicación Section -->
                 <div class="detail-section">
                     <div class="row g-4">
@@ -445,41 +480,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Departamento, Área, Orientación Section -->
-                <div class="detail-section">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-building"></i>
-                                    <span>Departamento</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}</div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-compass"></i>
-                                    <span>Área</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.area }}</div>
-                            </div>
-                        </div>
-                        {% if concurso.orientacion %}
-                        <div class="col-12">
-                            <div class="detail-item">
-                                <div class="detail-label">
-                                    <i class="bi bi-arrow-right"></i>
-                                    <span>Orientación</span>
-                                </div>
-                                <div class="detail-value">{{ concurso.orientacion }}</div>
-                            </div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
                 

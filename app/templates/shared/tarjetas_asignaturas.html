@@ -63,10 +63,9 @@
                 {% endif %}
                                 {% if asignatura.id_materia and asignatura.id_materia|int > 0 %}                <div class="mt-3 d-flex justify-content-end programa-button-container" data-id-materia="{{ asignatura.id_materia }}">
                     <!-- Default button state -->
-                    <button type="button" 
-                            class="btn btn-primary w-100 download-programa-btn" 
-                            data-id-materia="{{ asignatura.id_materia }}"
-                            onclick="checkAndDownloadPrograma({{ asignatura.id_materia }})">
+            <button type="button" 
+                class="btn btn-primary w-100 download-programa-btn" 
+                data-id-materia="{{ asignatura.id_materia }}">
                         <i class="bi bi-file-earmark-arrow-down"></i> Buscar programa
                     </button>
                     
@@ -122,6 +121,14 @@
         border-radius: 0.25rem;
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
+    }
+    /* Keep subject header background and text consistent (including mobile) */
+    #asignaturas-relacionadas .card .card-header {
+        background: #2563eb;
+        color: #fff;
+    }
+    #asignaturas-relacionadas .card .card-header .card-title {
+        color: #fff;
     }
 </style>
 
@@ -225,6 +232,13 @@
         // Alternative: Add a class to flag when a button has been checked
         downloadButtons.forEach(button => {
             button.classList.add('program-status-unchecked');
+            // Bind click to trigger program fetch using data attribute (avoids inline handlers)
+            button.addEventListener('click', function() {
+                const idMateria = this.getAttribute('data-id-materia');
+                if (idMateria) {
+                    checkAndDownloadPrograma(parseInt(idMateria));
+                }
+            });
         });
     });
 </script>

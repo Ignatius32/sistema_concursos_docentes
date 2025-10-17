@@ -302,6 +302,41 @@ def create_app():
         except Exception:
             return value or ""
 
+    # Email autolink filter
+    import re
+    from markupsafe import Markup, escape
+
+    EMAIL_REGEX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+    @app.template_filter('link_emails')
+    def link_emails(value: str):
+        """Turn plain emails into mailto links with highlight styling.
+
+        - Wraps emails in <a href="mailto:"> with class 'email-highlight'.
+        - Escapes all non-email text to avoid HTML injection.
+        - Leaves None/empty values untouched.
+        """
+        if not value:
+            return ""
+
+        def _replace(match):
+            email = match.group(0)
+            return f'<a href="mailto:{escape(email)}" class="email-highlight"><strong>{escape(email)}</strong></a>'
+
+        # We must escape input first, then safely re-insert links via regex on the raw string.
+        # Approach: split by regex keeping delimiters, escape non-email parts, convert emails.
+        parts = []
+        last = 0
+        for m in EMAIL_REGEX.finditer(value):
+            # escape preceding text
+            parts.append(escape(value[last:m.start()]))
+            # add linked email (already escaped inside)
+            parts.append(Markup(_replace(m)))
+            last = m.end()
+        # trailing text
+        parts.append(escape(value[last:]))
+        return Markup("").join(parts)
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))

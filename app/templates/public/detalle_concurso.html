@@ -165,11 +165,15 @@
 .document-mini-card .card-title {
     color: #2563eb;
 }
+.document-mini-card .card-body { padding: 1rem; }
 
 .document-mini-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
+
+/* Make document cards show pointer when clickable */
+.document-mini-card.clickable { cursor: pointer; }
 
 .btn-primary-custom {
     background: #2563eb;
@@ -442,7 +446,7 @@ html {
     border-radius: 12px;
     padding: 1rem 1.25rem;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
 }
@@ -462,6 +466,8 @@ html {
 }
 .normativa-callout .callout-actions {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
 }
 
 @media (max-width: 576px) {
@@ -471,6 +477,11 @@ html {
     }
     .normativa-callout .callout-actions {
         margin-top: 0.5rem;
+        width: 100%;
+    }
+    .btn-cta-instructivo {
+        width: 100%;
+        text-align: center;
     }
 }
 
@@ -500,6 +511,26 @@ html {
 .breadcrumbs-top a:hover { color: #1d4ed8; }
 .breadcrumbs-top .breadcrumb-item + .breadcrumb-item::before { color: #6b7280; }
 .toolbar-top { border-bottom: 1px solid #e5e7eb; }
+
+/* Prominent CTA button for Instructivo */
+.btn-cta-instructivo {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border: none;
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 28px;
+    font-weight: 700;
+    font-size: 1rem;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+    transition: all 0.25s ease;
+    text-decoration: none;
+}
+.btn-cta-instructivo:hover {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    transform: translateY(-2px);
+    color: #fff;
+    text-decoration: none;
+}
 </style>
 {% endblock %}
 
@@ -526,17 +557,16 @@ html {
 <div class="public-hero">
     <div>
         <p style="font-size: 1.1rem; color: #e5e7eb; margin-bottom: 0.5rem;">
-            <i class="bi bi-calendar-event me-2"></i>
-            <strong>Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}</strong>
+            <i class="bi bi-calendar-event me-2 d-none d-sm-inline"></i>
+            <strong>
+                Cierre de inscripción: {{ concurso.cierre_inscripcion.strftime('%d/%m/%Y') if concurso.cierre_inscripcion else 'No definido' }}
+            </strong>
+            <span class="d-inline d-sm-none"><br/>N° de registro de selección: {{ concurso.id }}</span>
         </p>
     <h1 class="mb-2">{{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}</h1>
-     
-       <p class="mb-0 opacity-70" style="font-size: 0.9rem;">       
-            <i class="bi bi-building me-2"></i>Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}
-        </p>
-               <p class="mb-0 opacity-70" style="font-size: 0.9rem;">
-            <i class="bi bi-people me-1"></i>{{ concurso.cant_cargos }} cargo{{ 's' if concurso.cant_cargos != 1 else '' }}
-        </p>   
+    <p class="mb-0 opacity-70 d-none d-sm-block" style="font-size: 0.95rem;">
+        N° de registro de selección: {{ concurso.id }}
+    </p>
     </div>
     </div>
 
@@ -590,7 +620,7 @@ html {
                             {% endif %}
                         </div>
                         <div class="callout-actions">
-                            <a href="{{ url_for('public.ver_instructivo', concurso_id=concurso.id) }}" class="btn btn-primary-custom">
+                            <a href="{{ url_for('public.ver_instructivo', concurso_id=concurso.id) }}" class="btn-cta-instructivo">
                                 <i class="bi bi-eye me-1"></i>Ver Instructivo
                             </a>
                         </div>
@@ -677,22 +707,14 @@ html {
                 {% if public_documents %}
                 <div class="row">
                     {% for document in public_documents %}
-                    <div class="col-12 mb-3">
-                        <div class="document-mini-card">
+                    <div class="col-12 my-2">
+                        <div class="document-mini-card {% if document.drive_file_id %}clickable{% endif %}"
+                             {% if document.drive_file_id %}role="button" data-bs-toggle="modal" data-bs-target="#pdfViewerModal{{ document.id }}"{% endif %}>
                             <div class="card-body">
-                                <h6 class="card-title text-primary fw-bold mb-3">
+                                <h6 class="card-title text-primary fw-bold mb-2">
                                     <i class="bi bi-file-pdf me-2"></i>{{ document.get_template_display_name() }}
                                 </h6>
-                                <div class="d-flex gap-2 flex-wrap mb-3">
-                                    {% if document.drive_file_id %}
-                                    <button type="button" 
-                                            class="btn-primary-custom" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#pdfViewerModal{{ document.id }}">
-                                        <i class="bi bi-eye me-1"></i>Ver
-                                    </button>                           
-                                    {% endif %}
-                                </div>
+                                
                                 {% if document.fecha_creacion %}
                                 <div class="mt-auto">
                                     <small class="text-muted">
