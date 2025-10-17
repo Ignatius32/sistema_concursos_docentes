@@ -139,6 +139,11 @@
     color: white;
 }
 
+.status-inscripcion-no-abierta {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
+    color: white;
+}
+
 .status-default {
     background: linear-gradient(135deg, #6b7280, #9ca3af);
     color: white;
@@ -402,6 +407,13 @@
             {% elif dynamic_estado == 'INSCRIPCIÓN CERRADA' %}
                 {% set badge_class = 'status-inscripcion-cerrada' %}
                 {% set badge_text = 'INSCRIPCIÓN CERRADA' %}
+            {% elif dynamic_estado == 'INSCRIPCIÓN NO ABIERTA' %}
+                {% set badge_class = 'status-inscripcion-no-abierta' %}
+                {% if concurso.fecha_apertura_inscripcion %}
+                    {% set badge_text = 'La inscripción abre el ' ~ (concurso.fecha_apertura_inscripcion|format_date_spanish) %}
+                {% else %}
+                    {% set badge_text = 'INSCRIPCIÓN NO ABIERTA' %}
+                {% endif %}
             {% elif dynamic_estado == 'FINALIZADO' %}
                 {% set badge_class = 'status-finalizado' %}
                 {% set badge_text = 'FINALIZADO' %}

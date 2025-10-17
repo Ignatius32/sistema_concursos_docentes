@@ -135,7 +135,6 @@ class FormularioInscripcionTemplate:
             
             c.setFont("Helvetica", 12)
             c.drawString(self.margin, self.height - 90, "Secretaría Académica")
-            c.drawString(self.margin, self.height - 105, "Selección de Personal Docente")
             
         except Exception as e:
             # If logo fails to load, just add text header

@@ -41,18 +41,23 @@ def index():
     # Get all concursos first to apply dynamic estado logic
     concursos_list = query.order_by(Concurso.creado.desc()).all()
     
-    # Apply dynamic estado logic based on cierre_inscripcion date and current estado
+    # Apply dynamic estado logic based on apertura/cierre dates and current estado
     for concurso in concursos_list:
         if concurso.estado_actual == 'FINALIZADO':
             concurso.dynamic_estado = 'FINALIZADO'
-        elif concurso.cierre_inscripcion:
-            if concurso.cierre_inscripcion <= today:
-                concurso.dynamic_estado = 'INSCRIPCIÓN CERRADA'
-            else:
-                concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
         else:
-            # If no cierre_inscripcion date, default to INSCRIPCIÓN ABIERTA
-            concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+            # Check apertura first: if there's an apertura date in the future, not open yet
+            if getattr(concurso, 'fecha_apertura_inscripcion', None) and concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion:
+                concurso.dynamic_estado = 'INSCRIPCIÓN NO ABIERTA'
+            elif concurso.cierre_inscripcion:
+                # Treat cierre_inscripcion as inclusive (open until 23:59 of that day)
+                if concurso.cierre_inscripcion < today:
+                    concurso.dynamic_estado = 'INSCRIPCIÓN CERRADA'
+                else:
+                    concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+            else:
+                # If no cierre_inscripcion date, default to INSCRIPCIÓN ABIERTA
+                concurso.dynamic_estado = 'INSCRIPCIÓN ABIERTA'
     
     # Apply estado filter after dynamic estado calculation
     if estado_filter:
@@ -62,7 +67,7 @@ def index():
     departamentos = Departamento.query.order_by(Departamento.nombre).all()
     
     # Available estados for filtering - only the dynamic ones
-    estados_disponibles = ['INSCRIPCIÓN ABIERTA', 'INSCRIPCIÓN CERRADA', 'FINALIZADO']
+    estados_disponibles = ['INSCRIPCIÓN ABIERTA', 'INSCRIPCIÓN NO ABIERTA', 'INSCRIPCIÓN CERRADA', 'FINALIZADO']
     
     return render_template('public/index.html', 
                          concursos=concursos_list,
@@ -116,10 +121,12 @@ def ver_concurso(concurso_id):
     
     # Registration is closed if:
     # 1. Estado is FINALIZADO, or
-    # 2. cierre_inscripcion date has passed
+    # 2. today is before apertura date (not open yet), or
+    # 3. cierre_inscripcion date has passed (treat cierre date as inclusive)
     is_registration_closed = (
         concurso.estado_actual == 'FINALIZADO' or 
-        (concurso.cierre_inscripcion and concurso.cierre_inscripcion <= today)
+        (getattr(concurso, 'fecha_apertura_inscripcion', None) and concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion) or
+        (concurso.cierre_inscripcion and concurso.cierre_inscripcion < today)
     )
     
     return render_template('public/detalle_concurso.html', 
@@ -158,7 +165,8 @@ def ver_instructivo(concurso_id):
     today = datetime.now(argentina_tz).date()
     is_registration_closed = (
         concurso.estado_actual == 'FINALIZADO' or 
-        (concurso.cierre_inscripcion and concurso.cierre_inscripcion <= today)
+        (getattr(concurso, 'fecha_apertura_inscripcion', None) and concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion) or
+        (concurso.cierre_inscripcion and concurso.cierre_inscripcion < today)
     )
 
     return render_template(

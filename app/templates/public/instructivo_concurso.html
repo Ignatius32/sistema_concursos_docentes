@@ -151,6 +151,10 @@
             <button class="btn btn-secondary" disabled>
                 <i class="bi bi-check-circle me-1"></i>Selección Finalizada
             </button>
+            {% elif concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion %}
+            <button class="btn btn-secondary" disabled>
+                <i class="bi bi-hourglass-split me-1"></i>La inscripción abre el {{ concurso.fecha_apertura_inscripcion|format_date_spanish }}
+            </button>
             {% elif is_registration_closed %}
             <button class="btn btn-secondary" disabled>
                 <i class="bi bi-x-circle me-1"></i>Inscripción Cerrada
@@ -240,13 +244,30 @@
         </div>
     </div>
     <!-- Full-width download button below Normativa -->
-    {% if not (concurso.estado_actual == 'FINALIZADO' or is_registration_closed) %}
     <div class="my-2">
+        {% set not_open_yet = (concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion) %}
+        {% set closed_after_cierre = (concurso.cierre_inscripcion and concurso.cierre_inscripcion < today) %}
+        {% set is_finalizado = (concurso.estado_actual == 'FINALIZADO') %}
+        {% set can_download = not (is_finalizado or not_open_yet or closed_after_cierre) %}
+
+        {% if can_download %}
         <a class="btn btn-success-custom w-100 py-3" href="{{ url_for('public.descargar_formulario_inscripcion', concurso_id=concurso.id) }}">
             <i class="bi bi-download me-2"></i>Descargar Solicitud de Inscripción
         </a>
+        {% elif not_open_yet %}
+        <button class="btn btn-success-custom w-100 py-3" disabled>
+            <i class="bi bi-hourglass-split me-2"></i>La inscripción abre el {{ concurso.fecha_apertura_inscripcion|format_date_spanish }}
+        </button>
+        {% elif is_finalizado %}
+        <button class="btn btn-secondary w-100 py-3" disabled>
+            <i class="bi bi-check-circle me-2"></i>Selección Finalizada
+        </button>
+        {% else %}
+        <button class="btn btn-secondary w-100 py-3" disabled>
+            <i class="bi bi-x-circle me-2"></i>Inscripción Cerrada
+        </button>
+        {% endif %}
     </div>
-    {% endif %}
     </div>
     {% endif %}
 {% endblock %}
