@@ -337,7 +337,7 @@ class FormularioInscripcionTemplate:
             c.showPage()
             y = self.height - 100 - extra_top_margin
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(self.margin, y, "DOCUMENTACIÓN PRESENTADA")
+        c.drawString(self.margin, y, "DOCUMENTACIÓN A PRESENTAR")
         c.line(self.margin, y - 5, self.width - self.margin, y - 5)
         y -= 30
         c.setFont("Helvetica", 11)
@@ -396,7 +396,7 @@ class FormularioInscripcionTemplate:
         y -= 18
         notes = [
             "• La inscripción se realiza de forma digital enviando los archivos necesarios (en formato pdf) al correo electrónico institucional asignado por la Unidad Académica y que consta en la publicación del llamado.",
-            "• Los archivos correspondientes al CV u documentación respaldatoria tienen carácter de declaración jurada.",
+            "• Los archivos correspondientes al CV o documentación respaldatoria tienen carácter de declaración jurada.",
         ]
         x_notes = self.margin + 10
         max_width_notes = self.width - self.margin - x_notes

@@ -95,6 +95,23 @@
 .instructivo-text a.email-highlight { color: #1d4ed8; font-weight: 700; text-decoration: none; }
 .instructivo-text a.email-highlight:hover { text-decoration: underline; }
 
+/* Highlight note for email submission instructions */
+.inscripcion-note {
+    background: #fff8e1; /* soft yellow */
+    border-left: 4px solid #f59e0b; /* amber accent */
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    padding: 0.5rem 0.75rem; /* tighter padding */
+    border-radius: 8px;
+    line-height: 1.35; /* tighter line spacing */
+}
+.inscripcion-note p {
+    margin-top: 0 !important;
+    margin-bottom: 0.25rem !important; /* reduce gap between the two lines */
+}
+.inscripcion-note p:last-child {
+    margin-bottom: 0 !important; /* no extra bottom gap */
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
     .page-hero { padding: 1rem; border-radius: 16px; }
@@ -190,19 +207,21 @@
     </div>
     <div class="card-body">
         {% if instructivo %}
-        {% set meta = instructivo.meta if instructivo.meta is defined else None %}
-        {% if meta %}
-        <div class="mb-3">
-            <span class="badge bg-primary me-2">Fuente: {{ meta.base_source|capitalize }}</span>
-            {% if meta.dedic_source %}<span class="badge bg-info me-2">Dedicación: {{ meta.dedic_source }}</span>{% endif %}
-            {% if meta.version %}<span class="badge bg-secondary">v{{ meta.version }}</span>{% endif %}
-            {% if meta.updated_at %}<small class="text-muted ms-2">Actualizado: {{ meta.updated_at.strftime('%d/%m/%Y') }}</small>{% endif %}
-        </div>
-        {% endif %}
+        {# Removed meta/debug badges (Fuente, Dedicación, versión, Actualizado) #}
 
         <div class="row g-4">
             <div class="col-12">
                 <h6 class="text-primary mb-2"><i class="bi bi-clock me-1"></i>Instrucciones y documentación a presentar</h6>
+                <div class="instructivo-text">
+                    <div class="inscripcion-note fw-bold mb-1">
+                        <p class="mb-1">
+                            Para realizar la inscripción debe enviar los archivos que se detallan a continuación por correo electrónico a: 
+                            <a class="email-highlight" href="mailto:selecciones.docentes@uncobariloche.com">selecciones.docentes@uncobariloche.com</a>.<br>                     
+                        
+                            Debe colocar en el asunto: APELLIDO, NOMBRE - DNI y el N° de registro de la selección (que se encuentra en el encabezado de esta página).
+                        </p>    
+                    </div>
+                </div>
                 <div class="instructivo-text">{{ instructivo.dedicacion|link_emails }}</div>
             </div>
         </div>
