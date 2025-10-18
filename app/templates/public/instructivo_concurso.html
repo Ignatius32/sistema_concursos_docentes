@@ -103,11 +103,21 @@
     padding: 0.5rem 0.7rem; /* slightly tighter padding */
     border-radius: 8px;
     line-height: 1.3; /* tighter line spacing */
+    /* Reset whitespace to avoid pre-line from parent adding an extra line at the top */
+    white-space: normal;
 }
 .inscripcion-note p {
-    margin-top: 0 !important;
-    margin-bottom: 0.15rem !important; /* tighter gap between paragraphs */
+    margin: 0 !important; /* reset margins */
 }
+.inscripcion-note p + p { /* spacing between consecutive paragraphs */
+    margin-top: 0.75rem !important;
+}
+/* Title line inside the yellow note */
+.inscripcion-note .note-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.inscripcion-note > :first-child { margin-top: 0 !important; }
 .inscripcion-note p:last-child {
     margin-bottom: 0 !important; /* no extra bottom gap */
 }
@@ -210,6 +220,26 @@
             <div class="col-12">
                 <div class="instructivo-text">
                     <div class="inscripcion-note mb-1">
+                        {# Composed title: cantidad + Cargo(s) + tipo (plural if needed) + categoría + dedicación #}
+                        {% set cantidad = concurso.cant_cargos or 0 %}
+                        {% set cargo_label = 'Cargo' if cantidad == 1 else 'Cargos' %}
+                        {% set tipo_raw = (concurso.tipo or '') %}
+                        {% set tipo_lower = tipo_raw.lower() %}
+                        {% set tipo_label = tipo_raw %}
+                        {% if cantidad|int > 1 %}
+                            {% if tipo_lower == 'regular' %}
+                                {% set tipo_label = 'Regulares' %}
+                            {% elif tipo_lower == 'interino' %}
+                                {% set tipo_label = 'Interinos' %}
+                            {% else %}
+                                {% set tipo_label = tipo_raw %}
+                            {% endif %}
+                        {% endif %}
+                        <p class="mb-2 fw-bold note-title" style="color:#000000; white-space: normal;">
+                            {{ cantidad }} {{ cargo_label }} {{ tipo_label }} {{ concurso.categoria_nombre|inclusive_title }} {{ concurso.dedicacion }}
+                            &nbsp;&middot;&nbsp;
+                            Departamento: {{ concurso.departamento_rel.nombre if concurso.departamento_rel else 'N/A' }}
+                        </p>
                         {% if concurso.cierre_inscripcion %}
                         <p class="mb-2 d-inline-flex align-items-center" style="color:#000000; white-space: normal;">
                             <i class="bi bi-calendar-event me-1" style="opacity:0.75;"></i>
