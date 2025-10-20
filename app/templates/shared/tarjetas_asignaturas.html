@@ -1,6 +1,13 @@
-{% if asignaturas_externas and asignaturas_externas|length > 0 %}
+{# Prepare a list excluding optativas on the frontend (do not render those cards) #}
+{% set asignaturas_no_optativas = asignaturas_externas
+    |rejectattr('optativa', 'equalto', 'SI')
+    |rejectattr('optativa', 'equalto', 'Si')
+    |rejectattr('optativa', 'equalto', 'si')
+    |list %}
+
+{% if asignaturas_no_optativas and asignaturas_no_optativas|length > 0 %}
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-    {% for asignatura in asignaturas_externas %}
+    {% for asignatura in asignaturas_no_optativas %}
     <div class="col">
         <div class="card h-100">            
             <div class="card-header">
