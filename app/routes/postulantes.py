@@ -12,6 +12,9 @@ from PIL import Image
 import io
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 import tempfile
+import unicodedata
+import base64
+
 
 postulantes = Blueprint('postulantes', __name__, url_prefix='/postulantes')
 drive_api = GoogleDriveAPI()
@@ -40,6 +43,35 @@ def generate_document_filename(tipo, postulante, concurso):
     nombre = secure_filename(postulante.nombre.lower())
     return f"{tipo}_{apellido}_{nombre}_{postulante.dni}_{concurso.categoria}_{concurso.dedicacion}_{concurso.id}.pdf"
 
+def _sanitize_component(text: str) -> str:
+    """Sanitize filename path component: remove accents, keep alnum and underscores, replace spaces with underscores."""
+    if not text:
+        return ""
+    # Normalize and strip accents
+    normalized = unicodedata.normalize('NFKD', text)
+    ascii_text = ''.join(ch for ch in normalized if not unicodedata.combining(ch))
+    ascii_text = ascii_text.replace(' ', '_')
+    # Keep safe characters
+    safe = []
+    for ch in ascii_text:
+        if ch.isalnum() or ch in ['_', '-']:
+            safe.append(ch)
+    return ''.join(safe)
+
+def build_solicitud_filename(concurso, dni: str, apellido: str, nombre: str, base_name: str | None = None) -> str:
+    """Build final filename for Solicitud de Inscripción.
+
+    Pattern: solicitud_de_inscripcion_{concurso_id}_{dni}_{apellido}_{nombre}.pdf
+    If base_name provided (original client file base), it's ignored per final agreed pattern.
+    Missing parts are omitted gracefully.
+    """
+    parts = ["solicitud_de_inscripcion", str(concurso.id) if getattr(concurso, 'id', None) else None]
+    for comp in [dni, apellido, nombre]:
+        safe = _sanitize_component((comp or '').strip())
+        parts.append(safe or None)
+    parts = [p for p in parts if p]
+    return f"{'_'.join(parts)}.pdf"
+
 @postulantes.route('/concurso/<int:concurso_id>')
 @keycloak_login_required
 @admin_required
@@ -64,6 +96,21 @@ def agregar(concurso_id):
             correo = request.form.get('correo')
             telefono = request.form.get('telefono')
             domicilio = request.form.get('domicilio')
+            solicitud_file = request.files.get('solicitud_pdf')
+            
+            # Server-side validation: all inputs are mandatory
+            field_labels = [
+                ('dni', dni, 'DNI'),
+                ('nombre', nombre, 'Nombre'),
+                ('apellido', apellido, 'Apellido'),
+                ('correo', correo, 'Correo electrónico'),
+                ('telefono', telefono, 'Teléfono'),
+                ('domicilio', domicilio, 'Domicilio'),
+            ]
+            missing = [label for _, value, label in field_labels if not (value and value.strip())]
+            if missing:
+                flash('Los siguientes campos son obligatorios: ' + ', '.join(missing), 'danger')
+                return redirect(url_for('postulantes.agregar', concurso_id=concurso_id))
             
             # Check if postulante already exists in this concurso
             existing = Postulante.query.filter_by(concurso_id=concurso_id, dni=dni).first()
@@ -100,6 +147,32 @@ def agregar(concurso_id):
                 except Exception as e:
                     print(f"Error creating Drive folder: {e}")
                     flash('El postulante fue creado pero hubo un error al crear su carpeta en Drive.', 'warning')
+
+            # If a Solicitud de Inscripción PDF was provided, upload it as a document for the postulante
+            if solicitud_file and getattr(postulante, 'drive_folder_id', None):
+                try:
+                    file_bytes = solicitud_file.read()
+                    final_name = build_solicitud_filename(
+                        concurso=concurso,
+                        dni=postulante.dni or '',
+                        apellido=postulante.apellido or '',
+                        nombre=postulante.nombre or ''
+                    )
+                    file_id, web_view_link = drive_api.upload_document(
+                        postulante.drive_folder_id,
+                        final_name,
+                        file_bytes,
+                        mime_type='application/pdf'
+                    )
+                    documento = DocumentoPostulante(
+                        postulante_id=postulante.id,
+                        tipo='SOLICITUD_INSCRIPCION',
+                        url=web_view_link
+                    )
+                    db.session.add(documento)
+                except Exception as e:
+                    current_app.logger.exception("Error al subir la Solicitud de Inscripción al Drive")
+                    flash('Advertencia: No se pudo subir la Solicitud de Inscripción al Drive.', 'warning')
             
             db.session.commit()
             
@@ -111,6 +184,76 @@ def agregar(concurso_id):
             flash(f'Error al agregar postulante: {str(e)}', 'danger')
     
     return render_template('postulantes/agregar.html', concurso=concurso)
+
+@postulantes.route('/preparse_solicitud', methods=['POST'])
+@keycloak_login_required
+@admin_required
+def preparse_solicitud():
+    """Parse a filled Solicitud de Inscripción PDF and return fields to prefill the form.
+
+    Expects multipart/form-data with field name 'pdf'. Returns JSON with 'prefill' and optional 'warnings'.
+    """
+    try:
+        file = request.files.get('pdf')
+        if not file or not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Debe adjuntar un archivo PDF válido.'}), 400
+
+        # Read file content into PdfReader
+        file_stream = io.BytesIO(file.read())
+        reader = PdfReader(file_stream)
+
+        field_values = {}
+        try:
+            fields = reader.get_fields() or {}
+            for key, meta in fields.items():
+                val = None
+                # PyPDF2 can provide dict-like with '/V' or objects with .value
+                if isinstance(meta, dict):
+                    val = meta.get('/V') or meta.get('V')
+                if val is None:
+                    val = getattr(meta, 'value', None)
+                if isinstance(val, bytes):
+                    try:
+                        val = val.decode('utf-8', errors='ignore')
+                    except Exception:
+                        val = ''
+                if val is None:
+                    val = ''
+                field_values[str(key)] = str(val)
+        except Exception:
+            field_values = {}
+
+        def g(name):
+            return (field_values.get(name) or '').strip()
+
+        def gv(*names):
+            for n in names:
+                val = g(n)
+                if val:
+                    return val
+            return ''
+
+        apellido_y_nombre = gv('dp_apellido_y_nombre')
+        dni = gv('dp_dni')
+        telefono = gv('dp_telefono', 'dp_tel_fono')
+        domicilio = gv('dp_domicilio')
+        correo = gv('dp_correo_electronico', 'dp_correo_electr_nico').lower()
+
+        prefill = {
+            'nombre': apellido_y_nombre,
+            'dni': dni,
+            'telefono': telefono,
+            'domicilio': domicilio,
+            'correo': correo,
+        }
+        warnings = []
+        if not any(prefill.values()):
+            warnings.append('No se encontraron campos de formulario en el PDF o están vacíos.')
+
+        return jsonify({'prefill': prefill, 'warnings': warnings})
+    except Exception as e:
+        current_app.logger.exception("Error al preprocesar la Solicitud de Inscripción")
+        return jsonify({'error': 'No se pudo leer el PDF. Verifique que sea el formulario con campos rellenos.'}), 400
 
 @postulantes.route('/<int:postulante_id>')
 @keycloak_login_required
@@ -251,8 +394,16 @@ def agregar_documento(postulante_id):
                 flash(f'Error al procesar el archivo: {str(e)}', 'danger')
                 return redirect(request.url)
             
-            # Generate standardized filename
-            filename = generate_document_filename(tipo, postulante, concurso)
+            # Generate standardized filename (custom pattern for Solicitud de Inscripción)
+            if tipo == 'SOLICITUD_INSCRIPCION':
+                filename = build_solicitud_filename(
+                    concurso=concurso,
+                    dni=postulante.dni or '',
+                    apellido=postulante.apellido or '',
+                    nombre=postulante.nombre or ''
+                )
+            else:
+                filename = generate_document_filename(tipo, postulante, concurso)
             
             # Check if document already exists
             existing = DocumentoPostulante.query.filter_by(
@@ -266,9 +417,11 @@ def agregar_documento(postulante_id):
                     existing_file_id = existing.url.split('/')[-2]
                     
                     # Overwrite existing file
+                    # overwrite_file expects base64-encoded content
+                    encoded_pdf = base64.b64encode(pdf_data).decode('utf-8')
                     file_id, web_view_link = drive_api.overwrite_file(
                         existing_file_id,
-                        pdf_data
+                        encoded_pdf
                     )
                     
                     # Update existing document

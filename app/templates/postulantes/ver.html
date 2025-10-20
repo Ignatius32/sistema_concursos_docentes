@@ -61,6 +61,34 @@
         <div class="row mt-4">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Solicitud de Inscripción</h4>
+                    <div>
+                        {% if 'SOLICITUD_INSCRIPCION' in uploaded_docs %}
+                            {% if uploaded_docs['SOLICITUD_INSCRIPCION'].url %}
+                            <a href="{{ uploaded_docs['SOLICITUD_INSCRIPCION'].url }}" target="_blank" class="btn btn-info btn-sm me-2">Ver</a>
+                            {% endif %}
+                            <button type="button" class="btn btn-primary btn-sm me-2" id="btn-solicitud-upload">Reemplazar PDF</button>
+                            <form action="{{ url_for('postulantes.eliminar_documento', documento_id=uploaded_docs['SOLICITUD_INSCRIPCION'].id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-solicitud-upload">Subir PDF</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-muted">
+                    {% if 'SOLICITUD_INSCRIPCION' in uploaded_docs %}
+                        Última actualización: {{ uploaded_docs['SOLICITUD_INSCRIPCION'].creado.strftime('%d/%m/%Y %H:%M') }}
+                    {% else %}
+                        No hay una Solicitud de Inscripción cargada.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4>Documentación</h4>
                     <a href="{{ url_for('postulantes.agregar_documento', postulante_id=postulante.id) }}" class="btn btn-primary">
                         Agregar Documento
@@ -190,4 +218,41 @@
     <input type="hidden" name="tipo" id="tipo">
     <input type="file" name="documento" id="documento" accept=".pdf,.jpg,.jpeg,.png">
 </form>
+<script>
+(() => {
+    const uploadForm = document.getElementById('document-upload-form');
+    const tipoInput = document.getElementById('tipo');
+    const fileInput = document.getElementById('documento');
+
+    function openUploadFor(tipo, accept) {
+        tipoInput.value = tipo;
+        if (accept) fileInput.setAttribute('accept', accept);
+        fileInput.click();
+    }
+
+    // Handle generic required-doc upload buttons if not handled globally
+    document.querySelectorAll('[data-action="upload-document"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const t = btn.getAttribute('data-doc-type');
+            if (!t) return;
+            openUploadFor(t, '.pdf,.jpg,.jpeg,.png');
+        });
+    });
+
+    // Handle Solicitud de Inscripción specific upload/replace
+    const solicitudBtn = document.getElementById('btn-solicitud-upload');
+    if (solicitudBtn) {
+        solicitudBtn.addEventListener('click', () => {
+            openUploadFor('SOLICITUD_INSCRIPCION', '.pdf');
+        });
+    }
+
+    // Auto-submit on file selection
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length > 0) {
+            uploadForm.submit();
+        }
+    });
+})();
+</script>
 {% endblock %}

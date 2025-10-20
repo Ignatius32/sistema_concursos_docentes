@@ -8,7 +8,7 @@
         <h2 class="mb-0">Agregar Postulante para Concurso #{{ concurso.id }}</h2>
     </div>
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data" id="agregar-postulante-form">
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="nombre" class="form-label">Nombre</label>
@@ -42,6 +42,21 @@
                 <div class="col-md-12 mb-3">
                     <label for="domicilio" class="form-label">Domicilio</label>
                     <input type="text" class="form-control" id="domicilio" name="domicilio">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Solicitud de Inscripción (PDF opcional)</label>
+                    <div id="dropzone" class="border border-2 rounded p-3 text-center bg-light" style="cursor: pointer;">
+                        <div class="mb-2"><i class="bi bi-file-earmark-pdf" style="font-size: 2rem;"></i></div>
+                        <div>
+                            Arrastre y suelte el PDF aquí, o haga clic para seleccionar
+                        </div>
+                        <div id="file-selected" class="small text-muted mt-2">Ningún archivo seleccionado</div>
+                    </div>
+                    <input type="file" id="solicitud_pdf" name="solicitud_pdf" accept="application/pdf" class="d-none">
+                    <div class="mt-2 small text-muted">El formulario se completará automáticamente al seleccionar un PDF válido.</div>
                 </div>
             </div>
 
@@ -79,4 +94,65 @@
         </dl>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('solicitud_pdf');
+    const fileSelected = document.getElementById('file-selected');
+        async function preparseAndFill() {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            try {
+                const form = new FormData();
+                form.append('pdf', file);
+                const resp = await fetch("{{ url_for('postulantes.preparse_solicitud') }}", { method: 'POST', body: form });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'No se pudo leer el PDF');
+                const pre = data.prefill || {};
+                const setVal = (id, val) => { if (val) { const el = document.getElementById(id); if (el) el.value = val; } };
+                setVal('nombre', pre.nombre);
+                setVal('dni', pre.dni);
+                setVal('telefono', pre.telefono);
+                setVal('domicilio', pre.domicilio);
+                setVal('correo', pre.correo);
+                if (data.warnings && data.warnings.length) console.warn('Preparse warnings:', data.warnings);
+            } catch (err) {
+                console.error(err);
+                // Non-blocking: keep manual entry
+            }
+        }
+
+    function setFile(file) {
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Seleccione un archivo PDF válido.');
+            return;
+        }
+        // Create a DataTransfer to programmatically set the file input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        fileSelected.textContent = `Seleccionado: ${file.name}`;
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('bg-white'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('bg-white'));
+        dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('bg-white');
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        setFile(file);
+            preparseAndFill();
+    });
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        setFile(file);
+            preparseAndFill();
+    });
+})();
+</script>
 {% endblock %}
