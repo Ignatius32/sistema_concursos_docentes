@@ -335,3 +335,55 @@ def descargar_formulario_inscripcion(concurso_id):
     except Exception as e:
         logger.error(f"Error generating inscription form: {str(e)}")
         return f"Error al generar el formulario: {str(e)}", 500
+
+@public.route('/requisitos-tribunal/<int:concurso_id>')
+def requisitos_tribunal_concurso(concurso_id):
+    """Public page to display Tribunal instructivo for a specific concurso
+    plus a compact concurso card linking to its public detail.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    concurso = Concurso.query.get_or_404(concurso_id)
+
+    # Only allow public viewing of concursos (hide only INICIO, CREADO, and DESPUBLICAR)
+    hidden_estados = ['INICIO', 'CREADO', 'DESPUBLICAR']
+    if concurso.estado_actual in hidden_estados:
+        return "Concurso no disponible para visualización pública", 404
+
+    # Resolve instructivo for Tribunal via service with concurso tipo awareness
+    from app.services.instructivo_service import instructivo_service
+    categoria = Categoria.query.filter_by(codigo=concurso.categoria).first()
+    instructivo_tribunal = instructivo_service.get_structured_tribunal(concurso)
+    # Legacy fallback if service returns nothing
+    if (not instructivo_tribunal) and categoria and categoria.instructivo_tribunal:
+        base_instructivo = categoria.instructivo_tribunal.get('base', '')
+        dedicacion_instructivo = (categoria.instructivo_tribunal.get('porDedicacion', {}) or {}).get(concurso.dedicacion, '')
+        instructivo_tribunal = {'base': base_instructivo, 'dedicacion': dedicacion_instructivo}
+
+    # Compute dynamic estado (same criteria as index)
+    argentina_offset = timedelta(hours=-3)
+    argentina_tz = timezone(argentina_offset)
+    today = datetime.now(argentina_tz).date()
+
+    if concurso.estado_actual == 'FINALIZADO':
+        dynamic_estado = 'FINALIZADO'
+    else:
+        if getattr(concurso, 'fecha_apertura_inscripcion', None) and concurso.fecha_apertura_inscripcion and today < concurso.fecha_apertura_inscripcion:
+            dynamic_estado = 'INSCRIPCIÓN NO ABIERTA'
+        elif concurso.cierre_inscripcion:
+            if concurso.cierre_inscripcion < today:
+                dynamic_estado = 'INSCRIPCIÓN CERRADA'
+            else:
+                dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+        else:
+            dynamic_estado = 'INSCRIPCIÓN ABIERTA'
+
+    # Attach transient attr for template reuse
+    concurso.dynamic_estado = dynamic_estado
+
+    return render_template(
+        'public/requisitos_tribunal_concurso.html',
+        concurso=concurso,
+        instructivo_tribunal=instructivo_tribunal,
+        today=today
+    )
