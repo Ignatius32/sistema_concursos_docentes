@@ -552,7 +552,7 @@ def enviar_firma(concurso_id, documento_id):
             to_email=destinatario,
             subject=subject,
             html_body=html_body,
-            sender_name='Sistema de Concursos Docentes',
+            sender_name='Selecciones Docentes CRUB UNCo',
             attachment_ids=[attachment_id],  # Make sure this is a list with a valid ID
             placeholders=placeholders  # Use all centralized placeholders
         )

@@ -133,7 +133,7 @@ class PasswordResetService:
                 <body>                    <div class=\"email-container\">
                         <div class="header">
                             <h1>Portal de Tribunal</h1>
-                            <p>Sistema de Concursos Docentes</p>
+                            <p>Selecciones Docentes CRUB UNCo</p>
                         </div>
                         
                         <div class="content">
@@ -167,7 +167,7 @@ class PasswordResetService:
                         </div>
                         
                         <div class="footer">
-                            <p><strong>Sistema de Concursos Docentes</strong></p>
+                            <p><strong>Selecciones Docentes CRUB UNCo</strong></p>
                             <p>Este es un mensaje automático, por favor no responda a este correo.</p>
                             <div class="url-break">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<login_url>></div>
                         </div>
@@ -206,7 +206,7 @@ class PasswordResetService:
                     to_email=persona.correo,
                     subject=subject,
                     html_body=html_body,
-                    sender_name="Sistema de Concursos Docentes",
+                    sender_name="Selecciones Docentes CRUB UNCo",
                     placeholders=placeholders
                 )
                 
@@ -326,7 +326,7 @@ class PasswordResetService:
                     to_email=persona.correo,
                     subject=subject,
                     html_body=html_body,
-                    sender_name="Sistema de Concursos Docentes",
+                    sender_name="Selecciones Docentes CRUB UNCo",
                     placeholders=placeholders
                 )
                 
@@ -413,7 +413,7 @@ class PasswordResetService:
                     <div class=\"email-container\">
                         <div class=\"header\">
                             <h1>Portal de Tribunal</h1>
-                            <p>Sistema de Concursos Docentes</p>
+                            <p>Selecciones Docentes CRUB UNCo</p>
                         </div>
                         <div class=\"content\">
                             <div class=\"greeting\">Hola <<nombre>> <<apellido>>,</div>
@@ -445,7 +445,7 @@ class PasswordResetService:
                             <p>Si tiene problemas para acceder o no solicitó este acceso, contacte al administrador del sistema.</p>
                         </div>
                         <div class=\"footer\">
-                            <p><strong>Sistema de Concursos Docentes</strong></p>
+                            <p><strong>Selecciones Docentes CRUB UNCo</strong></p>
                             <p>Este es un mensaje automático, por favor no responda a este correo.</p>
                             <div class=\"url-break\">Si no puede hacer clic en el enlace, copie y pegue la siguiente URL en su navegador:<br><<reset_url>></div>
                         </div>
@@ -484,7 +484,7 @@ class PasswordResetService:
                     to_email=persona.correo,
                     subject=subject,
                     html_body=html_body,
-                    sender_name="Sistema de Concursos Docentes",
+                    sender_name="Selecciones Docentes CRUB UNCo",
                     placeholders=placeholders
                 )
                 

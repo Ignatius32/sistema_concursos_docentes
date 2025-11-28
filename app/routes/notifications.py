@@ -584,7 +584,7 @@ def trigger_notification_campaign(concurso_id, campaign_id):
                     to_email=email_address,
                     subject=final_asunto,
                     html_body=final_cuerpo,
-                    sender_name='Sistema de Concursos Docentes',
+                    sender_name='Selecciones Docentes CRUB UNCo',
                     placeholders=placeholders,
                     attachment_ids=attachment_file_ids if attachment_file_ids else None
                 )
